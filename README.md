@@ -31,13 +31,42 @@ All prototype accounts use the password `Password123!`.
 | --- | --- | --- |
 | Customer | `customer@xpro.test` | None |
 | Provider | `provider@xpro.test` | None |
-| Admin / Dispatch | `admin@xpro.test` | None |
+| Staff · Super admin | `admin@xpro.test` | None |
+| Staff · Operations | `operations@xpro.test` | None |
+| Staff · Pricing | `pricing@xpro.test` | None |
+| Staff · Client relations | `relations@xpro.test` | None |
+
+Staff accounts share the same password as the other prototype accounts.
+
+Every admin account has one or more staff roles (super admin, operations,
+pricing, client relations). Roles are presets of permissions, and the workflow
+reducer checks one permission per action, so staff can see everything but only
+act within their role. New requests land unclaimed in a shared queue and alert
+every staff member who can claim requests. A staff member claims a request, or
+becomes its owner the first time they act on it; pricing staff never become
+owners. Super admins can reassign owners, manage staff at `/admin/staff`
+(invite, change roles, suspend with a hand-over of open requests), approve
+quotes above an optional high-value threshold in Settings, and restore sample
+records. Requests unclaimed for more than two hours are flagged in the queue and
+counted on the admin overview. Suspended staff are signed out and cannot act.
+Invited staff appear in the Staff list, but only the seeded accounts can sign in.
+Saved prototype data from before staff roles is reset on first load.
+
+Provider and customer actions that affect the other party are held for XPro. The
+admin Approvals queue (`/admin/approvals`) lists provider acceptances, progress and
+completion reports and customer cancellation requests, each approved or rejected
+inline by staff with the matching permission; quotes and provider verifications
+link to their own review screens.
 
 ## Frontend flow 1
 
-All three account types land on `/`, with a separate role-specific home screen
-and menu. Shared section URLs use `/workspace/:section`; the frontend rejects
-sections outside the current account's menu. No role prefixes are required.
+`/` is always the public site, for signed-in and signed-out visitors alike.
+Signing in sends customers and providers to `/overview`, and admins to `/admin`.
+Customer and provider sections live at top level (`/overview`, `/requests`,
+`/jobs`, `/quotes`, ...); the admin console lives at `/admin` (overview) and
+`/admin/:section`. The router guard rejects sections outside the current
+account's menu, and sends admins who open a shared section URL to its `/admin`
+equivalent. Old workspace-prefixed section URLs redirect to the new paths.
 
 Sign-in, customer/provider registration, verification and recovery are simulated
 by browser MSW handlers. Demo sessions survive refresh; newly registered accounts

@@ -6,7 +6,7 @@ notifications and React Native implementation are outside this slice.
 
 ## Public browsing and private workspaces
 
-- `/`: public homepage for visitors/customers; role overview for provider/admin.
+- `/`: public homepage for everyone, signed in or not.
 - `/services`: all six service lines and service-specific discovery.
 - `/providers`: search approved profiles by service, location and availability.
 - `/providers/:id`: public services, introduction, experience, sample ratings and
@@ -15,9 +15,12 @@ notifications and React Native implementation are outside this slice.
 - `/request`: create a brief in public. Visitors can prepare a validated brief,
   sign in, and resume it before submission. Submission requires a customer account.
   A preferred provider is a dispatch preference rather than an automatic match.
-- `/workspace/overview`: customer activity overview. Private sections contain
-  submitted requests, published quotes, schedules, messages and notifications.
-- `/workspace/:section`: role-specific customer/provider/admin pages.
+- `/overview`: customer/provider activity overview. Private sections at top
+  level (`/requests`, `/jobs`, `/quotes`, `/schedule`, `/messages`,
+  `/notifications`, `/settings`, `/account`, `/verification`, `/availability`)
+  contain submitted requests, published quotes, schedules and messages.
+- `/admin` and `/admin/:section`: the admin (staff) console, admin accounts only.
+  Old workspace-prefixed section URLs redirect to the new paths.
 
 ## Implemented journeys
 
@@ -36,8 +39,55 @@ notifications and React Native implementation are outside this slice.
    attachments and generated in-app notifications with read state.
 9. Completion: customer acknowledgement or issue report, admin resolution and
    acknowledgement-gated final closure.
-10. Overview/utilities: derived activity counts, audit history, account/contact
+10. Staff management: admin accounts carry staff roles (super admin, operations,
+    pricing, client relations) and the reducer enforces one permission per action;
+    see "Staff management" below.
+11. Overview/utilities: derived activity counts, audit history, account/contact
     preferences, notification settings and admin prototype controls.
+12. Approval gates: anything a provider or customer does that affects the other
+    party is held for XPro, then shown or notified after approval. See "Approval
+    gates" below.
+
+## Approval gates
+
+- New requests alert matching providers (approved, available, same city, or only the
+  preferred provider) with a generic notice. They cannot open the request.
+- Provider acceptance becomes `pending_approval`. XPro (`dispatch.manage`) confirms or
+  rejects it; only then is the request matched, pricing opened and the customer told.
+- Provider progress and completion reports are pending until a staff member with
+  `progress.review` approves them. Approval moves the job status and notifies the
+  customer; rejection keeps the status and sends the note to the provider. A provider
+  has one pending update at a time. Customers only see approved updates.
+- Customer cancellation is a request. XPro (`request.cancel`) approves or rejects it;
+  an admin cancelling directly clears any pending request.
+- Providers see "XPro customer" instead of the customer's name, phone and budget, and
+  the full site address only once the schedule is confirmed. Schedule responses are
+  labelled "Customer" and "Provider" rather than by name.
+- `/admin/approvals` lists every pending item (assignments, progress, completion,
+  cancellations, quotes awaiting sign-off, provider verifications) oldest first, with
+  inline approve/reject for the first four kinds. Requests with pending items show an
+  "Awaiting approval" chip on the board and the admin overview counts them.
+
+## Staff management
+
+- Roles are presets of permissions (`features/operations/staff.ts`). All staff can
+  view every request, conversation and provider; roles limit actions only. Action
+  buttons are hidden when the signed-in staff member lacks the permission.
+- Ownership: new requests are unclaimed and alert everyone who can claim. Staff claim
+  a request or become owner on their first action; pricing staff never own requests.
+  Super admins reassign owners. After claiming, only the owner is notified, plus
+  staff with the pricing role for pricing events. Unclaimed for more than two
+  hours flags the request in the queue and the admin overview.
+- Quote sign-off: pricing staff and super admins publish quotes and the publisher is
+  recorded. With a threshold set in Settings, a quote at or above it published by a
+  non-super-admin waits for super admin approval and notifies super admins.
+- `/admin/staff` (super admin only): invite by name, email and roles; edit roles;
+  suspend (choosing a successor for open requests) and reactivate. The last active
+  super admin cannot be suspended or demoted, and nobody can suspend themselves.
+  Suspended staff are signed out and every command they send is rejected. Demo mode:
+  invited staff are listed but only seeded accounts can sign in.
+- Settings (super admin only): prototype controls and the quote approval threshold.
+- Customers and providers see staff messages as "XPro Team" or "XPro Dispatch".
 
 ## Preview data and limits
 
@@ -60,6 +110,7 @@ Run `pnpm lint:check`, `pnpm typecheck`, `pnpm build` and
 `pnpm exec tsx --tsconfig tsconfig.json tests/xpro-workflows.mts`.
 The workflow checks cover six-service intake, verification, dispatch, quote revisions,
 rescheduling, dual confirmation, audience separation, execution/issues/closure,
-cancellation, denied access and atomic failures. Browser checks cover public discovery,
+cancellation, denied access and atomic failures, plus staff permissions, ownership,
+quote approval and staff account rules, and the approval gates. Browser checks cover public discovery,
 request draft/sign-in/submission, quote decisions, provider/admin handoffs and narrow
 layouts.
