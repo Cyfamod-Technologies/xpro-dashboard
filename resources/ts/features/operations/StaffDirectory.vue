@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
 import type { StaffMember, StaffRole } from '@/features/operations/types'
-import { when } from '@/features/operations/types'
+import { isFinished, when } from '@/features/operations/types'
 import { activeStaffWith, staffRoleLabels } from '@/features/operations/staff'
 
 const ops = useOperationsStore()
@@ -15,7 +15,7 @@ const rolesDraft = ref<StaffRole[]>([])
 const suspendTarget = ref<StaffMember>()
 const reassignTo = ref('')
 
-const openRequests = (member: StaffMember) => ops.state.requests.filter(item => item.staffOwnerId === member.id && !['closed', 'cancelled'].includes(item.status)).length
+const openRequests = (member: StaffMember) => ops.state.requests.filter(item => item.staffOwnerId === member.id && !isFinished(item.status)).length
 const successors = computed(() => activeStaffWith(ops.state, 'request.claim').filter(item => item.id !== suspendTarget.value?.id).map(item => ({ title: item.name, value: item.id })))
 const needsSuccessor = computed(() => suspendTarget.value ? openRequests(suspendTarget.value) > 0 : false)
 

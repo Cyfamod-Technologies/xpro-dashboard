@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
 import type { ServiceRequest } from '@/features/operations/types'
-import { money, statusLabels, when } from '@/features/operations/types'
-import { currentAssignment, currentSchedule } from '@/features/operations/workflow'
+import { isFinished, money, statusLabelFor, when } from '@/features/operations/types'
+import { currentAssignment, currentSchedule, visibleAssignments, visibleDetails } from '@/features/operations/workflow'
 import { activeStaffWith } from '@/features/operations/staff'
 import Attachments from '@/features/operations/Attachments.vue'
 import QuotePanel from '@/features/operations/QuotePanel.vue'
@@ -16,13 +16,17 @@ const panel = ref(props.initialPanel ?? 'overview')
 const note = ref('')
 const providerId = ref('')
 const cancelDialog = ref(false)
+const rejectDialog = ref(false)
+const rejectNote = ref('')
 const reassignTo = ref('')
 const reassignNote = ref('')
 const assignment = computed(() => currentAssignment(props.request))
 const role = computed(() => ops.actor?.role)
 const reviewNote = ref('')
 const rejecting = ref<'' | 'assignment' | 'cancellation'>('')
-const shownAssignment = computed(() => role.value === 'customer' && assignment.value?.status === 'pending_approval' ? undefined : assignment.value)
+const assignments = computed(() => ops.actor ? visibleAssignments(props.request, ops.actor) : [])
+const details = computed(() => ops.actor ? visibleDetails(props.request, ops.actor) : {})
+const shownAssignment = computed(() => role.value === 'customer' && assignment.value?.status === 'pending_approval' ? undefined : assignments.value.find(item => item.id === assignment.value?.id))
 const assignmentLabel = (status: string) => role.value === 'provider' && status === 'pending_approval' ? 'Awaiting XPro confirmation' : status.replaceAll('_', ' ')
 const pendingAssignment = computed(() => assignment.value?.status === 'pending_approval' ? assignment.value : undefined)
 const pendingCancellation = computed(() => props.request.cancellationRequest?.review.state === 'pending' ? props.request.cancellationRequest : undefined)
@@ -31,7 +35,7 @@ const addressShared = computed(() => role.value !== 'provider' || currentSchedul
 const eligible = computed(() => ops.state.providers.filter(item => item.verification === 'approved' && item.available && item.services.includes(props.request.service)))
 const providerName = (id: string) => ops.state.providers.find(item => item.id === id)?.name ?? 'Provider'
 const alertedNames = computed(() => props.request.alertedProviderIds.map(providerName))
-const active = computed(() => !['cancelled', 'closed', 'acknowledged'].includes(props.request.status))
+const active = computed(() => !isFinished(props.request.status) && props.request.status !== 'acknowledged')
 const ownerName = computed(() => props.request.staffOwnerId ? ops.staffById(props.request.staffOwnerId)?.name ?? 'Former staff member' : 'Unclaimed')
 const owners = computed(() => activeStaffWith(ops.state, 'request.claim').filter(item => item.id !== props.request.staffOwnerId).map(item => ({ title: item.name, value: item.id })))
 const canNote = computed(() => ops.can('dispatch.manage') || ops.can('request.review') || ops.can('request.flag'))
@@ -61,6 +65,11 @@ const cancel = async () => {
   if (await ops.run({ type: 'request.cancel', requestId: props.request.id, note: note.value }))
     cancelDialog.value = false
 }
+
+const reject = async () => {
+  if (await ops.run({ type: 'request.reject', requestId: props.request.id, note: rejectNote.value }))
+    rejectDialog.value = false
+}
 </script>
 
 <template>
@@ -79,9 +88,17 @@ const cancel = async () => {
           color="primary"
           variant="tonal"
         >
-          {{ statusLabels[request.status] }}
+          {{ statusLabelFor(request.status, role ?? 'customer') }}
         </VChip>
       </div>
+      <VAlert
+        v-if="role === 'customer' && request.status === 'rejected'"
+        variant="tonal"
+        color="warning"
+        class="mt-4"
+      >
+        XPro was not able to accept this request. The reason is in your messages.
+      </VAlert>
     </VCardText>
   </VCard>
   <VTabs
@@ -120,8 +137,10 @@ const cancel = async () => {
                 {{ request.city }}<br><span class="text-medium-emphasis">Full address shared once the schedule is confirmed.</span>
               </dd><dt>Contact</dt><dd>{{ role === 'provider' ? 'XPro customer' : `${request.customer} · ${request.phone}` }}</dd><template v-if="role !== 'provider'">
                 <dt>Indicative budget</dt><dd>{{ request.budget ? money(request.budget) : 'To be confirmed' }}</dd>
+              </template><template v-if="role === 'admin'">
+                <dt>Preferred contact</dt><dd>{{ request.contactMethod ?? 'phone' }}</dd>
               </template><dt>Preferred start</dt><dd>{{ request.startDate || 'Flexible' }}</dd><template
-                v-for="(value, key) in request.details"
+                v-for="(value, key) in details"
                 :key="key"
               >
                 <dt>{{ key === 'preferredProviderId' ? 'Preferred provider' : String(key).replace(/([A-Z])/g, ' $1') }}</dt><dd>{{ key === 'preferredProviderId' ? providerName(value) : value }}</dd>
@@ -138,7 +157,10 @@ const cancel = async () => {
             <h3 class="text-h5 mb-4">
               Provider assignment
             </h3><template v-if="shownAssignment">
-              <p>{{ providerName(shownAssignment.providerId) }} · {{ assignmentLabel(shownAssignment.status) }}</p><p class="text-body-2">
+              <p>{{ providerName(shownAssignment.providerId) }} · {{ assignmentLabel(shownAssignment.status) }}</p><p
+                v-if="shownAssignment.note"
+                class="text-body-2"
+              >
                 {{ shownAssignment.note }}
               </p>
             </template><p
@@ -351,6 +373,13 @@ const cancel = async () => {
                   @click="ops.run({ type: 'request.review', requestId: request.id, clarify: true, note })"
                 >
                   Ask for clarification
+                </VBtn><VBtn
+                  variant="text"
+                  color="error"
+                  :disabled="ops.busy"
+                  @click="rejectNote = ''; rejectDialog = true"
+                >
+                  Reject request
                 </VBtn>
               </div>
               <div class="mt-4">
@@ -400,12 +429,12 @@ const cancel = async () => {
             </template>
           </VCardText>
         </VCard>
-        <VCard v-if="request.assignments.length && ops.actor?.role !== 'customer'">
+        <VCard v-if="assignments.length && ops.actor?.role !== 'customer'">
           <VCardText>
             <h3 class="text-h6 mb-3">
               Assignment history
             </h3><p
-              v-for="item in request.assignments"
+              v-for="item in assignments"
               :key="item.id"
               class="text-body-2"
             >
@@ -457,6 +486,41 @@ const cancel = async () => {
     v-else-if="panel === 'messages'"
     :request="request"
   />
+  <VDialog
+    v-model="rejectDialog"
+    max-width="480"
+  >
+    <VCard>
+      <VCardText>
+        <h3 class="text-h5 mb-3">
+          Reject this request?
+        </h3><p>The customer will be told this request was not accepted, and your reason is shared with them. Any alerted or offered provider is released.</p><VTextarea
+          v-model="rejectNote"
+          label="Reason for rejecting (shared with the customer)"
+        /><VAlert
+          v-if="ops.error"
+          variant="tonal"
+          color="error"
+          class="mb-4"
+        >
+          {{ ops.error }}
+        </VAlert><div class="d-flex justify-end gap-2">
+          <VBtn
+            variant="text"
+            @click="rejectDialog = false"
+          >
+            Keep request
+          </VBtn><VBtn
+            color="error"
+            :loading="ops.busy"
+            @click="reject"
+          >
+            Reject request
+          </VBtn>
+        </div>
+      </VCardText>
+    </VCard>
+  </VDialog>
   <VDialog
     v-model="cancelDialog"
     max-width="480"

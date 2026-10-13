@@ -16,6 +16,7 @@ const portfolioFiles = ref<File[]>([])
 const photoFile = ref<File[]>([])
 const profile = ops.profile
 const known: BankInput | undefined = profile?.payout.pending ?? profile?.payout.current ?? undefined
+
 // Changes already waiting for XPro review are shown (and resubmitted) as the form's proposed values.
 const proposed = profile?.pendingChanges ?? profile
 const form = reactive<ProviderInput>({ phone: profile?.phone ?? '', trade: proposed?.trade ?? '', city: profile?.city ?? '', services: [...(proposed?.services ?? [])], experience: profile?.experience ?? 0, bio: profile?.bio ?? '', documents: [...(proposed?.documents ?? [])], portfolio: [...(profile?.portfolio ?? [])], photo: proposed?.photo ?? null, bank: { bankCode: known?.bankCode ?? '', accountNumber: known?.accountNumber ?? '', accountName: known?.accountName ?? '' } })
