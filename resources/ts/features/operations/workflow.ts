@@ -87,7 +87,7 @@ export const visibleAssignments = (request: ServiceRequest, actor: Actor): Assig
   return request.assignments.map(item => ({ ...item, note: '' }))
 }
 
-export type ProfileChangeRow = { label: string; current: string; proposed: string }
+export interface ProfileChangeRow { label: string; current: string; proposed: string }
 
 const names = (files: { name: string }[]) => files.map(file => file.name).join(', ') || 'None'
 const sameIds = (a: { id: string }[], b: { id: string }[]) => a.length === b.length && a.every((file, index) => file.id === b[index].id)
@@ -124,7 +124,11 @@ export const visibleMessages = (request: ServiceRequest, actor: Actor, channel?:
 
   return actor.role === 'admin' || (actor.role === 'customer' && message.channel === 'customer') || (actor.role === 'provider' && message.channel === 'provider' && message.providerId === actor.id)
 })
+
+/** The inbox shows every notification addressed to the user. The in-app preference only affects the listed delivery channels. */
+export const inbox = (state: OperationsState, userId: string) => state.notifications.filter(item => item.recipientId === userId)
 export const defaultPreferences = (actor: Actor): Preferences => ({ name: actor.name, phone: '', email: true, push: true, inApp: true, timezone: 'Africa/Lagos' })
+
 /** Total in kobo. Every `rate` is a positive whole number of kobo; each line is rounded to a whole kobo. */
 export const quoteTotal = (items: QuoteItem[]) => {
   need(items.length > 0 && items.every(item => item.description.trim().length > 0 && Number.isFinite(item.quantity) && item.quantity > 0 && Number.isSafeInteger(item.rate) && item.rate > 0), 'Add a description, positive quantity and unit price for every line item.')

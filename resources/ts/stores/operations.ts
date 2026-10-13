@@ -3,7 +3,7 @@ import { computed, ref, toRaw } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { isWorkspaceRole } from '@/features/workspace/config'
 import { createOperationsState } from '@/features/operations/fixtures'
-import { applyCommand, defaultPreferences, publicProvider, visibleRequests } from '@/features/operations/workflow'
+import { applyCommand, defaultPreferences, inbox, publicProvider, visibleRequests } from '@/features/operations/workflow'
 import { staffCan } from '@/features/operations/staff'
 import type { Actor, Command, OperationsState, StaffPermission } from '@/features/operations/types'
 
@@ -42,7 +42,7 @@ export const useOperationsStore = defineStore('operations', () => {
   const requests = computed(() => actor.value ? visibleRequests(state.value, actor.value) : [])
   const profile = computed(() => state.value.providers.find(item => item.id === actor.value?.id))
   const preferences = computed(() => actor.value ? state.value.preferences[actor.value.id] ?? defaultPreferences(actor.value) : undefined)
-  const notifications = computed(() => state.value.notifications.filter(item => item.recipientId === actor.value?.id))
+  const notifications = computed(() => actor.value ? inbox(state.value, actor.value.id) : [])
   const publicProviders = computed(() => state.value.providers.filter(item => item.verification === 'approved').map(publicProvider))
 
   async function run(command: Command) {
