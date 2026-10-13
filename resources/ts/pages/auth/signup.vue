@@ -9,9 +9,10 @@ import { getErrorMessage } from '@/utils/errors'
 definePage({ meta: { layout: 'blank', public: true, unauthenticatedOnly: true } })
 
 const router = useRouter()
+const route = useRoute()
 const formRef = ref<VForm>()
 const form = reactive({ name: '', email: '', password: '', confirmPassword: '', accepted: false })
-const accountRole = ref<'customer' | 'provider'>('customer')
+const accountRole = ref<'customer' | 'provider'>(route.query.role === 'provider' ? 'provider' : 'customer')
 const accountTypes = [{ title: 'Customer', value: 'customer' }, { title: 'Provider', value: 'provider' }]
 const visible = ref(false)
 const loading = ref(false)
@@ -59,6 +60,12 @@ const submit = async () => {
             label="Account type"
             :items="accountTypes"
           />
+          <p
+            v-if="accountRole === 'provider'"
+            class="text-body-2 text-medium-emphasis mt-2 mb-0"
+          >
+            After you verify your email, complete your provider profile — documents, a face photo and bank details — for XPro to review.
+          </p>
         </VCol>
         <VCol cols="12">
           <AppTextField
