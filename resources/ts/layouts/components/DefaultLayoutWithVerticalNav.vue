@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { getVerticalNavItems } from '@/navigation/vertical'
 import { useAuthStore } from '@/stores/auth'
+import { useOperationsStore } from '@/stores/operations'
+import { staffRoleLabels } from '@/features/operations/staff'
 import { roleLabels } from '@/types/domain'
 import { themeConfig } from '@themeConfig'
 
@@ -13,7 +15,17 @@ import NavBarI18n from '@core/components/I18n.vue'
 import { VerticalNavLayout } from '@layouts'
 
 const auth = useAuthStore()
-const navItems = computed(() => getVerticalNavItems(auth.user?.role))
+const ops = useOperationsStore()
+const navItems = computed(() => getVerticalNavItems(auth.user?.role, ops.can))
+
+const roleChipLabel = computed(() => {
+  if (!auth.user)
+    return 'XPro workspace'
+
+  const roles = auth.user.role === 'admin' ? ops.staffMember?.roles : undefined
+
+  return roles?.length ? `Staff · ${roles.map(r => staffRoleLabels[r]).join(', ')}` : roleLabels[auth.user.role]
+})
 </script>
 
 <template>
@@ -38,7 +50,7 @@ const navItems = computed(() => getVerticalNavItems(auth.user?.role))
           size="small"
           variant="tonal"
         >
-          {{ auth.user ? roleLabels[auth.user.role] : 'XPro workspace' }}
+          {{ roleChipLabel }}
         </VChip>
 
         <VSpacer />

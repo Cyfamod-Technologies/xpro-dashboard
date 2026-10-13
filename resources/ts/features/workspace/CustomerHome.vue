@@ -23,7 +23,7 @@ const firstName = computed(() => auth.user?.name.split(' ')[0] ?? 'there')
         From your first brief to the final finish, keep your projects in one place.
       </p>
       <VBtn
-        to="/workspace/requests"
+        to="/requests"
         prepend-icon="tabler-clipboard-list"
       >
         View my requests
@@ -46,7 +46,7 @@ const firstName = computed(() => auth.user?.name.split(' ')[0] ?? 'there')
         lg="4"
       >
         <VCard
-          :to="{ path: '/workspace/requests', query: { service: service.name } }"
+          :to="{ path: '/requests', query: { service: service.name } }"
           class="h-100"
         >
           <VCardText>
@@ -83,7 +83,7 @@ const firstName = computed(() => auth.user?.name.split(' ')[0] ?? 'there')
           </p>
         </div>
         <VBtn
-          to="/workspace/messages"
+          to="/messages"
           variant="outlined"
         >
           Open messages

@@ -43,7 +43,7 @@ const firstName = computed(() => auth.user?.name.split(' ')[0] ?? 'there')
               Tell us about your services and service area, then share your documents for XPro review.
             </p>
             <VBtn
-              to="/workspace/verification"
+              to="/verification"
               prepend-icon="tabler-user-check"
             >
               View provider profile
@@ -71,7 +71,7 @@ const firstName = computed(() => auth.user?.name.split(' ')[0] ?? 'there')
               Keep your availability current so dispatch can coordinate the right work with you.
             </p>
             <VBtn
-              to="/workspace/availability"
+              to="/availability"
               variant="outlined"
             >
               View availability
@@ -86,7 +86,7 @@ const firstName = computed(() => auth.user?.name.split(' ')[0] ?? 'there')
           <h2 class="text-h5">
             Your job queue
           </h2><VBtn
-            to="/workspace/jobs"
+            to="/jobs"
             variant="text"
           >
             View jobs

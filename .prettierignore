@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+vendor
+
+# Build outputs
+dist
+dist-ssr
+public/build
+public/hot
+public/storage
+
+# Generated files
+resources/ts/plugins/iconify/icons.css
+public/mockServiceWorker.js
+typed-router.d.ts
+
+# Logs
+*.log
+logs
+
+# Lock files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Environment files
+.env*
+
+# Editor
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db

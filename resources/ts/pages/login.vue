@@ -39,7 +39,7 @@ const submit = async () => {
       return
     }
 
-    const redirect = typeof route.query.redirect === 'string' && (route.query.redirect === '/' || route.query.redirect.startsWith('/workspace/'))
+    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') && !route.query.redirect.startsWith('//') && !route.query.redirect.startsWith('/login') && !route.query.redirect.startsWith('/auth/')
       ? route.query.redirect
       : auth.homePath
 
@@ -57,6 +57,15 @@ const submit = async () => {
     title="Welcome back"
     subtitle="Sign in to request services, manage assignments or coordinate XPro operations."
   >
+    <VAlert
+      v-if="route.query.reason === 'staff-inactive'"
+      class="mb-5"
+      color="warning"
+      variant="tonal"
+    >
+      Your staff account is not active. Contact an XPro super admin.
+    </VAlert>
+
     <VAlert
       v-if="errorMessage"
       class="mb-5"
