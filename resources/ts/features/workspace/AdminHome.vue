@@ -1,8 +1,8 @@
 <script setup lang="ts">
 const areas = [
-  { title: 'Request intake', icon: 'tabler-clipboard-list', description: 'Review customer briefs and identify the next action.', to: '/workspace/requests', action: 'Open requests' },
-  { title: 'Provider review', icon: 'tabler-shield-check', description: 'Review profiles and verification documents before dispatch.', to: '/workspace/providers', action: 'Open providers' },
-  { title: 'Dispatch', icon: 'tabler-route', description: 'Coordinate assignments, provider responses and schedules.', to: '/workspace/dispatch', action: 'Open dispatch' },
+  { title: 'Request intake', icon: 'tabler-clipboard-list', description: 'Review customer briefs and identify the next action.', to: '/admin/requests', action: 'Open requests' },
+  { title: 'Provider review', icon: 'tabler-shield-check', description: 'Review profiles and verification documents before dispatch.', to: '/admin/providers', action: 'Open providers' },
+  { title: 'Dispatch', icon: 'tabler-route', description: 'Coordinate assignments, provider responses and schedules.', to: '/admin/dispatch', action: 'Open dispatch' },
 ]
 </script>
 
@@ -19,7 +19,7 @@ const areas = [
         </p>
       </div>
       <VBtn
-        to="/workspace/requests"
+        to="/admin/requests"
         prepend-icon="tabler-arrow-right"
       >
         Open intake queue
@@ -76,7 +76,7 @@ const areas = [
           <h2 class="text-h5">
             Recent activity
           </h2><VBtn
-            to="/workspace/audit"
+            to="/admin/audit"
             variant="text"
           >
             View history
