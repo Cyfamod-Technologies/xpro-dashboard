@@ -1,0 +1,28 @@
+// Write your overrides
+// Xpro product-level additions. Core template styling remains unchanged.
+.xpro-kicker {
+  color: rgb(var(--v-theme-secondary));
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.xpro-soft-surface {
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.08), rgba(var(--v-theme-secondary), 0.12));
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+// The supplied wordmark already includes the platform name.
+.app-logo .app-logo-title,
+.app-logo .app-title {
+  display: none;
+}
+
+.layout-vertical-nav-collapsed .layout-vertical-nav:not(.hovered) .app-logo img {
+  block-size: auto !important;
+  inline-size: 40px !important;
+}
