@@ -42,6 +42,12 @@ router.beforeEach(async to => {
   if (to.path === '/auth/mfa' && !auth.pendingMfa)
     return '/login'
 
+  if (auth.user && !isWorkspaceRole(auth.user.role)) {
+    auth.logout()
+
+    return '/login'
+  }
+
   if (to.meta.public) {
     if (to.meta.unauthenticatedOnly && auth.isAuthenticated)
       return auth.homePath
@@ -54,12 +60,6 @@ router.beforeEach(async to => {
       path: '/login',
       query: { redirect: to.fullPath },
     }
-  }
-
-  if (auth.user && !isWorkspaceRole(auth.user.role)) {
-    auth.logout()
-
-    return '/login'
   }
 
   if (to.path.startsWith('/workspace/')) {

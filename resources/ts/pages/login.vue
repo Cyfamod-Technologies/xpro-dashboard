@@ -39,7 +39,7 @@ const submit = async () => {
       return
     }
 
-    const redirect = typeof route.query.redirect === 'string' && (route.query.redirect === '/' || route.query.redirect.startsWith('/workspace/'))
+    const redirect = typeof route.query.redirect === 'string' && (route.query.redirect === '/' || route.query.redirect === '/request' || route.query.redirect.startsWith('/workspace/'))
       ? route.query.redirect
       : auth.homePath
 

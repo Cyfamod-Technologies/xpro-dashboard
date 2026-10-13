@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import CustomerHome from '@/features/workspace/CustomerHome.vue'
-import ProviderHome from '@/features/workspace/ProviderHome.vue'
-import AdminHome from '@/features/workspace/AdminHome.vue'
+import PublicHome from '@/features/discovery/PublicHome.vue'
+import WorkspaceOverview from '@/features/operations/WorkspaceOverview.vue'
 import { useAuthStore } from '@/stores/auth'
+
+definePage({ meta: { public: true, publicSite: true } })
 
 const auth = useAuthStore()
 </script>
 
 <template>
-  <CustomerHome v-if="auth.user?.role === 'customer'" />
-  <ProviderHome v-else-if="auth.user?.role === 'provider'" />
-  <AdminHome v-else-if="auth.user?.role === 'admin'" />
+  <WorkspaceOverview v-if="auth.isAuthenticated && auth.user?.role !== 'customer'" />
+  <PublicHome v-else />
 </template>

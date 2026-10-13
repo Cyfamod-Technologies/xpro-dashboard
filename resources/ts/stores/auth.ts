@@ -10,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const pendingMfa = ref<{ token: string; user: User } | null>(null)
 
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
-  const homePath = computed(() => isAuthenticated.value ? '/' : '/login')
+  const homePath = computed(() => isAuthenticated.value ? (user.value?.role === 'customer' ? '/workspace/overview' : '/') : '/login')
 
   async function login(payload: LoginPayload) {
     pendingMfa.value = null
