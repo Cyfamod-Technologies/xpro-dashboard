@@ -11,6 +11,8 @@ definePage({ meta: { layout: 'blank', public: true, unauthenticatedOnly: true } 
 const router = useRouter()
 const formRef = ref<VForm>()
 const form = reactive({ name: '', email: '', password: '', confirmPassword: '', accepted: false })
+const accountRole = ref<'customer' | 'provider'>('customer')
+const accountTypes = [{ title: 'Customer', value: 'customer' }, { title: 'Provider', value: 'provider' }]
 const visible = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -24,7 +26,7 @@ const submit = async () => {
 
   loading.value = true
   try {
-    await authApi.registerViewer({ name: form.name, email: form.email, password: form.password })
+    await authApi.registerAccount({ name: form.name, email: form.email, password: form.password, role: accountRole.value })
     await router.push({ path: '/auth/verify-email', query: { email: form.email } })
   }
   catch (error) { errorMessage.value = getErrorMessage(error) }
@@ -34,9 +36,9 @@ const submit = async () => {
 
 <template>
   <AuthShell
-    eyebrow="Read-only public data"
-    title="Create a Budget Viewer account"
-    subtitle="Register to explore approved project and allocation information. Manager accounts are invitation-only."
+    eyebrow="Join XPro"
+    title="Create your XPro account"
+    subtitle="Request a service as a customer, or join XPro as a service provider. Staff accounts are managed internally."
   >
     <VAlert
       v-if="errorMessage"
@@ -51,6 +53,13 @@ const submit = async () => {
       @submit.prevent="submit"
     >
       <VRow>
+        <VCol cols="12">
+          <AppSelect
+            v-model="accountRole"
+            label="Account type"
+            :items="accountTypes"
+          />
+        </VCol>
         <VCol cols="12">
           <AppTextField
             v-model="form.name"
@@ -110,7 +119,7 @@ const submit = async () => {
             type="submit"
             :loading="loading"
           >
-            Create viewer account
+            Create account
           </VBtn>
         </VCol>
       </VRow>

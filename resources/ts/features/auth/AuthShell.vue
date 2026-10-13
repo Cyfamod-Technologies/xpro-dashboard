@@ -1,39 +1,49 @@
 <script setup lang="ts">
-import { XPRO_BRAND } from "@/utils/branding";
+import { XPRO_BRAND } from '@/utils/branding'
 
 defineProps<{
-  title: string;
-  subtitle: string;
-  eyebrow?: string;
-}>();
+  title: string
+  subtitle: string
+  eyebrow?: string
+}>()
 </script>
 
 <template>
-  <VRow no-gutters class="auth-shell bg-surface">
-    <VCol cols="12" md="6" lg="7" class="auth-story d-none d-md-flex">
+  <VRow
+    no-gutters
+    class="auth-shell bg-surface"
+  >
+    <VCol
+      cols="12"
+      md="6"
+      lg="7"
+      class="auth-story d-none d-md-flex"
+    >
       <div class="auth-story__content">
         <div class="d-flex align-center gap-3 mb-12">
           <div class="xpro-brand-mark xpro-brand-mark--large">
             <img
               :src="XPRO_BRAND.logo"
               alt="Xpro — Excellent Professionals and Procurement"
-            />
+            >
           </div>
-          <!-- <div>
+          <!--
+            <div>
             <div class="text-caption text-white opacity-80">
-              Operations dashboard
+            Operations dashboard
             </div>
-          </div> -->
+            </div>
+          -->
         </div>
 
         <div class="xpro-kicker text-white mb-4">
           {{ XPRO_BRAND.fullName }}
         </div>
         <h1 class="text-h2 text-white text-balance mb-5">
-          Manage your projects, services and operations.
+          Good work starts with the right connection.
         </h1>
         <p class="text-h6 text-white opacity-80 text-balance mb-10">
-          Your workspace for design, construction, hire and procurement.
+          Request a service, deliver your expertise or coordinate the work. Your XPro workspace brings it together.
         </p>
 
         <div class="d-flex flex-wrap gap-3">
@@ -44,14 +54,23 @@ defineProps<{
           >
             Operations workspace
           </VChip>
-          <VChip color="white" variant="outlined" prepend-icon="tabler-map-pin">
+          <VChip
+            color="white"
+            variant="outlined"
+            prepend-icon="tabler-map-pin"
+          >
             {{ XPRO_BRAND.location }}
           </VChip>
         </div>
       </div>
     </VCol>
 
-    <VCol cols="12" md="6" lg="5" class="d-flex align-center justify-center">
+    <VCol
+      cols="12"
+      md="6"
+      lg="5"
+      class="d-flex align-center justify-center"
+    >
       <div class="auth-panel pa-6 pa-sm-10">
         <RouterLink
           to="/login"
@@ -61,7 +80,7 @@ defineProps<{
             <img
               :src="XPRO_BRAND.logo"
               alt="Xpro — Excellent Professionals and Procurement"
-            />
+            >
           </div>
         </RouterLink>
 

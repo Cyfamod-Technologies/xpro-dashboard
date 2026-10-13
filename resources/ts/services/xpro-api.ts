@@ -4,10 +4,10 @@ import type { AddEvidencePayload, Allocation, ApiEnvelope, AuditEvent, CreatePro
 export const authApi = {
   login: (payload: LoginPayload) => $api<ApiEnvelope<LoginResponse>>('/auth/login', { method: 'POST', body: payload }),
   verifyMfa: (code: string) => $api<ApiEnvelope<{ verified: boolean }>>('/auth/mfa/challenge', { method: 'POST', body: { code } }),
-  registerViewer: (payload: { name: string; email: string; password: string }) => $api<ApiEnvelope<{ email: string; name: string; status: string }>>('/auth/viewer/register', { method: 'POST', body: payload }),
-  verifyEmail: (token: string) => $api<ApiEnvelope<{ verified: boolean }>>('/auth/email/verify', { method: 'POST', body: { token } }),
+  registerAccount: (payload: { name: string; email: string; password: string; role: 'customer' | 'provider' }) => $api<ApiEnvelope<{ email: string; name: string; status: string }>>('/auth/register', { method: 'POST', body: payload }),
+  verifyEmail: (token: string, email: string) => $api<ApiEnvelope<{ verified: boolean }>>('/auth/email/verify', { method: 'POST', body: { token, email } }),
   forgotPassword: (email: string) => $api<ApiEnvelope<{ sent: boolean }>>('/auth/password/forgot', { method: 'POST', body: { email } }),
-  resetPassword: (payload: { token: string; password: string }) => $api<ApiEnvelope<{ reset: boolean }>>('/auth/password/reset', { method: 'POST', body: payload }),
+  resetPassword: (payload: { token: string; password: string; email: string }) => $api<ApiEnvelope<{ reset: boolean }>>('/auth/password/reset', { method: 'POST', body: payload }),
   me: () => $api<ApiEnvelope<User>>('/me'),
 }
 

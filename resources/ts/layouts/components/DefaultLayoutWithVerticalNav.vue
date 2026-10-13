@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { getVerticalNavItems } from '@/navigation/vertical'
 import { useAuthStore } from '@/stores/auth'
+import { roleLabels } from '@/types/domain'
 import { themeConfig } from '@themeConfig'
 
 // Components
 import Footer from '@/layouts/components/Footer.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
-import ViewerStateSwitcher from '@/layouts/components/ViewerStateSwitcher.vue'
 import NavBarI18n from '@core/components/I18n.vue'
 
 // @layouts plugin
@@ -18,10 +18,6 @@ const navItems = computed(() => getVerticalNavItems(auth.user?.role))
 
 <template>
   <VerticalNavLayout :nav-items="navItems">
-    <template #before-vertical-nav-items>
-      <ViewerStateSwitcher v-if="auth.user?.role === 'budget_viewer'" />
-    </template>
-
     <!-- 👉 navbar -->
     <template #navbar="{ toggleVerticalOverlayNavActive }">
       <div class="d-flex h-100 align-center">
@@ -42,7 +38,7 @@ const navItems = computed(() => getVerticalNavItems(auth.user?.role))
           size="small"
           variant="tonal"
         >
-          Prototype data
+          {{ auth.user ? roleLabels[auth.user.role] : 'XPro workspace' }}
         </VChip>
 
         <VSpacer />

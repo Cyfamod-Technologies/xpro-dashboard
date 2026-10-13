@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import navItems from '@/navigation/horizontal'
+import { getHorizontalNavItems } from '@/navigation/horizontal'
+import { useAuthStore } from '@/stores/auth'
 
 import { themeConfig } from '@themeConfig'
 
@@ -9,6 +10,9 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 import NavBarI18n from '@core/components/I18n.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
+
+const auth = useAuthStore()
+const navItems = computed(() => getHorizontalNavItems(auth.user?.role))
 </script>
 
 <template>

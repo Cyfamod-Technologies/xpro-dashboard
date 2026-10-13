@@ -1,25 +1,14 @@
-<template>
-  <div>
-    <VCard
-      class="mb-6"
-      title="Kick start your project 🚀"
-    >
-      <VCardText>All the best for your new project.</VCardText>
-      <VCardText>
-        Please make sure to read our <a
-          href="https://demos.pixinvent.com/vuexy-vuejs-admin-template/documentation/"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-decoration-none"
-        >
-          Template Documentation
-        </a> to understand where to go from here and how to use our template.
-      </VCardText>
-    </VCard>
+<script setup lang="ts">
+import CustomerHome from '@/features/workspace/CustomerHome.vue'
+import ProviderHome from '@/features/workspace/ProviderHome.vue'
+import AdminHome from '@/features/workspace/AdminHome.vue'
+import { useAuthStore } from '@/stores/auth'
 
-    <VCard title="Want to integrate JWT? 🔒">
-      <VCardText>We carefully crafted JWT flow so you can implement JWT with ease and with minimum efforts.</VCardText>
-      <VCardText>Please read our  JWT Documentation to get more out of JWT authentication.</VCardText>
-    </VCard>
-  </div>
+const auth = useAuthStore()
+</script>
+
+<template>
+  <CustomerHome v-if="auth.user?.role === 'customer'" />
+  <ProviderHome v-else-if="auth.user?.role === 'provider'" />
+  <AdminHome v-else-if="auth.user?.role === 'admin'" />
 </template>

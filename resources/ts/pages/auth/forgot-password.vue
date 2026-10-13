@@ -83,7 +83,7 @@ const submit = async () => {
       v-else
       block
       size="large"
-      to="/auth/reset-password?token=prototype-token"
+      :to="{ path: '/auth/reset-password', query: { token: 'prototype-token', email } }"
     >
       Open prototype reset link
     </VBtn>

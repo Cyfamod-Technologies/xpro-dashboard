@@ -9,13 +9,14 @@ const route = useRoute()
 const verified = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+const resent = ref(false)
 const email = computed(() => typeof route.query.email === 'string' ? route.query.email : 'your email address')
 
 const verify = async () => {
   loading.value = true
   errorMessage.value = ''
   try {
-    await authApi.verifyEmail('prototype-verification-token')
+    await authApi.verifyEmail('prototype-verification-token', email.value)
     verified.value = true
   }
   catch (error) {
@@ -31,7 +32,7 @@ const verify = async () => {
   <AuthShell
     eyebrow="Email verification"
     :title="verified ? 'Email verified' : 'Check your inbox'"
-    :subtitle="verified ? 'Your Budget Viewer account is ready.' : `We sent a verification link to ${email}.`"
+    :subtitle="verified ? 'Your XPro account is ready. Sign in to open your workspace.' : `We sent a verification link to ${email}.`"
   >
     <VAlert
       v-if="errorMessage"
@@ -73,8 +74,9 @@ const verify = async () => {
       <VBtn
         variant="text"
         size="small"
+        @click="resent = true"
       >
-        Resend verification email
+        {{ resent ? 'Verification link ready - use the button above' : 'Resend verification email' }}
       </VBtn>
     </div>
   </AuthShell>
