@@ -39,7 +39,7 @@ const submit = async () => {
       return
     }
 
-    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
+    const redirect = typeof route.query.redirect === 'string' && (route.query.redirect === '/' || route.query.redirect.startsWith('/workspace/'))
       ? route.query.redirect
       : auth.homePath
 
@@ -55,7 +55,7 @@ const submit = async () => {
 <template>
   <AuthShell
     title="Welcome back"
-    subtitle="Sign in to manage operations or explore approved public budget information."
+    subtitle="Sign in to request services, manage assignments or coordinate XPro operations."
   >
     <VAlert
       v-if="errorMessage"
@@ -77,7 +77,7 @@ const submit = async () => {
             autofocus
             label="Email address"
             type="email"
-            placeholder="name@organisation.org"
+            placeholder="you@example.com"
             autocomplete="email"
             :rules="emailRules"
           />
@@ -123,12 +123,12 @@ const submit = async () => {
     </VForm>
 
     <p class="text-center text-body-2 mt-6 mb-6">
-      Want read-only budget access?
+      New to XPro?
       <RouterLink
         to="/auth/signup"
         class="text-primary font-weight-semibold text-decoration-none"
       >
-        Create a viewer account
+        Create a customer or provider account
       </RouterLink>
     </p>
 

@@ -1,21 +1,43 @@
 import type { Allocation, AuditEvent, NotificationItem, Program, Submission, TrackedProject, User } from '@/types/domain'
 
 export const demoCredentials = [
-  { role: 'Super Admin', email: 'admin@xpro.test', password: 'Password123!' },
-  { role: 'Manager', email: 'manager@xpro.test', password: 'Password123!' },
-  { role: 'Budget Viewer', email: 'viewer@xpro.test', password: 'Password123!' },
+  { role: 'Customer', email: 'customer@xpro.test', password: 'Password123!' },
+  { role: 'Provider', email: 'provider@xpro.test', password: 'Password123!' },
+  { role: 'Admin / Dispatch', email: 'admin@xpro.test', password: 'Password123!' },
 ] as const
 
 export const users: User[] = [
   {
+    id: 'usr-customer',
+    name: 'Ada Okafor',
+    email: 'customer@xpro.test',
+    role: 'customer',
+    status: 'active',
+    title: 'XPro Customer',
+    initials: 'AO',
+    scopes: ['Own requests'],
+    mfaRequired: false,
+  },
+  {
+    id: 'usr-provider',
+    name: 'Tunde Bakare',
+    email: 'provider@xpro.test',
+    role: 'provider',
+    status: 'active',
+    title: 'XPro Service Provider',
+    initials: 'TB',
+    scopes: ['Own profile', 'Assigned jobs'],
+    mfaRequired: false,
+  },
+  {
     id: 'usr-admin',
     name: 'Amara Okafor',
     email: 'admin@xpro.test',
-    role: 'super_admin',
+    role: 'admin',
     status: 'active',
     title: 'Platform Administrator',
     initials: 'AO',
-    scopes: ['Niger State', 'All programs'],
+    scopes: ['Requests', 'Providers', 'Dispatch'],
     mfaRequired: false,
   },
   {

@@ -2,7 +2,7 @@
 export const XPRO_BRAND = {
   name: 'Xpro',
   fullName: 'Excellent Professionals and Procurement',
-  logo: '/images/xpro-logo.png',
+  logo: '/images/xpro-logo-transparent.png',
   website: 'https://xpro.ng',
   email: 'admin@xpro.ng',
   location: 'Abuja, Nigeria',

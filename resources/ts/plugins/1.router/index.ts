@@ -6,6 +6,7 @@ import type { RouteRecordRaw } from 'vue-router/auto'
 import { createRouter, createWebHistory } from 'vue-router/auto'
 import { store } from '@/plugins/2.pinia'
 import { useAuthStore } from '@/stores/auth'
+import { isWorkspaceRole, workspaceSections } from '@/features/workspace/config'
 
 function recursiveLayouts(route: RouteRecordRaw): RouteRecordRaw {
   if (route.children) {
@@ -36,9 +37,6 @@ router.beforeEach(async to => {
 
   await auth.hydrate()
 
-  if (to.path === '/')
-    return auth.isAuthenticated ? auth.homePath : '/login'
-
   // The MFA page is only valid after the mock API has accepted staff credentials.
   // Guard it before rendering so a direct visit never flashes the challenge UI.
   if (to.path === '/auth/mfa' && !auth.pendingMfa)
@@ -56,6 +54,23 @@ router.beforeEach(async to => {
       path: '/login',
       query: { redirect: to.fullPath },
     }
+  }
+
+  if (auth.user && !isWorkspaceRole(auth.user.role)) {
+    auth.logout()
+
+    return '/login'
+  }
+
+  if (to.path.startsWith('/workspace/')) {
+    const section = 'section' in to.params ? String(to.params.section) : ''
+    const role = auth.user?.role
+
+    if (!isWorkspaceRole(role) || !workspaceSections[role].some(item => item.id === section))
+      return '/access-denied'
+  }
+  else if (!['/', '/access-denied'].includes(to.path)) {
+    return '/access-denied'
   }
 
   if (to.meta.roles && !auth.hasRole(to.meta.roles))

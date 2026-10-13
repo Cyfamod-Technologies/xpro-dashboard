@@ -3,12 +3,6 @@ import { defineStore } from 'pinia'
 import { authApi } from '@/services/xpro-api'
 import type { LoginPayload, User, UserRole } from '@/types/domain'
 
-const homeByRole: Record<UserRole, string> = {
-  super_admin: '/admin/dashboard',
-  manager: '/dashboard',
-  budget_viewer: '/budget',
-}
-
 export const useAuthStore = defineStore('auth', () => {
   const token = useCookie<string | null>('accessToken')
   const user = ref<User | null>(null)
@@ -16,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const pendingMfa = ref<{ token: string; user: User } | null>(null)
 
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
-  const homePath = computed(() => user.value ? homeByRole[user.value.role] : '/login')
+  const homePath = computed(() => isAuthenticated.value ? '/' : '/login')
 
   async function login(payload: LoginPayload) {
     pendingMfa.value = null

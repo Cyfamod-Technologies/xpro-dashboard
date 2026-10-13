@@ -1,0 +1,63 @@
+import type { UserRole } from '@/types/domain'
+
+export type WorkspaceRole = 'customer' | 'provider' | 'admin'
+
+export interface WorkspaceSection {
+  id: string
+  title: string
+  icon: string
+  description: string
+  emptyMessage: string
+}
+
+export const isWorkspaceRole = (role?: UserRole): role is WorkspaceRole =>
+  role === 'customer' || role === 'provider' || role === 'admin'
+
+const section = (id: string, title: string, icon: string, description: string, emptyMessage: string): WorkspaceSection =>
+  ({ id, title, icon, description, emptyMessage })
+
+const account = section('account', 'Account', 'tabler-user', 'Your personal details and account preferences.', 'Your account details are shown below.')
+const settings = section('settings', 'Settings', 'tabler-settings', 'Manage your account and workspace preferences.', 'Your preferences will appear here.')
+const messages = section('messages', 'Messages', 'tabler-message-circle', 'Stay connected with the XPro team about your work.', 'Your conversations with XPro will appear here.')
+const quotes = section('quotes', 'Quotes', 'tabler-file-invoice', 'Keep scope, pricing and quote decisions in one place.', 'Quotes will appear here when a request is ready for pricing.')
+const schedule = section('schedule', 'Schedule', 'tabler-calendar', 'Coordinate dates and keep track of confirmed appointments.', 'Your upcoming appointments will appear here.')
+
+export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
+  customer: [
+    section('requests', 'My requests', 'tabler-clipboard-list', 'Follow your requests from the initial brief to completion.', 'Your service requests will appear here.'),
+    quotes,
+    schedule,
+    messages,
+    settings,
+    account,
+  ],
+  provider: [
+    section('jobs', 'My jobs', 'tabler-briefcase', 'Review offers and keep your assigned jobs moving.', 'New assignments and accepted jobs will appear here.'),
+    section('verification', 'Profile & verification', 'tabler-shield-check', 'Introduce your services and submit your verification documents.', 'Your provider profile and verification documents will appear here.'),
+    section('availability', 'Availability', 'tabler-clock', 'Let dispatch know when you are ready to take on work.', 'Your availability preferences will appear here.'),
+    schedule,
+    messages,
+    settings,
+    account,
+  ],
+  admin: [
+    section('requests', 'Requests', 'tabler-clipboard-list', 'Review incoming briefs and coordinate the next action.', 'Customer requests awaiting review will appear here.'),
+    section('providers', 'Providers', 'tabler-users', 'Review profiles, verification documents and service areas.', 'Provider submissions and approved profiles will appear here.'),
+    section('dispatch', 'Dispatch', 'tabler-route', 'Match verified providers to requests and follow their responses.', 'Assignment offers and dispatch decisions will appear here.'),
+    quotes,
+    schedule,
+    messages,
+    section('audit', 'Activity history', 'tabler-history', 'Follow the decisions made across requests, quotes and jobs.', 'Operational actions and their history will appear here.'),
+    settings,
+    account,
+  ],
+}
+
+export const serviceLines = [
+  { name: 'Design', icon: 'tabler-ruler-2', description: 'Architectural, structural and interior plans.' },
+  { name: 'Construction', icon: 'tabler-building', description: 'Construction, finishes and renovation.' },
+  { name: 'Hire', icon: 'tabler-tools', description: 'Professionals, trades and heavy equipment.' },
+  { name: 'Procurement', icon: 'tabler-package', description: 'Materials and fittings for your site.' },
+  { name: 'Facility management', icon: 'tabler-home-cog', description: 'Maintenance and property support.' },
+  { name: 'Waste management', icon: 'tabler-recycle', description: 'Waste collection and site clearance.' },
+]

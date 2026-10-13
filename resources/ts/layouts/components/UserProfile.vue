@@ -22,6 +22,9 @@ const handleLogout = async () => {
   >
     <VAvatar
       class="cursor-pointer"
+      role="button"
+      tabindex="0"
+      aria-label="Open account menu"
       color="primary"
       variant="tonal"
     >
@@ -65,7 +68,7 @@ const handleLogout = async () => {
           <VDivider class="my-2" />
 
           <!-- 👉 Profile -->
-          <VListItem link>
+          <VListItem to="/workspace/account">
             <template #prepend>
               <VIcon
                 class="me-2"
@@ -78,7 +81,7 @@ const handleLogout = async () => {
           </VListItem>
 
           <!-- 👉 Settings -->
-          <VListItem link>
+          <VListItem to="/workspace/settings">
             <template #prepend>
               <VIcon
                 class="me-2"
@@ -94,7 +97,13 @@ const handleLogout = async () => {
           <VDivider class="my-2" />
 
           <!-- 👉 Logout -->
-          <VListItem @click="handleLogout">
+          <VListItem
+            role="button"
+            tabindex="0"
+            @click="handleLogout"
+            @keydown.enter="handleLogout"
+            @keydown.space.prevent="handleLogout"
+          >
             <template #prepend>
               <VIcon
                 class="me-2"

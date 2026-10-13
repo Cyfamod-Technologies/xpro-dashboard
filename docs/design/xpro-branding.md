@@ -26,9 +26,10 @@ future theme switching. Keep loader branding in `index.html` in sync.
 
 ## Mark
 
-`public/images/xpro-logo.png` is the supplied platform logo, used without
-alteration in navigation, authentication, the loader and browser icon. Preserve
-its proportions and white backing. Hide duplicate platform titles beside it.
+`public/images/xpro-logo-transparent.png` is the platform logo with its white
+background removed, used in navigation, authentication, the loader and browser
+icon. The supplied original remains in `public/images/xpro-logo.png`. Preserve
+its proportions and transparency; do not add a white CSS backing. Hide duplicate platform titles beside it.
 
 ## Public company details
 

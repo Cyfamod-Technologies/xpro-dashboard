@@ -29,7 +29,7 @@ const submit = async () => {
 
   loading.value = true
   try {
-    await authApi.resetPassword({ token: String(route.query.token ?? ''), password: form.password })
+    await authApi.resetPassword({ token: String(route.query.token ?? ''), password: form.password, email: String(route.query.email ?? '') })
     reset.value = true
   }
   catch (error) {
@@ -60,7 +60,7 @@ const submit = async () => {
       variant="tonal"
       class="mb-6"
     >
-      Your prototype password has been reset and previous sessions would now be revoked.
+      Your password has been updated for this preview. You can sign in with the new password until the preview is reloaded.
     </VAlert>
     <VForm
       v-if="!reset"

@@ -1,4 +1,4 @@
-export type UserRole = 'super_admin' | 'manager' | 'budget_viewer'
+export type UserRole = 'admin' | 'customer' | 'provider' | 'super_admin' | 'manager' | 'budget_viewer'
 export type AccountStatus = 'active' | 'invited' | 'unverified' | 'suspended'
 export type ApprovalStatus = 'draft' | 'submitted' | 'changes_requested' | 'rejected' | 'published'
 export type TrackingStatus = 'not_started' | 'in_progress' | 'stalled' | 'action_required' | 'action_in_progress' | 'completed'
@@ -160,6 +160,9 @@ export interface ReviewDecisionPayload {
 }
 
 export const roleLabels: Record<UserRole, string> = {
+  admin: 'Admin / Dispatch',
+  customer: 'Customer',
+  provider: 'Provider',
   super_admin: 'Super Admin',
   manager: 'Manager',
   budget_viewer: 'Budget Viewer',

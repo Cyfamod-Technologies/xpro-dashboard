@@ -4,6 +4,7 @@ import { allocations, auditEvents, demoCredentials, notifications, programs, pro
 import type { AddEvidencePayload, CreateProjectPayload, DashboardMetric, ReviewDecisionPayload, Submission, TrackedProject, User, UserRole } from '@/types/domain'
 
 const api = '*/api'
+const accountPasswords = new Map<string, string>(demoCredentials.map(item => [item.email, item.password]))
 
 const envelope = <T>(data: T, meta?: Record<string, unknown>) => HttpResponse.json({ data, meta })
 
@@ -65,11 +66,18 @@ export const handlers = [
       return validationError('Enter a valid email address and password.')
 
     const normalizedEmail = String(payload.email).trim().toLowerCase()
-    const match = demoCredentials.find(item => item.email === normalizedEmail && item.password === payload.password)
-    const user = users.find(item => item.email === match?.email)
+
+    const user = accountPasswords.get(normalizedEmail) === payload.password
+      ? users.find(item => item.email === normalizedEmail)
+      : undefined
 
     if (!user)
       return HttpResponse.json({ error: { code: 'INVALID_CREDENTIALS', message: 'The email or password is incorrect.' } }, { status: 422 })
+
+    if (user.status === 'unverified')
+      return validationError('Verify your email before signing in.')
+    if (user.status !== 'active')
+      return validationError('This account is not currently active.')
 
     return envelope({ token: `mock-token-${user.id}`, user, requiresMfa: user.mfaRequired })
   }),
@@ -84,10 +92,10 @@ export const handlers = [
     return envelope({ verified: true })
   }),
 
-  http.post(`${api}/auth/viewer/register`, async ({ request }) => {
+  http.post(`${api}/auth/register`, async ({ request }) => {
     await delay(600)
 
-    const payload = await request.json() as { name?: string; email?: string; password?: string }
+    const payload = await request.json() as { name?: string; email?: string; password?: string; role?: string }
     const name = String(payload.name ?? '').trim()
     const email = String(payload.email ?? '').trim().toLowerCase()
 
@@ -100,11 +108,35 @@ export const handlers = [
     if (users.some(user => user.email === email))
       return validationError('An account already exists for this email address.')
 
+    if (payload.role !== 'customer' && payload.role !== 'provider')
+      return validationError('Choose a customer or provider account.')
+
+    users.push({
+      id: `usr-${crypto.randomUUID()}`,
+      name,
+      email,
+      role: payload.role,
+      status: 'unverified',
+      title: payload.role === 'customer' ? 'XPro Customer' : 'XPro Service Provider',
+      initials: name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase(),
+      scopes: [],
+      mfaRequired: false,
+    })
+    accountPasswords.set(email, String(payload.password))
+
     return envelope({ email, name, status: 'unverified' })
   }),
 
-  http.post(`${api}/auth/email/verify`, async () => {
+  http.post(`${api}/auth/email/verify`, async ({ request }) => {
     await delay(450)
+
+    const payload = await request.json() as { token?: string; email?: string }
+    const user = users.find(item => item.email === String(payload.email ?? '').trim().toLowerCase())
+
+    if (payload.token !== 'prototype-verification-token' || !user || user.status !== 'unverified')
+      return validationError('This verification link is invalid or has already been used.')
+
+    user.status = 'active'
 
     return envelope({ verified: true })
   }),
@@ -122,11 +154,18 @@ export const handlers = [
   http.post(`${api}/auth/password/reset`, async ({ request }) => {
     await delay(450)
 
-    const payload = await request.json() as { token?: string; password?: string }
+    const payload = await request.json() as { token?: string; password?: string; email?: string }
     if (payload.token !== 'prototype-token')
       return validationError('This password reset link is invalid or has expired.')
     if (!isStrongPassword(payload.password))
       return validationError('Use a stronger password to protect your account.')
+
+    const email = String(payload.email ?? '').trim().toLowerCase()
+
+    if (!accountPasswords.has(email))
+      return validationError('This password reset link is invalid or has expired.')
+
+    accountPasswords.set(email, String(payload.password))
 
     return envelope({ reset: true })
   }),

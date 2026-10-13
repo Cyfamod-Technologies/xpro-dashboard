@@ -12,7 +12,7 @@ export const { themeConfig, layoutConfig } = defineThemeConfig({
     logo: h('img', {
       src: XPRO_BRAND.logo,
       alt: 'Xpro logo',
-      style: 'display:block; inline-size:148px; block-size:64px; object-fit:contain; background:white; border-radius:4px;',
+      style: 'display:block; inline-size:148px; block-size:64px; object-fit:contain; border-radius:4px;',
     }),
     contentWidth: ContentWidth.Boxed,
     contentLayoutNav: AppContentLayoutNav.Vertical,
