@@ -32,6 +32,7 @@ const account = section(
   'Your personal details and account preferences.',
   'Your account details are shown below.',
 )
+
 const settings = section(
   'settings',
   'Settings',
@@ -39,6 +40,7 @@ const settings = section(
   'Manage your account and workspace preferences.',
   'Your preferences will appear here.',
 )
+
 const messages = section(
   'messages',
   'Messages',
@@ -46,6 +48,7 @@ const messages = section(
   'Stay connected with the XPro team about your work.',
   'Your conversations with XPro will appear here.',
 )
+
 const quotes = section(
   'quotes',
   'Quotes',
@@ -53,6 +56,7 @@ const quotes = section(
   'Keep scope, pricing and quote decisions in one place.',
   'Quotes will appear here when a request is ready for pricing.',
 )
+
 const schedule = section(
   'schedule',
   'Schedule',
