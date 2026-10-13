@@ -1,18 +1,32 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
+import { isWorkspaceRole, sectionPath } from '@/features/workspace/config'
 import { statusLabels, when } from '@/features/operations/types'
+import { isUnclaimedOverdue } from '@/features/operations/staff'
+import { pendingApprovals } from '@/features/operations/workflow'
 
 const ops = useOperationsStore()
 const role = computed(() => ops.actor?.role)
 
-const counters = computed(() => [
+const isOpen = (status: string) => !['closed', 'cancelled'].includes(status)
+
+const adminCounters = computed<{ label: string; value: number; to?: string }[]>(() => [
+  { label: 'Awaiting approval', value: pendingApprovals(ops.state).length, to: '/admin/approvals' },
+  { label: 'Unclaimed requests', value: ops.requests.filter(item => !item.staffOwnerId && isOpen(item.status)).length },
+  { label: 'Unclaimed over 2 hours', value: ops.requests.filter(item => isUnclaimedOverdue(item)).length },
+  { label: 'My open requests', value: ops.requests.filter(item => item.staffOwnerId === ops.actor?.id && isOpen(item.status)).length },
+])
+
+const counters = computed<{ label: string; value: number; to?: string }[]>(() => [
   { label: role.value === 'provider' ? 'Assigned jobs' : 'Active requests', value: ops.requests.filter(item => !['closed', 'cancelled'].includes(item.status)).length },
   { label: 'Quotes awaiting response', value: ops.requests.filter(item => item.quotes.some(quote => quote.status === 'sent')).length },
   { label: 'Confirmed schedules', value: ops.requests.filter(item => item.schedules.at(-1)?.status === 'confirmed' && !['closed', 'cancelled'].includes(item.status)).length },
   { label: role.value === 'admin' ? 'Providers pending review' : 'Unread updates', value: role.value === 'admin' ? ops.state.providers.filter(item => item.verification === 'pending').length : ops.notifications.filter(item => !item.read).length },
+  ...(role.value === 'admin' ? adminCounters.value : []),
 ])
 
-const requestSection = computed(() => role.value === 'provider' ? 'jobs' : 'requests')
+const pathFor = (id: string) => isWorkspaceRole(role.value) ? sectionPath(role.value, id) : '/'
+const requestPath = computed(() => pathFor(role.value === 'provider' ? 'jobs' : 'requests'))
 </script>
 
 <template>
@@ -40,7 +54,7 @@ const requestSection = computed(() => role.value === 'provider' ? 'jobs' : 'requ
       cols="6"
       md="3"
     >
-      <VCard>
+      <VCard :to="counter.to">
         <VCardText>
           <div class="text-h3 text-primary mb-2">
             {{ counter.value }}
@@ -58,7 +72,7 @@ const requestSection = computed(() => role.value === 'provider' ? 'jobs' : 'requ
     variant="tonal"
   >
     Profile: {{ ops.profile?.verification.replaceAll('_', ' ') ?? 'not submitted' }}. {{ ops.profile?.reviewNote }} <VBtn
-      to="/workspace/verification"
+      to="/verification"
       size="small"
       variant="text"
     >
@@ -69,20 +83,20 @@ const requestSection = computed(() => role.value === 'provider' ? 'jobs' : 'requ
     v-if="role === 'admin'"
     class="d-flex flex-wrap gap-3 mb-6"
   >
-    <VBtn to="/workspace/requests">
+    <VBtn to="/admin/requests">
       Review requests
     </VBtn><VBtn
-      to="/workspace/providers"
+      to="/admin/providers"
       variant="outlined"
     >
       Review providers
     </VBtn><VBtn
-      to="/workspace/dispatch"
+      to="/admin/dispatch"
       variant="outlined"
     >
       Open dispatch
     </VBtn><VBtn
-      to="/workspace/audit"
+      to="/admin/audit"
       variant="text"
     >
       Activity history
@@ -94,7 +108,7 @@ const requestSection = computed(() => role.value === 'provider' ? 'jobs' : 'requ
         <h2 class="text-h5">
           {{ role === 'provider' ? 'Your job queue' : 'Recent requests' }}
         </h2><VBtn
-          :to="`/workspace/${requestSection}`"
+          :to="requestPath"
           variant="text"
         >
           View all
@@ -103,7 +117,7 @@ const requestSection = computed(() => role.value === 'provider' ? 'jobs' : 'requ
         <VListItem
           v-for="request in ops.requests.slice(0, 5)"
           :key="request.id"
-          :to="{ path: `/workspace/${requestSection}`, query: { request: request.id } }"
+          :to="{ path: requestPath, query: { request: request.id } }"
           :title="request.title"
           :subtitle="`${request.id} · ${request.service} · ${request.city}`"
           class="py-3"

@@ -3,12 +3,16 @@ import { useOperationsStore } from '@/stores/operations'
 import type { Channel, ServiceRequest } from '@/features/operations/types'
 import { when } from '@/features/operations/types'
 import { visibleMessages } from '@/features/operations/workflow'
+import { messageAuthorLabel } from '@/features/operations/staff'
 import { prepareFiles } from '@/features/operations/files'
 import Attachments from '@/features/operations/Attachments.vue'
 
 const props = defineProps<{ request: ServiceRequest }>()
 const ops = useOperationsStore()
-const channel = ref<Channel>(ops.actor?.role === 'provider' ? 'provider' : 'customer')
+const channelOptions: { title: string; value: Channel }[] = [{ title: 'Customer ↔ XPro', value: 'customer' }, { title: 'Provider ↔ XPro', value: 'provider' }, { title: 'Internal XPro notes', value: 'internal' }]
+const allowedChannels = computed(() => channelOptions.filter(item => ops.can(`message.${item.value}`)))
+const canSend = computed(() => ops.actor?.role !== 'admin' || allowedChannels.value.length > 0)
+const channel = ref<Channel>(ops.actor?.role === 'provider' ? 'provider' : ops.actor?.role === 'admin' ? allowedChannels.value[0]?.value ?? 'internal' : 'customer')
 const text = ref('')
 const files = ref<File[]>([])
 const messages = computed(() => ops.actor ? visibleMessages(props.request, ops.actor, channel.value) : [])
@@ -32,7 +36,7 @@ const send = async () => {
         v-if="ops.actor?.role === 'admin'"
         v-model="channel"
         label="Conversation audience"
-        :items="[{ title: 'Customer ↔ XPro', value: 'customer' }, { title: 'Provider ↔ XPro', value: 'provider' }, { title: 'Internal XPro notes', value: 'internal' }]"
+        :items="allowedChannels"
       />
       <VAlert
         variant="tonal"
@@ -47,7 +51,7 @@ const send = async () => {
         class="message mb-4 pa-4 rounded"
       >
         <div class="d-flex justify-space-between flex-wrap gap-2 mb-2">
-          <strong>{{ message.author }}</strong><small class="text-medium-emphasis">{{ when(message.createdAt) }}</small>
+          <strong>{{ ops.actor ? messageAuthorLabel(message, ops.actor.role) : message.author }}</strong><small class="text-medium-emphasis">{{ when(message.createdAt) }}</small>
         </div><p class="message-text mb-0">
           {{ message.text }}
         </p><Attachments :files="message.attachments" />
@@ -58,22 +62,24 @@ const send = async () => {
       >
         No messages in this conversation yet.
       </p>
-      <VTextarea
-        v-model="text"
-        label="Message"
-        rows="3"
-      /><VFileInput
-        v-model="files"
-        label="Attach files"
-        multiple
-        accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.mp4"
-      /><VBtn
-        :loading="ops.busy"
-        prepend-icon="tabler-send"
-        @click="send"
-      >
-        Send message
-      </VBtn>
+      <template v-if="canSend">
+        <VTextarea
+          v-model="text"
+          label="Message"
+          rows="3"
+        /><VFileInput
+          v-model="files"
+          label="Attach files"
+          multiple
+          accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.mp4"
+        /><VBtn
+          :loading="ops.busy"
+          prepend-icon="tabler-send"
+          @click="send"
+        >
+          Send message
+        </VBtn>
+      </template>
     </VCardText>
   </VCard>
 </template>

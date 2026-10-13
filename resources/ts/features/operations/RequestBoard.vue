@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
-import type { ServiceLine } from '@/features/operations/types'
+import type { ServiceLine, ServiceRequest } from '@/features/operations/types'
 import { statusLabels, when } from '@/features/operations/types'
+import { isUnclaimedOverdue } from '@/features/operations/staff'
+import { currentAssignment, pendingApprovals } from '@/features/operations/workflow'
 import RequestDetail from '@/features/operations/RequestDetail.vue'
 
 const props = defineProps<{ section: string }>()
@@ -11,13 +13,22 @@ const router = useRouter()
 const search = ref('')
 const status = ref('')
 const service = ref<ServiceLine | null>(null)
+const owner = ref<'all' | 'mine' | 'unclaimed'>('all')
+const ownerFilters = [{ title: 'All', value: 'all' }, { title: 'Mine', value: 'mine' }, { title: 'Unclaimed', value: 'unclaimed' }]
+const isAdmin = computed(() => ops.actor?.role === 'admin')
+const filterCols = computed(() => isAdmin.value ? 3 : 4)
+const pendingRequestIds = computed(() => new Set(pendingApprovals(ops.state).flatMap(item => item.requestId ? [item.requestId] : [])))
+const awaitingConfirmation = (request: ServiceRequest) => ops.actor?.role === 'provider' && currentAssignment(request)?.status === 'pending_approval'
+const ownerLabel = (staffOwnerId: string) => staffOwnerId ? `Owner: ${ops.staffById(staffOwnerId)?.name ?? 'Former staff member'}` : 'Unclaimed'
 const selected = computed(() => ops.requests.find(item => item.id === route.query.request))
 const panel = computed(() => ['quotes', 'schedule', 'messages'].includes(props.section) ? props.section : 'overview')
 
 const filtered = computed(() => ops.requests.filter(item => {
   const sectionMatch = props.section === 'quotes' ? item.quotes.some(quote => ops.actor?.role === 'admin' || quote.status !== 'draft') : props.section === 'schedule' ? item.schedules.length : true
 
-  return sectionMatch && (!status.value || item.status === status.value) && (!service.value || item.service === service.value) && `${item.id} ${item.title} ${item.city}`.toLowerCase().includes(search.value.toLowerCase())
+  const ownerMatch = !isAdmin.value || owner.value === 'all' || (owner.value === 'mine' ? item.staffOwnerId === ops.actor?.id : !item.staffOwnerId)
+
+  return sectionMatch && ownerMatch && (!status.value || item.status === status.value) && (!service.value || item.service === service.value) && `${item.id} ${item.title} ${item.city}`.toLowerCase().includes(search.value.toLowerCase())
 }))
 
 const statuses = Object.entries(statusLabels).map(([value, title]) => ({ title, value }))
@@ -64,7 +75,7 @@ const select = (id?: string) => router.push({ path: route.path, query: id ? { re
         <VRow>
           <VCol
             cols="12"
-            md="4"
+            :md="filterCols"
           >
             <VTextField
               v-model="search"
@@ -77,7 +88,7 @@ const select = (id?: string) => router.push({ path: route.path, query: id ? { re
           </VCol><VCol
             cols="12"
             sm="6"
-            md="4"
+            :md="filterCols"
           >
             <VSelect
               v-model="status"
@@ -90,7 +101,7 @@ const select = (id?: string) => router.push({ path: route.path, query: id ? { re
           </VCol><VCol
             cols="12"
             sm="6"
-            md="4"
+            :md="filterCols"
           >
             <VSelect
               v-model="service"
@@ -99,6 +110,18 @@ const select = (id?: string) => router.push({ path: route.path, query: id ? { re
               hide-details
               clearable
               @click:clear="service = null"
+            />
+          </VCol><VCol
+            v-if="isAdmin"
+            cols="12"
+            sm="6"
+            :md="filterCols"
+          >
+            <VSelect
+              v-model="owner"
+              :items="ownerFilters"
+              label="Owner"
+              hide-details
             />
           </VCol>
         </VRow>
@@ -121,7 +144,40 @@ const select = (id?: string) => router.push({ path: route.path, query: id ? { re
               >
                 {{ statusLabels[request.status] }}
               </VChip>
-            </div><h2 class="text-h5 mb-2">
+            </div><div
+              v-if="isAdmin"
+              class="d-flex flex-wrap gap-2 mb-3"
+            >
+              <VChip
+                size="small"
+                variant="tonal"
+                :color="request.staffOwnerId ? 'primary' : 'warning'"
+              >
+                {{ ownerLabel(request.staffOwnerId) }}
+              </VChip><VChip
+                v-if="pendingRequestIds.has(request.id)"
+                size="small"
+                color="warning"
+                variant="flat"
+              >
+                Awaiting approval
+              </VChip><VChip
+                v-if="isUnclaimedOverdue(request)"
+                size="small"
+                color="error"
+                variant="flat"
+              >
+                Unclaimed &gt; 2h
+              </VChip>
+            </div><VChip
+              v-if="awaitingConfirmation(request)"
+              size="small"
+              color="warning"
+              variant="tonal"
+              class="mb-3"
+            >
+              Awaiting XPro confirmation
+            </VChip><h2 class="text-h5 mb-2">
               {{ request.title }}
             </h2><p class="text-medium-emphasis mb-4">
               {{ request.service }} · {{ request.city }}

@@ -2,7 +2,8 @@
 import { useOperationsStore } from '@/stores/operations'
 import type { ServiceRequest } from '@/features/operations/types'
 import { money, statusLabels, when } from '@/features/operations/types'
-import { currentAssignment } from '@/features/operations/workflow'
+import { currentAssignment, currentSchedule } from '@/features/operations/workflow'
+import { activeStaffWith } from '@/features/operations/staff'
 import Attachments from '@/features/operations/Attachments.vue'
 import QuotePanel from '@/features/operations/QuotePanel.vue'
 import SchedulePanel from '@/features/operations/SchedulePanel.vue'
@@ -15,10 +16,46 @@ const panel = ref(props.initialPanel ?? 'overview')
 const note = ref('')
 const providerId = ref('')
 const cancelDialog = ref(false)
+const reassignTo = ref('')
+const reassignNote = ref('')
 const assignment = computed(() => currentAssignment(props.request))
+const role = computed(() => ops.actor?.role)
+const reviewNote = ref('')
+const rejecting = ref<'' | 'assignment' | 'cancellation'>('')
+const shownAssignment = computed(() => role.value === 'customer' && assignment.value?.status === 'pending_approval' ? undefined : assignment.value)
+const assignmentLabel = (status: string) => role.value === 'provider' && status === 'pending_approval' ? 'Awaiting XPro confirmation' : status.replaceAll('_', ' ')
+const pendingAssignment = computed(() => assignment.value?.status === 'pending_approval' ? assignment.value : undefined)
+const pendingCancellation = computed(() => props.request.cancellationRequest?.review.state === 'pending' ? props.request.cancellationRequest : undefined)
+const rejectedCancellation = computed(() => props.request.cancellationRequest?.review.state === 'rejected' ? props.request.cancellationRequest : undefined)
+const addressShared = computed(() => role.value !== 'provider' || currentSchedule(props.request)?.status === 'confirmed')
 const eligible = computed(() => ops.state.providers.filter(item => item.verification === 'approved' && item.available && item.services.includes(props.request.service)))
 const providerName = (id: string) => ops.state.providers.find(item => item.id === id)?.name ?? 'Provider'
+const alertedNames = computed(() => props.request.alertedProviderIds.map(providerName))
 const active = computed(() => !['cancelled', 'closed', 'acknowledged'].includes(props.request.status))
+const ownerName = computed(() => props.request.staffOwnerId ? ops.staffById(props.request.staffOwnerId)?.name ?? 'Former staff member' : 'Unclaimed')
+const owners = computed(() => activeStaffWith(ops.state, 'request.claim').filter(item => item.id !== props.request.staffOwnerId).map(item => ({ title: item.name, value: item.id })))
+const canNote = computed(() => ops.can('dispatch.manage') || ops.can('request.review') || ops.can('request.flag'))
+
+const reassign = async () => {
+  if (await ops.run({ type: 'request.reassign', requestId: props.request.id, staffId: reassignTo.value, note: reassignNote.value })) {
+    reassignTo.value = ''
+    reassignNote.value = ''
+  }
+}
+
+const decideAssignment = async (approve: boolean) => {
+  if (pendingAssignment.value && await ops.run({ type: 'assignment.review', requestId: props.request.id, assignmentId: pendingAssignment.value.id, approve, note: approve ? '' : reviewNote.value })) {
+    reviewNote.value = ''
+    rejecting.value = ''
+  }
+}
+
+const decideCancellation = async (approve: boolean) => {
+  if (await ops.run({ type: 'cancellation.review', requestId: props.request.id, approve, note: approve ? '' : reviewNote.value })) {
+    reviewNote.value = ''
+    rejecting.value = ''
+  }
+}
 
 const cancel = async () => {
   if (await ops.run({ type: 'request.cancel', requestId: props.request.id, note: note.value }))
@@ -77,7 +114,13 @@ const cancel = async () => {
             </h3><p class="text-body-1 brief-copy">
               {{ request.description }}
             </p><dl class="details">
-              <dt>Site address</dt><dd>{{ request.address }}</dd><dt>Contact</dt><dd>{{ request.customer }} · {{ request.phone }}</dd><dt>Indicative budget</dt><dd>{{ request.budget ? money(request.budget) : 'To be confirmed' }}</dd><dt>Preferred start</dt><dd>{{ request.startDate || 'Flexible' }}</dd><template
+              <dt>Site address</dt><dd v-if="addressShared">
+                {{ request.address }}
+              </dd><dd v-else>
+                {{ request.city }}<br><span class="text-medium-emphasis">Full address shared once the schedule is confirmed.</span>
+              </dd><dt>Contact</dt><dd>{{ role === 'provider' ? 'XPro customer' : `${request.customer} · ${request.phone}` }}</dd><template v-if="role !== 'provider'">
+                <dt>Indicative budget</dt><dd>{{ request.budget ? money(request.budget) : 'To be confirmed' }}</dd>
+              </template><dt>Preferred start</dt><dd>{{ request.startDate || 'Flexible' }}</dd><template
                 v-for="(value, key) in request.details"
                 :key="key"
               >
@@ -94,9 +137,9 @@ const cancel = async () => {
           <VCardText>
             <h3 class="text-h5 mb-4">
               Provider assignment
-            </h3><template v-if="assignment">
-              <p>{{ providerName(assignment.providerId) }} · {{ assignment.status }}</p><p class="text-body-2">
-                {{ assignment.note }}
+            </h3><template v-if="shownAssignment">
+              <p>{{ providerName(shownAssignment.providerId) }} · {{ assignmentLabel(shownAssignment.status) }}</p><p class="text-body-2">
+                {{ shownAssignment.note }}
               </p>
             </template><p
               v-else
@@ -104,24 +147,187 @@ const cancel = async () => {
             >
               XPro is reviewing the brief and coordinating a provider.
             </p>
+            <VAlert
+              v-if="role === 'provider' && pendingAssignment"
+              variant="tonal"
+              color="info"
+              class="mb-4"
+            >
+              You accepted this offer. Waiting for XPro to confirm.
+            </VAlert>
+            <div
+              v-if="role === 'admin' && pendingAssignment"
+              class="approval-box mb-4"
+            >
+              <h4 class="text-h6 mb-2">
+                Provider accepted — confirm assignment
+              </h4><p class="mb-1">
+                {{ providerName(pendingAssignment.providerId) }}
+              </p><p class="text-body-2 text-medium-emphasis">
+                {{ pendingAssignment.response || 'No message from the provider.' }}
+              </p>
+              <template v-if="ops.can('dispatch.manage')">
+                <VTextarea
+                  v-if="rejecting === 'assignment'"
+                  v-model="reviewNote"
+                  label="Reason for not confirming (shared with the provider)"
+                  rows="2"
+                />
+                <div class="d-flex flex-wrap gap-2">
+                  <VBtn
+                    v-if="rejecting !== 'assignment'"
+                    size="small"
+                    :disabled="ops.busy"
+                    @click="decideAssignment(true)"
+                  >
+                    Approve
+                  </VBtn><VBtn
+                    v-if="rejecting !== 'assignment'"
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                    :disabled="ops.busy"
+                    @click="rejecting = 'assignment'; reviewNote = ''"
+                  >
+                    Reject
+                  </VBtn><template v-else>
+                    <VBtn
+                      size="small"
+                      color="warning"
+                      :disabled="ops.busy"
+                      @click="decideAssignment(false)"
+                    >
+                      Confirm rejection
+                    </VBtn><VBtn
+                      size="small"
+                      variant="text"
+                      @click="rejecting = ''"
+                    >
+                      Cancel
+                    </VBtn>
+                  </template>
+                </div>
+              </template>
+            </div>
+            <p
+              v-if="role === 'admin' && request.alertedProviderIds.length"
+              class="text-body-2 mb-4"
+            >
+              Alerted providers: {{ request.alertedProviderIds.length }} ({{ alertedNames.join(', ') }})
+            </p>
+            <div
+              v-if="role === 'admin' && pendingCancellation"
+              class="approval-box mb-4"
+            >
+              <h4 class="text-h6 mb-2">
+                Customer requested cancellation
+              </h4><p class="text-body-2 text-medium-emphasis">
+                {{ pendingCancellation.note }}
+              </p>
+              <template v-if="ops.can('request.cancel')">
+                <VTextarea
+                  v-if="rejecting === 'cancellation'"
+                  v-model="reviewNote"
+                  label="Reason for declining (shared with the customer)"
+                  rows="2"
+                />
+                <div class="d-flex flex-wrap gap-2">
+                  <VBtn
+                    v-if="rejecting !== 'cancellation'"
+                    size="small"
+                    color="error"
+                    :disabled="ops.busy"
+                    @click="decideCancellation(true)"
+                  >
+                    Approve
+                  </VBtn><VBtn
+                    v-if="rejecting !== 'cancellation'"
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                    :disabled="ops.busy"
+                    @click="rejecting = 'cancellation'; reviewNote = ''"
+                  >
+                    Reject
+                  </VBtn><template v-else>
+                    <VBtn
+                      size="small"
+                      color="warning"
+                      :disabled="ops.busy"
+                      @click="decideCancellation(false)"
+                    >
+                      Confirm rejection
+                    </VBtn><VBtn
+                      size="small"
+                      variant="text"
+                      @click="rejecting = ''"
+                    >
+                      Cancel
+                    </VBtn>
+                  </template>
+                </div>
+              </template>
+            </div>
             <template v-if="ops.actor?.role === 'admin' && active">
+              <div class="owner-row mb-4">
+                <div class="d-flex align-center flex-wrap gap-2">
+                  <span class="text-body-2 text-medium-emphasis">Owner</span><VChip
+                    size="small"
+                    variant="tonal"
+                    :color="request.staffOwnerId ? 'primary' : 'warning'"
+                  >
+                    {{ ownerName }}
+                  </VChip><VBtn
+                    v-if="!request.staffOwnerId && ops.can('request.claim')"
+                    size="small"
+                    variant="outlined"
+                    :disabled="ops.busy"
+                    @click="ops.run({ type: 'request.claim', requestId: request.id })"
+                  >
+                    Claim request
+                  </VBtn>
+                </div>
+                <div
+                  v-if="ops.can('request.reassign')"
+                  class="mt-3"
+                >
+                  <VSelect
+                    v-model="reassignTo"
+                    :items="owners"
+                    label="Reassign owner"
+                    density="compact"
+                  /><VTextarea
+                    v-model="reassignNote"
+                    label="Reason for reassigning"
+                    rows="2"
+                  /><VBtn
+                    size="small"
+                    variant="outlined"
+                    :disabled="!reassignTo || ops.busy"
+                    @click="reassign"
+                  >
+                    Reassign owner
+                  </VBtn>
+                </div>
+              </div>
               <VSelect
-                v-if="!assignment"
+                v-if="!assignment && ops.can('dispatch.manage')"
                 v-model="providerId"
                 :items="eligible.map(item => ({ title: `${item.name} · ${item.city}`, value: item.id }))"
                 label="Approved, available provider"
               /><VTextarea
+                v-if="canNote"
                 v-model="note"
                 label="Dispatch / review note"
                 rows="2"
               /><VBtn
-                v-if="!assignment"
+                v-if="!assignment && ops.can('dispatch.manage')"
                 :disabled="!providerId || ops.busy"
                 @click="ops.run({ type: 'assignment.offer', requestId: request.id, providerId, note })"
               >
                 Send assignment offer
               </VBtn><VBtn
-                v-else
+                v-else-if="assignment && ops.can('dispatch.manage')"
                 variant="outlined"
                 color="warning"
                 :disabled="ops.busy"
@@ -130,7 +336,7 @@ const cancel = async () => {
                 Withdraw assignment
               </VBtn>
               <div
-                v-if="['submitted', 'under_review'].includes(request.status)"
+                v-if="['submitted', 'under_review'].includes(request.status) && ops.can('request.review')"
                 class="d-flex flex-wrap gap-2 mt-4"
               >
                 <VBtn
@@ -149,6 +355,7 @@ const cancel = async () => {
               </div>
               <div class="mt-4">
                 <VBtn
+                  v-if="ops.can('request.flag')"
                   size="small"
                   variant="text"
                   color="warning"
@@ -156,7 +363,7 @@ const cancel = async () => {
                 >
                   Flag for attention
                 </VBtn><VBtn
-                  v-if="request.flag"
+                  v-if="request.flag && ops.can('request.flag')"
                   size="small"
                   variant="text"
                   @click="ops.run({ type: 'request.flag', requestId: request.id, note: '' })"
@@ -202,18 +409,34 @@ const cancel = async () => {
               :key="item.id"
               class="text-body-2"
             >
-              {{ providerName(item.providerId) }} · {{ item.status }}<br>{{ item.response || item.note }}
+              {{ providerName(item.providerId) }} · {{ assignmentLabel(item.status) }}<br>{{ item.response || item.note }}
             </p>
           </VCardText>
         </VCard>
+        <VAlert
+          v-if="role === 'customer' && pendingCancellation"
+          variant="tonal"
+          color="warning"
+          class="mt-5"
+        >
+          Cancellation requested — awaiting XPro
+        </VAlert>
+        <VAlert
+          v-else-if="role === 'customer' && rejectedCancellation && active"
+          variant="tonal"
+          color="info"
+          class="mt-5"
+        >
+          XPro did not approve your cancellation request.{{ rejectedCancellation.review.note ? ` ${rejectedCancellation.review.note}` : '' }}
+        </VAlert>
         <VBtn
-          v-if="active && ops.actor?.role !== 'provider'"
+          v-if="active && !(role === 'customer' && pendingCancellation) && (role === 'customer' || ops.can('request.cancel'))"
           variant="text"
           color="error"
           class="mt-5"
           @click="note = ''; cancelDialog = true"
         >
-          Cancel request
+          {{ role === 'customer' ? 'Request cancellation' : 'Cancel request' }}
         </VBtn>
       </VCol>
     </VRow>
@@ -241,8 +464,8 @@ const cancel = async () => {
     <VCard>
       <VCardText>
         <h3 class="text-h5 mb-3">
-          Cancel this request?
-        </h3><p>This will withdraw the current assignment and cancel its schedules.</p><VTextarea
+          {{ role === 'customer' ? 'Request cancellation?' : 'Cancel this request?' }}
+        </h3><p>{{ role === 'customer' ? 'XPro will review your request before anything is cancelled.' : 'This will withdraw the current assignment and cancel its schedules.' }}</p><VTextarea
           v-model="note"
           label="Reason for cancellation"
         /><VAlert
@@ -263,7 +486,7 @@ const cancel = async () => {
             :loading="ops.busy"
             @click="cancel"
           >
-            Confirm cancellation
+            {{ role === 'customer' ? 'Send request' : 'Confirm cancellation' }}
           </VBtn>
         </div>
       </VCardText>
@@ -273,6 +496,8 @@ const cancel = async () => {
 
 <style scoped>
 .brief-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
+.approval-box { border: 1px solid rgb(var(--v-theme-warning)); border-radius: 8px; background: rgba(var(--v-theme-warning), 0.08); padding: 1rem; }
+.owner-row { border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); padding-block-end: 1rem; }
 .details dt { font-size: 0.8rem; opacity: 0.7; text-transform: capitalize; margin-block-start: 1rem; }
 .details dd { margin-block-start: 0.25rem; overflow-wrap: anywhere; }
 </style>

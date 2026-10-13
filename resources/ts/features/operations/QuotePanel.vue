@@ -39,7 +39,7 @@ const save = async () => {
     XPro prepares and publishes the customer quote. Published versions retain their original line items. Provider costing is visible only to the provider and XPro.
   </VAlert>
   <VBtn
-    v-if="pricingOpen && (ops.actor?.role === 'admin' || (ops.actor?.role === 'provider' && currentAssignment(request)?.status === 'accepted'))"
+    v-if="pricingOpen && (ops.can('quote.manage') || (ops.actor?.role === 'provider' && currentAssignment(request)?.status === 'accepted'))"
     class="mb-5"
     @click="edit"
   >
@@ -151,17 +151,29 @@ const save = async () => {
         class="text-body-2"
       >
         Customer response: {{ quote.responseNote }}
-      </p><small class="text-medium-emphasis">Created {{ when(quote.createdAt) }}</small>
+      </p><small class="text-medium-emphasis">Created {{ when(quote.createdAt) }}</small><p
+        v-if="ops.actor?.role === 'admin' && quote.publishedBy"
+        class="text-body-2 mt-2 mb-0"
+      >
+        Published by {{ ops.staffById(quote.publishedBy)?.name ?? 'Former staff member' }}
+      </p><p
+        v-if="ops.actor?.role === 'admin' && quote.status === 'draft' && quote.approvalRequestedBy"
+        class="text-body-2 text-warning mt-2 mb-0"
+      >
+        Awaiting super admin approval (requested by {{ ops.staffById(quote.approvalRequestedBy)?.name ?? 'Former staff member' }})
+      </p>
       <div
         v-if="ops.actor?.role === 'admin' && quote.status === 'draft' && pricingOpen"
         class="d-flex flex-wrap gap-3 mt-4"
       >
         <VBtn
+          v-if="ops.can('quote.manage')"
           variant="outlined"
           @click="edit(quote.id)"
         >
           Edit draft
         </VBtn><VBtn
+          v-if="ops.can('quote.manage') && (!quote.approvalRequestedBy || ops.can('quote.approve'))"
           :loading="ops.busy"
           @click="ops.run({ type: 'quote.publish', requestId: request.id, quoteId: quote.id })"
         >

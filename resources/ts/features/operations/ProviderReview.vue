@@ -100,7 +100,7 @@ const selected = computed(() => ops.state.providers.find(item => item.id === sel
           class="mt-4"
         >
           Last review: {{ selected.reviewNote }}
-        </p><template v-if="selected.verification === 'pending'">
+        </p><template v-if="selected.verification === 'pending' && ops.can('provider.review')">
           <VTextarea
             v-model="note"
             label="Review note / changes required"

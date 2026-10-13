@@ -80,7 +80,7 @@ const submit = async () => {
   >
     <h2 class="text-h5 mb-2">
       Your request is on its way.
-    </h2><p>{{ submitted }} has been sent to XPro for review.</p><VBtn :to="{ path: '/workspace/requests', query: { request: submitted } }">
+    </h2><p>{{ submitted }} has been sent to XPro for review.</p><VBtn :to="{ path: '/requests', query: { request: submitted } }">
       View my request
     </VBtn>
   </VAlert>

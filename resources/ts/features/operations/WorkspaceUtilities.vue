@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
+import { isWorkspaceRole, sectionPath } from '@/features/workspace/config'
 import { when } from '@/features/operations/types'
 
 const props = defineProps<{ section: string }>()
@@ -7,10 +8,17 @@ const ops = useOperationsStore()
 const search = ref('')
 const unreadOnly = ref(false)
 const resetDialog = ref(false)
+const approvalOn = ref(ops.state.settings.quoteApprovalThreshold !== null)
+const threshold = ref<number | string>(ops.state.settings.quoteApprovalThreshold === null ? '' : ops.state.settings.quoteApprovalThreshold / 100)
 const prefs = reactive({ name: '', phone: '', email: true, push: true, inApp: true, timezone: 'Africa/Lagos', ...ops.preferences })
 const audit = computed(() => ops.state.audit.filter(item => `${item.action} ${item.actor} ${item.resource}`.toLowerCase().includes(search.value.toLowerCase())))
 const notifications = computed(() => ops.notifications.filter(item => !unreadOnly.value || !item.read))
-const requestPath = computed(() => `/workspace/${ops.actor?.role === 'provider' ? 'jobs' : 'requests'}`)
+
+const requestPath = computed(() => {
+  const role = ops.actor?.role
+
+  return isWorkspaceRole(role) ? sectionPath(role, role === 'provider' ? 'jobs' : 'requests') : '/'
+})
 </script>
 
 <template>
@@ -163,7 +171,34 @@ const requestPath = computed(() => `/workspace/${ops.actor?.role === 'provider' 
           Save preferences
         </VBtn>
       </VCardText>
-    </VCard><VCard v-if="ops.actor?.role === 'admin'">
+    </VCard><VCard
+      v-if="ops.can('settings.manage')"
+      class="mb-5"
+    >
+      <VCardText>
+        <h2 class="text-h5 mb-3">
+          Quote approval
+        </h2><p class="text-body-2 text-medium-emphasis">
+          Quotes at or above the threshold, published by anyone who is not a super admin, wait for super admin approval.
+        </p><VSwitch
+          v-model="approvalOn"
+          label="Require super admin approval for high-value quotes"
+          hide-details
+          class="mb-4"
+        /><VTextField
+          v-if="approvalOn"
+          v-model="threshold"
+          label="Threshold (₦)"
+          type="number"
+          min="1"
+        /><VBtn
+          :loading="ops.busy"
+          @click="ops.run({ type: 'settings.save', quoteApprovalThreshold: approvalOn ? Number(threshold) : null })"
+        >
+          Save quote approval
+        </VBtn>
+      </VCardText>
+    </VCard><VCard v-if="ops.can('settings.manage')">
       <VCardText>
         <h2 class="text-h5 mb-3">
           Prototype controls
