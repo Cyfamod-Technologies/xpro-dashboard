@@ -17,28 +17,64 @@ const activeService = ref(serviceLines[1].name)
 const search = reactive({ service: serviceLines[1].name, title: '', city: 'Abuja', start: '' })
 const serviceNames = serviceLines.map(item => item.name)
 const jobs = computed(() => popularJobs[activeService.value as keyof typeof popularJobs] ?? [])
-const heroStyle = computed(() => heroImage ? { backgroundImage: `linear-gradient(rgba(16, 42, 58, 0.62), rgba(16, 42, 58, 0.62)), url(${heroImage})` } : undefined)
+const heroStyle = computed(() =>
+  heroImage
+    ? { backgroundImage: `linear-gradient(rgba(16, 42, 58, 0.62), rgba(16, 42, 58, 0.62)), url(${heroImage})` }
+    : undefined,
+)
 
 const trust = [
-  { title: 'Verified providers', body: 'Identity, skills and bank details are checked by XPro.', icon: 'tabler-shield-check' },
-  { title: 'Payment held by XPro', body: 'Providers are paid only after you confirm the job is done.', icon: 'tabler-credit-card' },
-  { title: 'One accountable team', body: 'XPro reviews every quote, schedule and update for you.', icon: 'tabler-users-group' },
+  {
+    title: 'Verified providers',
+    body: 'Identity, skills and bank details are checked by XPro.',
+    icon: 'tabler-shield-check',
+  },
+  {
+    title: 'Payment held by XPro',
+    body: 'Providers are paid only after you confirm the job is done.',
+    icon: 'tabler-credit-card',
+  },
+  {
+    title: 'One accountable team',
+    body: 'XPro reviews every quote, schedule and update for you.',
+    icon: 'tabler-users-group',
+  },
   { title: 'No consultation fee', body: 'Requesting and receiving a quote is free.', icon: 'tabler-circle-check' },
 ]
 
 const steps = [
   { icon: 'tabler-search', title: 'Explore', body: 'Find a service and view verified provider profiles.' },
-  { icon: 'tabler-file-description', title: 'Share your brief', body: 'Tell us about the job. Sign in when you are ready to submit.' },
-  { icon: 'tabler-clipboard-check', title: 'Follow your project', body: 'Review quotes, confirm dates and track updates in your dashboard.' },
+  {
+    icon: 'tabler-file-description',
+    title: 'Share your brief',
+    body: 'Tell us about the job. Sign in when you are ready to submit.',
+  },
+  {
+    icon: 'tabler-clipboard-check',
+    title: 'Follow your project',
+    body: 'Review quotes, confirm dates and track updates in your dashboard.',
+  },
 ]
 
 watch(activeService, value => {
   search.service = value
 })
 
-const clean = (query: Record<string, string>) => Object.fromEntries(Object.entries(query).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]))
-const submit = () => router.push({ path: '/request', query: clean({ service: search.service, title: search.title, city: search.city, start: search.start }) })
-const jobLocation = (job: PopularJob) => ({ path: '/request', query: { service: activeService.value, title: job.name, ...job.details } })
+const clean = (query: Record<string, string>) =>
+  Object.fromEntries(
+    Object.entries(query)
+      .filter(([, value]) => value.trim())
+      .map(([key, value]) => [key, value.trim()]),
+  )
+const submit = () =>
+  router.push({
+    path: '/request',
+    query: clean({ service: search.service, title: search.title, city: search.city, start: search.start }),
+  })
+const jobLocation = (job: PopularJob) => ({
+  path: '/request',
+  query: { service: activeService.value, title: job.name, ...job.details },
+})
 
 const scrollToHash = () => {
   if (route.hash)
@@ -51,17 +87,9 @@ watch(() => route.hash, scrollToHash)
 
 <template>
   <section class="xp-container pt-6">
-    <div
-      class="hero pa-6 pa-md-12"
-      :class="{ 'hero--photo': heroImage }"
-      :style="heroStyle"
-    >
-      <p class="hero__eyebrow mb-4">
-        Design · Construction · Hire · Procurement · Facility · Waste
-      </p>
-      <h1 class="hero__title mb-4">
-        Book trusted professionals for any building job.
-      </h1>
+    <div class="hero pa-6 pa-md-12" :class="{ 'hero--photo': heroImage }" :style="heroStyle">
+      <p class="hero__eyebrow mb-4">Design · Construction · Hire · Procurement · Facility · Waste</p>
+      <h1 class="hero__title mb-4">Book trusted professionals for any building job.</h1>
       <p class="hero__copy mb-0">
         Request once. XPro matches a verified provider, sends your quote and holds your payment until the job is done.
       </p>
@@ -69,15 +97,8 @@ watch(() => route.hash, scrollToHash)
   </section>
 
   <div class="xp-container search-wrap">
-    <VCard
-      class="search-card"
-      elevation="6"
-    >
-      <VForm
-        aria-label="Request a service"
-        class="search-form"
-        @submit.prevent="submit"
-      >
+    <VCard class="search-card" elevation="6">
+      <VForm aria-label="Request a service" class="search-form" @submit.prevent="submit">
         <div class="seg">
           <VSelect
             v-model="search.service"
@@ -126,14 +147,7 @@ watch(() => route.hash, scrollToHash)
             persistent-placeholder
           />
         </div>
-        <VBtn
-          type="submit"
-          size="x-large"
-          class="go"
-          prepend-icon="tabler-search"
-        >
-          Get a quote
-        </VBtn>
+        <VBtn type="submit" size="x-large" class="go" prepend-icon="tabler-search"> Get a quote </VBtn>
       </VForm>
     </VCard>
   </div>
@@ -145,38 +159,20 @@ watch(() => route.hash, scrollToHash)
   <section class="xp-container pt-8 pb-12">
     <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
       <div>
-        <h2 class="text-h4 mb-1">
-          Popular {{ activeService.toLowerCase() }} jobs
-        </h2>
-        <p class="text-medium-emphasis mb-0">
-          Tap a job to start your request with it filled in.
-        </p>
+        <h2 class="text-h4 mb-1">Popular {{ activeService.toLowerCase() }} jobs</h2>
+        <p class="text-medium-emphasis mb-0">Tap a job to start your request with it filled in.</p>
       </div>
       <RouterLink :to="{ path: '/services', query: { service: activeService } }">
         All {{ activeService.toLowerCase() }} services →
       </RouterLink>
     </div>
     <div class="job-grid">
-      <VCard
-        v-for="job in jobs"
-        :key="`${activeService}-${job.name}`"
-        :to="jobLocation(job)"
-        class="job-card"
-      >
+      <VCard v-for="job in jobs" :key="`${activeService}-${job.name}`" :to="jobLocation(job)" class="job-card">
         <div class="job-card__media">
-          <VChip
-            class="job-card__group"
-            size="small"
-            color="surface"
-            variant="flat"
-          >
+          <VChip class="job-card__group" size="small" color="surface" variant="flat">
             {{ job.group }}
           </VChip>
-          <VIcon
-            :icon="job.icon"
-            size="64"
-            color="primary"
-          />
+          <VIcon :icon="job.icon" size="64" color="primary" />
         </div>
         <VCardText class="d-flex flex-column gap-1">
           <strong class="text-h6">{{ job.name }}</strong>
@@ -190,22 +186,11 @@ watch(() => route.hash, scrollToHash)
     </div>
   </section>
 
-  <section
-    aria-label="Why XPro"
-    class="xp-container pb-12"
-  >
+  <section aria-label="Why XPro" class="xp-container pb-12">
     <VCard variant="outlined">
       <VCardText class="trust-grid pa-7">
-        <div
-          v-for="item in trust"
-          :key="item.title"
-          class="d-flex align-start gap-4"
-        >
-          <VAvatar
-            variant="outlined"
-            color="primary"
-            size="44"
-          >
+        <div v-for="item in trust" :key="item.title" class="d-flex align-start gap-4">
+          <VAvatar variant="outlined" color="primary" size="44">
             <VIcon :icon="item.icon" />
           </VAvatar>
           <div>
@@ -217,40 +202,20 @@ watch(() => route.hash, scrollToHash)
     </VCard>
   </section>
 
-  <section
-    id="providers"
-    class="xp-container pb-12"
-  >
+  <section id="providers" class="xp-container pb-12">
     <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
-      <h2 class="text-h4">
-        Verified providers
-      </h2>
-      <RouterLink to="/providers">
-        View all providers →
-      </RouterLink>
+      <h2 class="text-h4">Verified providers</h2>
+      <RouterLink to="/providers"> View all providers → </RouterLink>
     </div>
     <ProviderCards :providers="ops.publicProviders.slice(0, 4)" />
   </section>
 
-  <section
-    id="how-it-works"
-    class="xp-container pb-12"
-  >
-    <h2 class="text-h4 mb-5">
-      How it works
-    </h2>
+  <section id="how-it-works" class="xp-container pb-12">
+    <h2 class="text-h4 mb-5">How it works</h2>
     <div class="steps-grid">
-      <VCard
-        v-for="(step, index) in steps"
-        :key="step.title"
-        variant="outlined"
-      >
+      <VCard v-for="(step, index) in steps" :key="step.title" variant="outlined">
         <VCardText class="d-flex gap-4">
-          <VAvatar
-            color="primary"
-            variant="tonal"
-            size="44"
-          >
+          <VAvatar color="primary" variant="tonal" size="44">
             <VIcon :icon="step.icon" />
           </VAvatar>
           <div>
@@ -262,34 +227,20 @@ watch(() => route.hash, scrollToHash)
     </div>
   </section>
 
-  <section
-    id="join"
-    class="xp-container pb-14"
-  >
+  <section id="join" class="xp-container pb-14">
     <VCard variant="outlined">
       <div class="join">
         <div class="join__media">
-          <VIcon
-            icon="tabler-helmet"
-            size="72"
-            color="primary"
-          />
+          <VIcon icon="tabler-helmet" size="72" color="primary" />
         </div>
         <div class="join__body">
           <div class="join__text">
-            <h2 class="text-h5 mb-2">
-              Are you a professional, artisan or supplier?
-            </h2>
+            <h2 class="text-h5 mb-2">Are you a professional, artisan or supplier?</h2>
             <p class="text-medium-emphasis mb-0">
               Join XPro free. Get verified, get matched to jobs near you and get paid through XPro.
             </p>
           </div>
-          <VBtn
-            to="/auth/signup?role=provider"
-            size="large"
-          >
-            Become a provider
-          </VBtn>
+          <VBtn to="/auth/signup?role=provider" size="large"> Become a provider </VBtn>
         </div>
       </div>
     </VCard>
@@ -338,7 +289,9 @@ watch(() => route.hash, scrollToHash)
   }
 
   &--photo &__eyebrow,
-  &--photo &__copy { color: #fff; }
+  &--photo &__copy {
+    color: #fff;
+  }
 }
 
 .search-wrap {
@@ -361,11 +314,17 @@ watch(() => route.hash, scrollToHash)
   border-inline-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   flex: 1 1 180px;
   min-inline-size: 0;
-  padding: 6px 12px;
+  padding: 10px 12px;
 
-  &:first-child { border-inline-start: 0; }
-  &--grow { flex-grow: 2; }
-  &:hover { background: rgba(var(--v-theme-primary), 0.05); }
+  &:first-child {
+    border-inline-start: 0;
+  }
+  &--grow {
+    flex-grow: 2;
+  }
+  &:hover {
+    background: rgba(var(--v-theme-primary), 0.05);
+  }
 }
 
 .go {
@@ -436,18 +395,24 @@ watch(() => route.hash, scrollToHash)
     padding: 28px;
   }
 
-  &__text { max-inline-size: 460px; }
+  &__text {
+    max-inline-size: 460px;
+  }
 }
 
 @media (max-width: 860px) {
-  .search-card { margin-inline: 0; }
+  .search-card {
+    margin-inline: 0;
+  }
 
   .seg {
     border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
     border-inline-start: 0;
     flex: 1 1 100%;
 
-    &:first-child { border-block-start: 0; }
+    &:first-child {
+      border-block-start: 0;
+    }
   }
 
   .go {

@@ -147,6 +147,10 @@ const nav = computed(() => [
   inline-size: min(100% - 2rem, 1180px);
   margin-inline: auto;
 }
+
+// Keep text links and tonal primary chips readable on light surfaces.
+.xp-site main a:not(.v-btn, .v-card, .v-tab, .text-high-emphasis) { color: rgb(var(--v-theme-primary-darken-1)); }
+.xp-site .v-chip.text-primary { color: color-mix(in srgb, rgb(var(--v-theme-primary-darken-1)), #000 25%) !important; }
 </style>
 
 <style lang="scss" scoped>
