@@ -413,6 +413,8 @@ const toggleService = (name: string, on: boolean | null) => {
 }
 
 @media (max-width: 600px) {
+  .sort-tabs :deep(.v-tab) { font-size: 0.8125rem; padding-inline: 6px; }
+
   .field,
   .go { flex: 1 1 100%; }
 }

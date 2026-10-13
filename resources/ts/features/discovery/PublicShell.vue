@@ -164,7 +164,8 @@ const nav = computed(() => [
   background: rgb(var(--v-theme-brand-backdrop));
   color: #fff;
 
-  a { color: #fff; }
+  // Override Vuexy's text-body-2 emphasis colour so every child stays white on the navy bar.
+  :deep(*) { color: #fff; }
 }
 
 .xp-header {

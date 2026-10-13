@@ -18,6 +18,7 @@ const tabs = computed(() => [...(props.all ? [{ name: '', label: 'All services',
     :aria-label="label ?? 'Browse by service'"
     class="service-tabs"
     color="primary-darken-1"
+    :mandatory="all ? false : 'force'"
   >
     <VTab
       v-for="item in tabs"
@@ -52,6 +53,8 @@ const tabs = computed(() => [...(props.all ? [{ name: '', label: 'All services',
     padding-block: 6px 14px;
     text-transform: none;
   }
+
+  :deep(.v-tab .v-btn__content) { white-space: nowrap; }
 
   :deep(.v-tab:not(.v-tab--selected)) { color: rgb(var(--v-theme-secondary)); }
 }

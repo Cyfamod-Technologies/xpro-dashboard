@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { experienceLabel, initials, requestLocation } from '@/features/discovery/provider-utils'
+import { providerCoverAlt, providerCoverImage } from '@/features/discovery/images'
+import { experienceLabel, requestLocation } from '@/features/discovery/provider-utils'
 import type { PublicProvider } from '@/features/discovery/provider-utils'
 
 defineProps<{ provider: PublicProvider; selectedServices?: string[] }>()
@@ -8,15 +9,14 @@ defineProps<{ provider: PublicProvider; selectedServices?: string[] }>()
 <template>
   <VCard class="result">
     <div class="result__main">
-      <VAvatar
-        color="primary"
-        variant="tonal"
-        size="72"
-        rounded="lg"
-        class="flex-shrink-0"
+      <img
+        :src="providerCoverImage(provider)"
+        :alt="providerCoverAlt(provider)"
+        class="result__cover"
+        loading="lazy"
+        width="148"
+        height="111"
       >
-        <span class="text-h5">{{ initials(provider.name) }}</span>
-      </VAvatar>
       <div class="d-flex flex-column gap-2 min-w-0">
         <div class="d-flex flex-wrap align-center gap-2">
           <RouterLink
@@ -93,6 +93,16 @@ defineProps<{ provider: PublicProvider; selectedServices?: string[] }>()
     padding: 20px;
   }
 
+  &__cover {
+    aspect-ratio: 4 / 3;
+    block-size: auto;
+    border-radius: 6px;
+    flex: 0 0 148px;
+    inline-size: 148px;
+    object-fit: cover;
+    align-self: flex-start;
+  }
+
   &__aside {
     background: rgb(var(--v-theme-background));
     border-inline-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
@@ -102,10 +112,20 @@ defineProps<{ provider: PublicProvider; selectedServices?: string[] }>()
     gap: 10px;
     justify-content: center;
     padding: 20px;
+
+    :deep(.v-btn) { flex: 0 0 auto; }
   }
 }
 
 @media (max-width: 700px) {
+  .result__main { flex-direction: column; }
+
+  .result__cover {
+    aspect-ratio: 16 / 9;
+    flex-basis: auto;
+    inline-size: 100%;
+  }
+
   .result__aside {
     border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
     border-inline-start: 0;

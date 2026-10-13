@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { providerCoverAlt, providerCoverImage } from '@/features/discovery/images'
 import { experienceLabel, initials, requestLocation } from '@/features/discovery/provider-utils'
 import Attachments from '@/features/operations/Attachments.vue'
 import { useOperationsStore } from '@/stores/operations'
@@ -26,14 +27,21 @@ const provider = computed(() => ops.publicProviders.find(item => item.id === ('i
     >
       <div class="d-flex flex-column gap-6 min-w-0">
         <VCard>
+          <img
+            :src="providerCoverImage(provider)"
+            :alt="providerCoverAlt(provider)"
+            class="profile-cover"
+            width="1024"
+            height="320"
+          >
           <VCardText class="d-flex flex-wrap gap-5 pa-6">
             <VAvatar
               color="primary"
               variant="tonal"
-              size="96"
+              size="72"
               rounded="lg"
             >
-              <span class="text-h3">{{ initials(provider.name) }}</span>
+              <span class="text-h4">{{ initials(provider.name) }}</span>
             </VAvatar>
             <div class="min-w-0">
               <div class="d-flex flex-wrap align-center gap-2 mb-2">
@@ -183,6 +191,18 @@ const provider = computed(() => ops.publicProviders.find(item => item.id === ('i
   display: grid;
   gap: 24px;
   grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.profile-cover {
+  aspect-ratio: 16 / 5;
+  block-size: auto;
+  display: block;
+  inline-size: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 600px) {
+  .profile-cover { aspect-ratio: 16 / 9; }
 }
 
 .profile-aside {

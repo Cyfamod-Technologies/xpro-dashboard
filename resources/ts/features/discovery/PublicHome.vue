@@ -2,8 +2,10 @@
 import { serviceLines } from '@/features/workspace/config'
 import ProviderCards from '@/features/discovery/ProviderCards.vue'
 import ServiceTabs from '@/features/discovery/ServiceTabs.vue'
+import { jobCoverAlt, jobCoverImage, serviceCoverAlt, serviceCoverImage } from '@/features/discovery/images'
 import { popularJobs } from '@/features/discovery/popular-jobs'
 import type { PopularJob } from '@/features/discovery/popular-jobs'
+import type { ServiceLine } from '@/features/operations/types'
 import { useOperationsStore } from '@/stores/operations'
 
 /** Drop a client photo into /public/images and set its path here, e.g. '/images/hero.jpg'. */
@@ -14,9 +16,11 @@ const route = useRoute()
 const router = useRouter()
 
 const activeService = ref(serviceLines[1].name)
+const activeLine = computed(() => activeService.value as ServiceLine)
 const search = reactive({ service: serviceLines[1].name, title: '', city: 'Abuja', start: '' })
 const serviceNames = serviceLines.map(item => item.name)
 const jobs = computed(() => popularJobs[activeService.value as keyof typeof popularJobs] ?? [])
+
 const heroStyle = computed(() =>
   heroImage
     ? { backgroundImage: `linear-gradient(rgba(16, 42, 58, 0.62), rgba(16, 42, 58, 0.62)), url(${heroImage})` }
@@ -66,11 +70,13 @@ const clean = (query: Record<string, string>) =>
       .filter(([, value]) => value.trim())
       .map(([key, value]) => [key, value.trim()]),
   )
+
 const submit = () =>
   router.push({
     path: '/request',
     query: clean({ service: search.service, title: search.title, city: search.city, start: search.start }),
   })
+
 const jobLocation = (job: PopularJob) => ({
   path: '/request',
   query: { service: activeService.value, title: job.name, ...job.details },
@@ -87,9 +93,17 @@ watch(() => route.hash, scrollToHash)
 
 <template>
   <section class="xp-container pt-6">
-    <div class="hero pa-6 pa-md-12" :class="{ 'hero--photo': heroImage }" :style="heroStyle">
-      <p class="hero__eyebrow mb-4">Design · Construction · Hire · Procurement · Facility · Waste</p>
-      <h1 class="hero__title mb-4">Book trusted professionals for any building job.</h1>
+    <div
+      class="hero pa-6 pa-md-12"
+      :class="{ 'hero--photo': heroImage }"
+      :style="heroStyle"
+    >
+      <p class="hero__eyebrow mb-4">
+        Design · Construction · Hire · Procurement · Facility · Waste
+      </p>
+      <h1 class="hero__title mb-4">
+        Book trusted professionals for any building job.
+      </h1>
       <p class="hero__copy mb-0">
         Request once. XPro matches a verified provider, sends your quote and holds your payment until the job is done.
       </p>
@@ -97,8 +111,15 @@ watch(() => route.hash, scrollToHash)
   </section>
 
   <div class="xp-container search-wrap">
-    <VCard class="search-card" elevation="6">
-      <VForm aria-label="Request a service" class="search-form" @submit.prevent="submit">
+    <VCard
+      class="search-card"
+      elevation="6"
+    >
+      <VForm
+        aria-label="Request a service"
+        class="search-form"
+        @submit.prevent="submit"
+      >
         <div class="seg">
           <VSelect
             v-model="search.service"
@@ -147,7 +168,14 @@ watch(() => route.hash, scrollToHash)
             persistent-placeholder
           />
         </div>
-        <VBtn type="submit" size="x-large" class="go" prepend-icon="tabler-search"> Get a quote </VBtn>
+        <VBtn
+          type="submit"
+          size="x-large"
+          class="go"
+          prepend-icon="tabler-search"
+        >
+          Get a quote
+        </VBtn>
       </VForm>
     </VCard>
   </div>
@@ -159,20 +187,51 @@ watch(() => route.hash, scrollToHash)
   <section class="xp-container pt-8 pb-12">
     <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
       <div>
-        <h2 class="text-h4 mb-1">Popular {{ activeService.toLowerCase() }} jobs</h2>
-        <p class="text-medium-emphasis mb-0">Tap a job to start your request with it filled in.</p>
+        <h2 class="text-h4 mb-1">
+          Popular {{ activeService.toLowerCase() }} jobs
+        </h2>
+        <p class="text-medium-emphasis mb-0">
+          Tap a job to start your request with it filled in.
+        </p>
       </div>
       <RouterLink :to="{ path: '/services', query: { service: activeService } }">
         All {{ activeService.toLowerCase() }} services →
       </RouterLink>
     </div>
     <div class="job-grid">
-      <VCard v-for="job in jobs" :key="`${activeService}-${job.name}`" :to="jobLocation(job)" class="job-card">
+      <VCard
+        v-for="job in jobs"
+        :key="`${activeService}-${job.name}`"
+        :to="jobLocation(job)"
+        class="job-card"
+      >
         <div class="job-card__media">
-          <VChip class="job-card__group" size="small" color="surface" variant="flat">
+          <VChip
+            class="job-card__group"
+            size="small"
+            color="surface"
+            variant="flat"
+          >
             {{ job.group }}
           </VChip>
-          <VIcon :icon="job.icon" size="64" color="primary" />
+          <img
+            :src="jobCoverImage(activeLine, job.name)"
+            :alt="jobCoverAlt(activeLine, job.name)"
+            class="job-card__img"
+            loading="lazy"
+            width="400"
+            height="160"
+          >
+          <VAvatar
+            class="job-card__badge"
+            color="surface"
+            size="40"
+          >
+            <VIcon
+              :icon="job.icon"
+              color="primary-darken-1"
+            />
+          </VAvatar>
         </div>
         <VCardText class="d-flex flex-column gap-1">
           <strong class="text-h6">{{ job.name }}</strong>
@@ -186,11 +245,22 @@ watch(() => route.hash, scrollToHash)
     </div>
   </section>
 
-  <section aria-label="Why XPro" class="xp-container pb-12">
+  <section
+    aria-label="Why XPro"
+    class="xp-container pb-12"
+  >
     <VCard variant="outlined">
       <VCardText class="trust-grid pa-7">
-        <div v-for="item in trust" :key="item.title" class="d-flex align-start gap-4">
-          <VAvatar variant="outlined" color="primary" size="44">
+        <div
+          v-for="item in trust"
+          :key="item.title"
+          class="d-flex align-start gap-4"
+        >
+          <VAvatar
+            variant="outlined"
+            color="primary"
+            size="44"
+          >
             <VIcon :icon="item.icon" />
           </VAvatar>
           <div>
@@ -202,20 +272,40 @@ watch(() => route.hash, scrollToHash)
     </VCard>
   </section>
 
-  <section id="providers" class="xp-container pb-12">
+  <section
+    id="providers"
+    class="xp-container pb-12"
+  >
     <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
-      <h2 class="text-h4">Verified providers</h2>
-      <RouterLink to="/providers"> View all providers → </RouterLink>
+      <h2 class="text-h4">
+        Verified providers
+      </h2>
+      <RouterLink to="/providers">
+        View all providers →
+      </RouterLink>
     </div>
     <ProviderCards :providers="ops.publicProviders.slice(0, 4)" />
   </section>
 
-  <section id="how-it-works" class="xp-container pb-12">
-    <h2 class="text-h4 mb-5">How it works</h2>
+  <section
+    id="how-it-works"
+    class="xp-container pb-12"
+  >
+    <h2 class="text-h4 mb-5">
+      How it works
+    </h2>
     <div class="steps-grid">
-      <VCard v-for="(step, index) in steps" :key="step.title" variant="outlined">
+      <VCard
+        v-for="(step, index) in steps"
+        :key="step.title"
+        variant="outlined"
+      >
         <VCardText class="d-flex gap-4">
-          <VAvatar color="primary" variant="tonal" size="44">
+          <VAvatar
+            color="primary"
+            variant="tonal"
+            size="44"
+          >
             <VIcon :icon="step.icon" />
           </VAvatar>
           <div>
@@ -227,20 +317,37 @@ watch(() => route.hash, scrollToHash)
     </div>
   </section>
 
-  <section id="join" class="xp-container pb-14">
+  <section
+    id="join"
+    class="xp-container pb-14"
+  >
     <VCard variant="outlined">
       <div class="join">
         <div class="join__media">
-          <VIcon icon="tabler-helmet" size="72" color="primary" />
+          <img
+            :src="serviceCoverImage('Construction')"
+            :alt="`${serviceCoverAlt('Construction')} — XPro artisans at work`"
+            class="join__img"
+            loading="lazy"
+            width="400"
+            height="300"
+          >
         </div>
         <div class="join__body">
           <div class="join__text">
-            <h2 class="text-h5 mb-2">Are you a professional, artisan or supplier?</h2>
+            <h2 class="text-h5 mb-2">
+              Are you a professional, artisan or supplier?
+            </h2>
             <p class="text-medium-emphasis mb-0">
               Join XPro free. Get verified, get matched to jobs near you and get paid through XPro.
             </p>
           </div>
-          <VBtn to="/auth/signup?role=provider" size="large"> Become a provider </VBtn>
+          <VBtn
+            to="/auth/signup?role=provider"
+            size="large"
+          >
+            Become a provider
+          </VBtn>
         </div>
       </div>
     </VCard>
@@ -345,12 +452,22 @@ watch(() => route.hash, scrollToHash)
   flex-direction: column;
 
   &__media {
-    align-items: center;
     background: rgba(var(--v-theme-primary), 0.14);
     block-size: 160px;
-    display: flex;
-    justify-content: center;
     position: relative;
+  }
+
+  &__img {
+    block-size: 100%;
+    display: block;
+    inline-size: 100%;
+    object-fit: cover;
+  }
+
+  &__badge {
+    inset-block-end: 12px;
+    inset-inline-start: 12px;
+    position: absolute;
   }
 
   &__group {
@@ -377,12 +494,18 @@ watch(() => route.hash, scrollToHash)
   flex-wrap: wrap;
 
   &__media {
-    align-items: center;
     background: rgba(var(--v-theme-primary), 0.14);
-    display: flex;
     flex: 1 1 280px;
-    justify-content: center;
     min-block-size: 180px;
+    position: relative;
+  }
+
+  &__img {
+    block-size: 100%;
+    inline-size: 100%;
+    inset: 0;
+    object-fit: cover;
+    position: absolute;
   }
 
   &__body {

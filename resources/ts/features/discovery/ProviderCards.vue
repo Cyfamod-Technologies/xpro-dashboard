@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { experienceLabel, initials } from '@/features/discovery/provider-utils'
+import { providerCoverAlt, providerCoverImage } from '@/features/discovery/images'
+import { experienceLabel } from '@/features/discovery/provider-utils'
 import type { PublicProvider } from '@/features/discovery/provider-utils'
 
 defineProps<{ providers: PublicProvider[] }>()
@@ -12,13 +13,14 @@ defineProps<{ providers: PublicProvider[] }>()
       :key="provider.id"
     >
       <VCardText class="d-flex align-center gap-4">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          size="64"
+        <img
+          :src="providerCoverImage(provider)"
+          :alt="providerCoverAlt(provider)"
+          class="provider-thumb"
+          loading="lazy"
+          width="96"
+          height="96"
         >
-          <span class="text-h6">{{ initials(provider.name) }}</span>
-        </VAvatar>
         <div class="flex-grow-1 min-w-0">
           <div class="d-flex flex-wrap align-center gap-2 mb-1">
             <strong class="text-body-1">{{ provider.name }}</strong>
@@ -55,5 +57,13 @@ defineProps<{ providers: PublicProvider[] }>()
   display: grid;
   gap: 24px;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.provider-thumb {
+  aspect-ratio: 1;
+  block-size: 88px;
+  border-radius: 6px;
+  flex: 0 0 88px;
+  inline-size: 88px;
+  object-fit: cover;
 }
 </style>

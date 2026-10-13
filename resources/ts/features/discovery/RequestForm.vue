@@ -17,7 +17,7 @@ const formRef = ref<VForm>()
 const error = ref('')
 const files = ref<File[]>([])
 const submitted = ref('')
-const blank: RequestInput = { title: '', service: 'Design', city: '', address: '', phone: ops.preferences?.phone ?? '', description: '', budget: 0, startDate: '', details: {}, attachments: [] }
+const blank: RequestInput = { title: '', service: 'Design', city: '', address: '', phone: ops.preferences?.phone ?? '', contactMethod: 'phone', description: '', budget: 0, startDate: '', details: {}, attachments: [] }
 let initial = blank
 try {
   const saved = JSON.parse(sessionStorage.getItem(draftKey) ?? 'null') as RequestInput | null
@@ -26,6 +26,8 @@ try {
 }
 catch { /* Start a new brief if a saved draft cannot be read. */ }
 const form = reactive<RequestInput>(initial)
+
+form.contactMethod ??= 'phone'
 
 // Pre-fill from the query string (home search, popular jobs, provider pages). It takes priority over a saved draft.
 const queryText = (key: string) => {
@@ -58,6 +60,7 @@ if (ops.publicProviders.some(item => item.id === queryText('provider')))
 
 const preferred = computed(() => ops.publicProviders.find(item => item.id === form.details.preferredProviderId))
 const serviceNames = serviceLines.map(item => item.name)
+const contactMethods = [{ title: 'Phone', value: 'phone' }, { title: 'Email', value: 'email' }, { title: 'Phone and email', value: 'both' }]
 const selectedLine = computed(() => serviceLines.find(item => item.name === form.service))
 const fields = computed(() => intakeFields[form.service])
 const choiceFields = computed(() => fields.value.filter(field => field.options))
@@ -101,6 +104,7 @@ const summary = computed(() => [
   ...(form.title.trim() ? [{ key: 'Title', value: form.title.trim() }] : []),
   ...fields.value.filter(filled).map(field => ({ key: field.label.replace(/ \(.*\)$/, ''), value: form.details[field.key] })),
   { key: 'Location', value: form.city.trim() || 'Not set' },
+  { key: 'Contact', value: contactMethods.find(item => item.value === form.contactMethod)?.title ?? 'Phone' },
   { key: 'Start', value: formatDate(form.startDate) || 'Flexible' },
   { key: 'Budget', value: form.budget ? new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(form.budget) : 'Quote first' },
   ...(form.attachments.length || files.value.length ? [{ key: 'Files', value: String(form.attachments.length + files.value.length) }] : []),
@@ -358,6 +362,16 @@ const submit = async () => {
                   type="tel"
                   :rules="[required]"
                 />
+                <VSelect
+                  v-model="form.contactMethod"
+                  :items="contactMethods"
+                  label="Preferred contact method"
+                />
+                <VTextField
+                  v-model="form.startDate"
+                  label="Preferred start date"
+                  type="date"
+                />
                 <VTextField
                   v-model="form.address"
                   label="Site address *"
@@ -365,11 +379,6 @@ const submit = async () => {
                   persistent-hint
                   :rules="[required]"
                   class="field-grid__wide"
-                />
-                <VTextField
-                  v-model="form.startDate"
-                  label="Preferred start date"
-                  type="date"
                 />
                 <VTextField
                   v-model="budgetInput"
