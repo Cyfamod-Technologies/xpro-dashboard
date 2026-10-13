@@ -45,5 +45,6 @@ declare module 'vue-router/auto-routes' {
     'projects': RouteRecordInfo<'projects', '/projects', Record<never, never>, Record<never, never>>,
     'projects-id': RouteRecordInfo<'projects-id', '/projects/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'projects-new': RouteRecordInfo<'projects-new', '/projects/new', Record<never, never>, Record<never, never>>,
+    'workspace-section': RouteRecordInfo<'workspace-section', '/workspace/:section', { section: ParamValue<true> }, { section: ParamValue<false> }>,
   }
 }

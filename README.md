@@ -29,16 +29,30 @@ All prototype accounts use the password `Password123!`.
 
 | Role | Email | Additional step |
 | --- | --- | --- |
-| Super Admin | `admin@xpro.test` | None |
-| Manager | `manager@xpro.test` | None |
-| Budget Viewer | `viewer@xpro.test` | None |
+| Customer | `customer@xpro.test` | None |
+| Provider | `provider@xpro.test` | None |
+| Admin / Dispatch | `admin@xpro.test` | None |
+
+## Frontend flow 1
+
+All three account types land on `/`, with a separate role-specific home screen
+and menu. Shared section URLs use `/workspace/:section`; the frontend rejects
+sections outside the current account's menu. No role prefixes are required.
+
+Sign-in, customer/provider registration, verification and recovery are simulated
+by browser MSW handlers. Demo sessions survive refresh; newly registered accounts
+and password changes reset when the preview reloads. No email is sent.
+
+The remaining workflow sections currently show navigation/empty-state shells;
+their forms and business interactions are implemented one flow at a time.
+The inherited budget/project routes are not part of the XPro prototype navigation.
 
 ## Theme
 
 The primary colour is `#4AA7DF` in both theme definitions. Text and icons on solid primary backgrounds use white. Semantic colours are defined in
 `resources/ts/plugins/vuetify/theme.ts`; the initial loader colour is defined
 in `index.html`. The supplied platform logo is in
-`public/images/xpro-logo.png`, referenced by `themeConfig.ts` and the auth shell.
+`public/images/xpro-logo-transparent.png`, referenced by `themeConfig.ts` and the auth shell.
 Public contact details are defined in `resources/ts/utils/branding.ts`, sourced
 from [the Xpro about page](https://xpro.ng/about.php).
 See [branding](docs/design/xpro-branding.md).
