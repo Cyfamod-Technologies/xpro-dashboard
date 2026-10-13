@@ -1,4 +1,4 @@
-import type { OperationsState, ProviderProfile, RequestStatus, ServiceLine, ServiceRequest } from '@/features/operations/types'
+import type { OperationsState, ProviderProfile, RequestStatus, ServiceLine, ServiceRequest, StaffMember } from '@/features/operations/types'
 
 const ago = (days: number) => new Date(Date.now() - days * 86400000).toISOString()
 const sampleFile = { id: 'sample-drawing', name: 'Site-brief.pdf', size: 240000, type: 'application/pdf' }
@@ -25,21 +25,37 @@ export function createOperationsState(): OperationsState {
     const id = `XPR-${String(index + 1).padStart(5, '0')}`
     const assigned = !['submitted', 'under_review'].includes(row.status)
     const accepted = !['submitted', 'under_review', 'quoted'].includes(row.status)
-    const request: ServiceRequest = { ...row, id, ownerId: 'usr-customer', customer: 'Ada Okafor', city: 'Abuja', phone: '0800 000 0000', description: 'Please review the attached project brief and coordinate the service with a verified provider.', budget: 45000000, startDate: '', details: {}, attachments: [{ ...sampleFile, id: `${id}-brief` }], createdAt: ago(index + 1), flag: '', assignments: [], contributions: [], quotes: [], schedules: [], updates: [], messages: [], issues: [] }
+    const request: ServiceRequest = { ...row, id, ownerId: 'usr-customer', customer: 'Ada Okafor', city: 'Abuja', phone: '0800 000 0000', description: 'Please review the attached project brief and coordinate the service with a verified provider.', budget: 45000000, startDate: '', details: {}, attachments: [{ ...sampleFile, id: `${id}-brief` }], createdAt: ago(index + 1), staffOwnerId: ['XPR-00001', 'XPR-00004'].includes(id) ? '' : 'usr-operations', claimedAt: ['XPR-00001', 'XPR-00004'].includes(id) ? '' : ago(2), flag: '', assignments: [], contributions: [], quotes: [], schedules: [], updates: [], messages: [], issues: [], alertedProviderIds: [], cancellationRequest: null }
     if (assigned) {
       request.assignments.push({ id: `${id}-assignment`, providerId: 'provider-nneka', status: 'accepted', note: 'Matched to the service and location.', response: 'Assignment accepted.', createdAt: ago(2) })
-      request.quotes.push({ id: `${id}-quote`, version: 1, status: accepted ? 'accepted' : 'sent', items: [{ description: 'Service and coordination', quantity: 1, rate: 350000 }], total: 35000000, note: 'Scope follows the approved project brief.', createdAt: ago(2), responseNote: accepted ? 'Accepted by customer.' : '' })
+      request.quotes.push({ id: `${id}-quote`, version: 1, status: accepted ? 'accepted' : 'sent', items: [{ description: 'Service and coordination', quantity: 1, rate: 350000 }], total: 35000000, note: 'Scope follows the approved project brief.', createdAt: ago(2), responseNote: accepted ? 'Accepted by customer.' : '', approvalRequestedBy: '', publishedBy: 'usr-pricing' })
     }
     if (accepted)
       request.schedules.push({ id: `${id}-schedule`, startAt: row.status === 'scheduled' ? new Date(Date.now() + (index + 1) * 86400000).toISOString() : ago(3), note: 'Access details confirmed with the customer.', quoteId: `${id}-quote`, status: 'confirmed', customer: 'accepted', provider: 'accepted', responses: ['Both participants confirmed.'] })
 
     if (['in_progress', 'completion_pending', 'closed'].includes(row.status))
-      request.updates.push({ id: `${id}-update`, authorId: 'provider-nneka', author: 'Nneka Services', status: row.status, note: row.status === 'completion_pending' ? 'Inspection completed. Please review the attached service report.' : 'The team has shared a work update.', attachments: [{ ...sampleFile, id: `${id}-evidence`, name: 'Work-report.pdf' }], createdAt: ago(1) })
+      request.updates.push({ id: `${id}-update`, authorId: 'provider-nneka', author: 'Nneka Services', status: row.status, note: row.status === 'completion_pending' ? 'Inspection completed. Please review the attached service report.' : 'The team has shared a work update.', attachments: [{ ...sampleFile, id: `${id}-evidence`, name: 'Work-report.pdf' }], createdAt: ago(1), review: { state: 'approved', by: 'usr-operations', note: '', at: ago(1) } })
 
-    request.messages.push({ id: `${id}-message`, authorId: 'usr-admin', author: 'XPro Dispatch', channel: 'customer', text: 'We have your request. We will keep all coordination and updates here.', attachments: [], createdAt: ago(1) })
+    if (id === 'XPR-00004')
+      request.assignments.push({ id: `${id}-assignment`, providerId: 'provider-nneka', status: 'pending_approval', note: 'Matched to the service and location.', response: 'Happy to take this on.', createdAt: ago(1) })
+    if (id === 'XPR-00002')
+      request.updates.unshift({ id: `${id}-update-pending`, authorId: 'provider-nneka', author: 'Nneka Services', status: 'in_progress', note: 'Tiling 60% complete. Photos attached.', attachments: [{ ...sampleFile, id: `${id}-photos`, name: 'Tiling-progress.pdf' }], createdAt: ago(0.25), review: { state: 'pending', by: '', note: '', at: '' } })
+    if (id === 'XPR-00003')
+      request.cancellationRequest = { note: 'Project postponed to next quarter.', requestedAt: ago(0.5), review: { state: 'pending', by: '', note: '', at: '' } }
+
+    request.messages.push({ id: `${id}-message`, authorId: 'usr-admin', author: 'XPro Dispatch', authorRole: 'admin', channel: 'customer', text: 'We have your request. We will keep all coordination and updates here.', attachments: [], createdAt: ago(1) })
 
     return request
   })
 
-  return { schema: 1, nextRequest: 8, requests, providers: profiles, notifications: [{ id: 'welcome-customer', recipientId: 'usr-customer', title: 'Quote ready to review', message: 'Your site engineer request has a quote ready.', requestId: 'XPR-00003', createdAt: ago(1), read: false, channels: ['In-app', 'Email', 'Push'] }, { id: 'welcome-provider', recipientId: 'usr-provider', title: 'Profile changes requested', message: 'Add an identity document to complete verification.', createdAt: ago(1), read: false, channels: ['In-app', 'Email'] }], audit: [{ id: 'initial-audit', actor: 'XPro Dispatch', action: 'Reviewed provider verification', resource: 'Tunde Bakare', createdAt: ago(1) }], preferences: {} }
+  const staffRecord = (id: string, name: string, email: string, roles: StaffMember['roles']): StaffMember => ({ id, name, email, roles, status: 'active', invitedAt: ago(30), history: [{ action: 'Account created', by: 'System', createdAt: ago(30) }] })
+
+  const staff: StaffMember[] = [
+    staffRecord('usr-admin', 'Amara Okafor', 'admin@xpro.test', ['super_admin']),
+    staffRecord('usr-operations', 'Kemi Adebayo', 'operations@xpro.test', ['operations']),
+    staffRecord('usr-pricing', 'Chidi Nwosu', 'pricing@xpro.test', ['pricing']),
+    staffRecord('usr-relations', 'Zainab Lawal', 'relations@xpro.test', ['client_relations']),
+  ]
+
+  return { schema: 3, nextRequest: 8, requests, providers: profiles, notifications: [{ id: 'welcome-customer', recipientId: 'usr-customer', title: 'Quote ready to review', message: 'Your site engineer request has a quote ready.', requestId: 'XPR-00003', createdAt: ago(1), read: false, channels: ['In-app', 'Email', 'Push'] }, { id: 'welcome-provider', recipientId: 'usr-provider', title: 'Profile changes requested', message: 'Add an identity document to complete verification.', createdAt: ago(1), read: false, channels: ['In-app', 'Email'] }], audit: [{ id: 'initial-audit', actor: 'XPro Dispatch', action: 'Reviewed provider verification', resource: 'Tunde Bakare', createdAt: ago(1) }], preferences: {}, staff, settings: { quoteApprovalThreshold: null } }
 }

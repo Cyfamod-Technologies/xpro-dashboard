@@ -4,14 +4,15 @@ import { useAuthStore } from '@/stores/auth'
 import { isWorkspaceRole } from '@/features/workspace/config'
 import { createOperationsState } from '@/features/operations/fixtures'
 import { applyCommand, defaultPreferences, visibleRequests } from '@/features/operations/workflow'
-import type { Actor, Command, OperationsState } from '@/features/operations/types'
+import { staffCan } from '@/features/operations/staff'
+import type { Actor, Command, OperationsState, StaffPermission } from '@/features/operations/types'
 
 const storageKey = 'xpro-ui-workspace-v1'
 
 const readState = (): OperationsState => {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as OperationsState | null
-    if (saved?.schema === 1 && Array.isArray(saved.requests) && Array.isArray(saved.providers) && Array.isArray(saved.audit) && Array.isArray(saved.notifications) && saved.preferences)
+    if (saved?.schema === 3 && Array.isArray(saved.staff) && saved.settings && Array.isArray(saved.requests) && Array.isArray(saved.providers) && Array.isArray(saved.audit) && Array.isArray(saved.notifications) && saved.preferences)
       return saved
   }
   catch { /* A new local preview can recover from an old or damaged snapshot. */ }
@@ -35,6 +36,9 @@ export const useOperationsStore = defineStore('operations', () => {
     return { id: user.id, name: state.value.preferences[user.id]?.name ?? user.name, email: user.email, role: user.role }
   })
 
+  const staffMember = computed(() => actor.value?.role === 'admin' ? state.value.staff.find(item => item.id === actor.value?.id) : undefined)
+  const can = (permission: StaffPermission) => actor.value?.role === 'admin' && staffCan(staffMember.value, permission)
+  const staffById = (staffId: string) => state.value.staff.find(item => item.id === staffId)
   const requests = computed(() => actor.value ? visibleRequests(state.value, actor.value) : [])
   const profile = computed(() => state.value.providers.find(item => item.id === actor.value?.id))
   const preferences = computed(() => actor.value ? state.value.preferences[actor.value.id] ?? defaultPreferences(actor.value) : undefined)
@@ -75,7 +79,7 @@ export const useOperationsStore = defineStore('operations', () => {
   }
 
   function reset() {
-    if (actor.value?.role !== 'admin')
+    if (!can('settings.manage'))
       return
     try {
       const next = createOperationsState()
@@ -92,5 +96,5 @@ export const useOperationsStore = defineStore('operations', () => {
       state.value = readState()
   })
 
-  return { state, actor, requests, profile, preferences, publicProviders, notifications, busy, error, notice, failNext, run, reset }
+  return { state, actor, requests, profile, preferences, publicProviders, notifications, busy, error, notice, failNext, staffMember, can, staffById, run, reset }
 })

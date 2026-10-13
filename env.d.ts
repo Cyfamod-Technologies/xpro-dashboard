@@ -11,5 +11,7 @@ declare module 'vue-router' {
     unauthenticatedOnly?: boolean
     public?: boolean
     roles?: UserRole[]
+    section?: string
+    adminSection?: string | boolean
   }
 }
