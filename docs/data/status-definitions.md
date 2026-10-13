@@ -1,0 +1,23 @@
+# Status Definitions
+
+## Account
+
+`UNVERIFIED`, `INVITED`, `ACTIVE`, `LOCKED`, `SUSPENDED`, `ARCHIVED`
+
+## Approval
+
+`DRAFT`, `SUBMITTED`, `CHANGES_REQUESTED`, `REJECTED`, `APPROVED`, `PUBLISHED`, `WITHDRAWN`
+
+## Project tracking
+
+`PLANNED`, `NOT_STARTED`, `IN_PROGRESS`, `STALLED`, `ABANDONED`, `ACTION_REQUIRED`, `ACTION_IN_PROGRESS`, `OUTCOME_VERIFIED`, `COMPLETED`, `ARCHIVED`
+
+## Evidence processing
+
+`PENDING_UPLOAD`, `PROCESSING`, `READY`, `REJECTED`, `QUARANTINED`
+
+## Import
+
+`UPLOADED`, `VALIDATING`, `NEEDS_CORRECTION`, `READY`, `IMPORTING`, `COMPLETED`, `PARTIALLY_COMPLETED`, `FAILED`, `CANCELLED`
+
+Approval status and Project tracking status are independent and must never share one field.
