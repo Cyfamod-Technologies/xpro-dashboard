@@ -1,0 +1,13 @@
+.git
+.github
+.vscode
+node_modules
+dist
+dist-ssr
+coverage
+.env
+.env.*
+!.env.example
+.pnpm-store
+*.log
+.DS_Store
