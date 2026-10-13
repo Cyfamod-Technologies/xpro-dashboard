@@ -47,6 +47,12 @@ notifications and React Native implementation are outside this slice.
 12. Approval gates: anything a provider or customer does that affects the other
     party is held for XPro, then shown or notified after approval. See "Approval
     gates" below.
+13. Provider sign-up and payout details: "Become a provider" opens sign-up with the
+    Provider role preselected; onboarding at `/verification` collects documents, a
+    staff-only face photo and bank details (simulated account lookup). Operations
+    (`provider.review`) and Finance (`bank.review`) approve separately; bank
+    changes under `/payouts` keep the old account active until approved. See
+    "Provider sign-up and payout details" below.
 
 ## Approval gates
 
@@ -67,6 +73,26 @@ notifications and React Native implementation are outside this slice.
   cancellations, quotes awaiting sign-off, provider verifications) oldest first, with
   inline approve/reject for the first four kinds. Requests with pending items show an
   "Awaiting approval" chip on the board and the admin overview counts them.
+
+## Provider sign-up and payout details
+
+- Public entry: header and homepage "Become a provider" buttons go to
+  `/auth/signup?role=provider`, which preselects Provider.
+- `/verification` is the onboarding form with a checklist (profile, documents,
+  face photo, bank details, submitted, identity verified, bank verified). The photo
+  is visible to staff only and never in the public provider projection.
+- Bank details: bank (demo Paystack codes), 10-digit account number and a
+  "Verify account" step that fills a read-only account name. Demo: account numbers
+  ending in `0000` fail verification. No API is called.
+- Submitting creates a pending bank review and alerts staff with `bank.review`
+  (Finance, super admin). Identity verification stays with `provider.review`.
+- `/payouts` (provider): current account, pending change, last rejection note,
+  history, and a change form (`payout.update`). Payouts stay on the verified
+  account until Finance approves; with no verified account they are paused
+  (`payoutReady`).
+- Staff: provider review shows the photo and payout block; `/admin/approvals` has
+  a Bank filter with inline approve/reject (reject needs a reason). Account numbers
+  are masked unless the staff member has `bank.review`.
 
 ## Staff management
 
