@@ -12,6 +12,8 @@ export type ReviewState = 'pending' | 'approved' | 'rejected'
 export interface Review { state: ReviewState; by: string; note: string; at: string }
 export interface CancellationRequest { note: string; requestedAt: string; review: Review }
 export interface Actor { id: string; name: string; email: string; role: WorkspaceRole }
+export interface BankAccount { bankCode: string; bankName: string; accountNumber: string; accountName: string; submittedAt: string }
+export interface BankInput { bankCode: string; accountNumber: string; accountName: string }
 export interface Attachment { id: string; name: string; size: number; type: string; dataUrl?: string }
 export interface QuoteItem { description: string; quantity: number; rate: number }
 export interface Quote { id: string; version: number; status: QuoteStatus; items: QuoteItem[]; total: number; note: string; createdAt: string; responseNote: string; approvalRequestedBy: string; publishedBy: string }
