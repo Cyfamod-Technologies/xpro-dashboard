@@ -1,40 +1,65 @@
-# XPro frontend UI implementation
+# XPro frontend UI flows
 
-Build customer, provider and admin browser prototypes with mock data only.
-Keep backend and React Native work separate. Match the existing Vue/Vuetify
-structure, components and semantic XPro theme colours.
+Vue/Vuetify browser prototypes for customers, providers and admin. All business
+records and workflow actions run locally. Backend, payments, real email/push
+notifications and React Native implementation are outside this slice.
 
-All roles share `/` as their landing route. The current account selects the
-home screen, navigation and permitted `/workspace/:section` pages. This is
-prototype navigation behaviour; real server authorization belongs to later
-backend integration.
+## Public browsing and private workspaces
 
-## Flow order
+- `/`: public homepage for visitors/customers; role overview for provider/admin.
+- `/services`: all six service lines and service-specific discovery.
+- `/providers`: search approved profiles by service, location and availability.
+- `/providers/:id`: public services, introduction, experience, sample ratings and
+  portfolio. Verification documents, private contacts and review notes stay in
+  the provider/admin UI.
+- `/request`: create a brief in public. Visitors can prepare a validated brief,
+  sign in, and resume it before submission. Submission requires a customer account.
+  A preferred provider is a dispatch preference rather than an automatic match.
+- `/workspace/overview`: customer activity overview. Private sections contain
+  submitted requests, published quotes, schedules, messages and notifications.
+- `/workspace/:section`: role-specific customer/provider/admin pages.
 
-1. Access and workspace shell: sign-in, customer/provider registration,
-   verification, recovery, logout and role-specific navigation.
-2. Service requests and admin intake: all six service lines, My Tasks and review.
-3. Provider onboarding and admin verification.
-4. Dispatch, assignment offers and provider responses.
-5. Provider costing, admin quotes and customer decisions.
-6. Scheduling, confirmation and rescheduling.
-7. Job execution, evidence and progress tracking.
-8. Conversations, files and notification UI.
-9. Completion acknowledgement, exceptions and closure.
-10. Operational overview, activity history and account/settings refinement.
+## Implemented journeys
 
-Review each flow before starting the next. Use shared mock records so actions,
-lists, detail views and status history remain consistent. Include loading,
-empty, validation, failure, success and confirmation states as relevant.
+1. Access: existing mock sign-in, signup, verification, recovery and logout.
+2. Intake: six service-specific briefs, attachments, filters, admin review,
+   clarification and cancellation with a reason.
+3. Providers: editable profile, private verification documents, public portfolio,
+   submission/review history, approval/changes/rejection and availability.
+4. Dispatch: eligible-provider offers, accept/decline, withdrawal and reassignment.
+5. Pricing: private provider costing, admin draft line items, immutable published
+   quote versions, customer acceptance/decline/revision and new versions.
+6. Scheduling: WAT proposals, both participants' confirmation, date-change requests,
+   rescheduling and a basic one-hour proximity check for confirmed appointments.
+7. Execution: work updates, blockers, resume and completion evidence.
+8. Conversations: separate customer/XPro, provider/XPro and internal staff audiences;
+   attachments and generated in-app notifications with read state.
+9. Completion: customer acknowledgement or issue report, admin resolution and
+   acknowledgement-gated final closure.
+10. Overview/utilities: derived activity counts, audit history, account/contact
+    preferences, notification settings and admin prototype controls.
 
-## Flow 1
+## Preview data and limits
 
-The first slice adapts existing authentication screens and supplies separate
-customer, provider and admin home components, navigation and account views.
-Future sections have empty-state shells, not implemented business workflows.
-Customer/provider mock signup accounts can be verified and used to sign in.
-Registration and password edits exist only for the current preview lifetime.
-Refreshing resets these changes; seeded demo accounts remain available.
+Business state persists in this browser's localStorage and is shared between demo
+accounts. Actions simulate a short save delay. Admin Settings can simulate a failed
+save or restore sample records after confirmation. Failed commands leave data intact.
+Notification channel preferences are recorded; email/push are not delivered.
 
-Validate lint, type checking and build, then inspect desktop/narrow browser
-layouts and the sign-in, navigation, denied-section and logout journeys.
+File names/types/sizes are retained. PNG/JPEG/WebP images up to 512 KB also preview
+locally; other files are metadata only. There is no upload service or cloud storage.
+Public ratings/review counts are sample data; review submission is not implemented.
+
+UI role guards and visibility are for prototype review; real authorization and
+provider verification belong to backend integration. Demo accounts use the existing
+mock auth. Newly registered accounts/reset passwords are not durable across reloads.
+
+## Validation
+
+Run `pnpm lint:check`, `pnpm typecheck`, `pnpm build` and
+`pnpm exec tsx --tsconfig tsconfig.json tests/xpro-workflows.mts`.
+The workflow checks cover six-service intake, verification, dispatch, quote revisions,
+rescheduling, dual confirmation, audience separation, execution/issues/closure,
+cancellation, denied access and atomic failures. Browser checks cover public discovery,
+request draft/sign-in/submission, quote decisions, provider/admin handoffs and narrow
+layouts.
