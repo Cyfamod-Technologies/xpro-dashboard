@@ -1,29 +1,40 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
 import { isWorkspaceRole, sectionPath } from '@/features/workspace/config'
-import { statusLabels, when } from '@/features/operations/types'
+import { isFinished, statusLabelFor, when } from '@/features/operations/types'
 import { isUnclaimedOverdue } from '@/features/operations/staff'
 import { pendingApprovals } from '@/features/operations/workflow'
 
 const ops = useOperationsStore()
 const role = computed(() => ops.actor?.role)
 
-const isOpen = (status: string) => !['closed', 'cancelled'].includes(status)
-
 const adminCounters = computed<{ label: string; value: number; to?: string }[]>(() => [
   { label: 'Awaiting approval', value: pendingApprovals(ops.state).length, to: '/admin/approvals' },
-  { label: 'Unclaimed requests', value: ops.requests.filter(item => !item.staffOwnerId && isOpen(item.status)).length },
+  { label: 'Unclaimed requests', value: ops.requests.filter(item => !item.staffOwnerId && !isFinished(item.status)).length },
   { label: 'Unclaimed over 2 hours', value: ops.requests.filter(item => isUnclaimedOverdue(item)).length },
-  { label: 'My open requests', value: ops.requests.filter(item => item.staffOwnerId === ops.actor?.id && isOpen(item.status)).length },
+  { label: 'My open requests', value: ops.requests.filter(item => item.staffOwnerId === ops.actor?.id && !isFinished(item.status)).length },
 ])
 
 const counters = computed<{ label: string; value: number; to?: string }[]>(() => [
-  { label: role.value === 'provider' ? 'Assigned jobs' : 'Active requests', value: ops.requests.filter(item => !['closed', 'cancelled'].includes(item.status)).length },
+  { label: role.value === 'provider' ? 'Assigned jobs' : 'Active requests', value: ops.requests.filter(item => !isFinished(item.status)).length },
   { label: 'Quotes awaiting response', value: ops.requests.filter(item => item.quotes.some(quote => quote.status === 'sent')).length },
-  { label: 'Confirmed schedules', value: ops.requests.filter(item => item.schedules.at(-1)?.status === 'confirmed' && !['closed', 'cancelled'].includes(item.status)).length },
+  { label: 'Confirmed schedules', value: ops.requests.filter(item => item.schedules.at(-1)?.status === 'confirmed' && !isFinished(item.status)).length },
   { label: role.value === 'admin' ? 'Providers pending review' : 'Unread updates', value: role.value === 'admin' ? ops.state.providers.filter(item => item.verification === 'pending').length : ops.notifications.filter(item => !item.read).length },
   ...(role.value === 'admin' ? adminCounters.value : []),
 ])
+
+const payoutAlert = computed(() => {
+  const payout = ops.profile?.payout
+
+  if (!payout?.current)
+    return payout?.review?.state === 'pending' ? 'Payouts are paused until XPro verifies your bank details.' : payout?.review?.state === 'rejected' ? `Your bank details were not approved${payout.review.note ? `: ${payout.review.note}` : '.'}` : 'Add your bank details so XPro can pay you.'
+  if (payout.review?.state === 'pending')
+    return 'Your bank change is awaiting XPro review. Payouts are paused until XPro verifies your new bank details.'
+  if (payout.review?.state === 'rejected')
+    return `Your last bank change was not approved${payout.review.note ? `: ${payout.review.note}` : '.'}`
+
+  return ''
+})
 
 const pathFor = (id: string) => isWorkspaceRole(role.value) ? sectionPath(role.value, id) : '/'
 const requestPath = computed(() => pathFor(role.value === 'provider' ? 'jobs' : 'requests'))
@@ -79,6 +90,20 @@ const requestPath = computed(() => pathFor(role.value === 'provider' ? 'jobs' : 
       Manage profile
     </VBtn>
   </VAlert>
+  <VAlert
+    v-if="role === 'provider' && payoutAlert"
+    class="mb-6"
+    color="warning"
+    variant="tonal"
+  >
+    {{ payoutAlert }} <VBtn
+      to="/payouts"
+      size="small"
+      variant="text"
+    >
+      Payout details
+    </VBtn>
+  </VAlert>
   <div
     v-if="role === 'admin'"
     class="d-flex flex-wrap gap-3 mb-6"
@@ -128,7 +153,7 @@ const requestPath = computed(() => pathFor(role.value === 'provider' ? 'jobs' : 
               variant="tonal"
               color="primary"
             >
-              {{ statusLabels[request.status] }}
+              {{ statusLabelFor(request.status, role ?? 'customer') }}
             </VChip>
           </template>
         </VListItem>
