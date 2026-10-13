@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { createOperationsState } from '@/features/operations/fixtures.ts'
-import { applyCommand, currentAssignment, publicQuote, currentSchedule, visibleRequests, visibleMessages, visibleUpdates, pendingApprovals } from '@/features/operations/workflow.ts'
+import { applyCommand, currentAssignment, currentSchedule, payoutReady, pendingApprovals, publicProvider, publicQuote, visibleMessages, visibleRequests, visibleUpdates } from '@/features/operations/workflow.ts'
 import { intakeFields } from '@/features/operations/types.ts'
-import { messageAuthorLabel } from '@/features/operations/staff.ts'
-import type { Actor, Command, ServiceLine, RequestInput } from '@/features/operations/types.ts'
+import { isNuban, maskAccount, resolveAccountDemo } from '@/features/operations/banks.ts'
+import { messageAuthorLabel, staffCan } from '@/features/operations/staff.ts'
+import type { Actor, Command, ProviderInput, RequestInput, ServiceLine } from '@/features/operations/types.ts'
 
 const customer: Actor = { id: 'usr-customer', name: 'Ada', email: 'customer@xpro.test', role: 'customer' }
 const provider: Actor = { id: 'usr-provider', name: 'Tunde', email: 'provider@xpro.test', role: 'provider' }
@@ -14,20 +15,28 @@ const staffActor = (id: string, name: string, email: string): Actor => ({ id, na
 const operations = staffActor('usr-operations', 'Kemi', 'operations@xpro.test')
 const pricing = staffActor('usr-pricing', 'Chidi', 'pricing@xpro.test')
 const relations = staffActor('usr-relations', 'Zainab', 'relations@xpro.test')
+const finance: Actor = { id: 'usr-finance', name: 'Ngozi', email: 'finance@xpro.test', role: 'admin' }
+const demoPhoto = { id: 'face', name: 'Face.jpg', size: 1000, type: 'image/jpeg' }
+const demoBank = { bankCode: '058', accountNumber: '0123456789', accountName: 'TUNDE BAKARE' }
 let state = createOperationsState()
 state.requests = []
+
 const run = (actor: Actor, command: Command) => { state = applyCommand(state, actor, command) }
+
 const fails = (actor: Actor, command: Command) => {
   const snapshot = JSON.stringify(state)
+
   assert.throws(() => applyCommand(state, actor, command))
   assert.equal(JSON.stringify(state), snapshot, 'Failed mutations must be atomic')
 }
+
 const failsWith = (actor: Actor, command: Command, pattern: RegExp) => {
   const snapshot = JSON.stringify(state)
 
   assert.throws(() => applyCommand(state, actor, command), pattern)
   assert.equal(JSON.stringify(state), snapshot, 'Failed mutations must be atomic')
 }
+
 const future = new Date(Date.now() + 5 * 86400000).toISOString()
 for (const service of Object.keys(intakeFields) as ServiceLine[]) {
   const input: RequestInput = { title: `Test ${service} request`, service, city: 'Abuja', address: 'Demo site', phone: '0800 000 0000', description: 'A sufficiently detailed demo brief for the service.', budget: 120000, startDate: '', attachments: [], details: {} }
@@ -38,29 +47,36 @@ for (const service of Object.keys(intakeFields) as ServiceLine[]) {
   run(customer, { type: 'request.create', input })
 }
 assert.equal(state.requests.length, 6, 'Every service accepts its dedicated brief')
+
 const requestId = state.requests.find(item => item.service === 'Construction')!.id
 const request = () => state.requests.find(item => item.id === requestId)!
 const newNotes = (before: number) => state.notifications.slice(0, state.notifications.length - before)
+
 // Provider alerts: matching approved, available providers in the city hear about the request, but cannot open it.
 assert.deepEqual(request().alertedProviderIds, ['provider-nneka'])
 assert.deepEqual(state.requests.find(item => item.service === 'Procurement')!.alertedProviderIds, [], 'Pending and out-of-city providers are not alerted')
+
 const alertNote = state.notifications.find(item => item.recipientId === 'provider-nneka' && item.title === 'New Construction request in Abuja')!
+
 assert(alertNote, 'Alerted provider receives a notification')
 assert.equal(alertNote.requestId, undefined, 'Alert carries no request id')
 assert(!alertNote.message.includes('Test Construction request'), 'Alert carries no request title')
 assert(!state.notifications.some(item => item.recipientId === provider.id && item.title.startsWith('New ')), 'Unverified providers are not alerted')
 assert.equal(visibleRequests(state, nneka).length, 0, 'Alerted providers cannot view the request')
 assert(state.audit.some(item => item.action === 'Providers alerted' && item.requestId === requestId))
+
 const line = [{ description: 'Construction service', quantity: 2, rate: 120000 }]
+
 fails(stranger, { type: 'request.cancel', requestId, note: 'Invalid access' })
 fails(customer, { type: 'provider.review', providerId: provider.id, decision: 'approved', note: '' })
 fails(admin, { type: 'assignment.offer', requestId, providerId: provider.id, note: 'Not approved' })
-run(provider, { type: 'provider.submit', input: { phone: '0800 000 0001', trade: 'Construction', city: 'Abuja', services: ['Construction'], experience: 8, bio: 'Demo introduction', documents: [{ id: 'identity', name: 'Identity.pdf', size: 1000, type: 'application/pdf' }], portfolio: [] } })
+run(provider, { type: 'provider.submit', input: { phone: '0800 000 0001', trade: 'Construction', city: 'Abuja', services: ['Construction'], experience: 8, bio: 'Demo introduction', documents: [{ id: 'identity', name: 'Identity.pdf', size: 1000, type: 'application/pdf' }], portfolio: [], photo: demoPhoto, bank: demoBank } })
 run(admin, { type: 'provider.review', providerId: provider.id, decision: 'approved', note: 'Reviewed documents' })
 run(admin, { type: 'request.review', requestId, clarify: true, note: 'Please confirm site access.' })
 run(customer, { type: 'message.send', requestId, channel: 'customer', text: 'Site access confirmed.', attachments: [] })
 run(admin, { type: 'assignment.offer', requestId, providerId: provider.id, note: 'Suitable for service and location' })
 assert.equal(visibleRequests(state, provider).length, 1)
+
 // Provider acceptance is held for XPro; the customer hears nothing until it is confirmed.
 let before = state.notifications.length
 run(provider, { type: 'assignment.respond', requestId, assignmentId: currentAssignment(request())!.id, accept: true, note: 'Accepted' })
@@ -103,7 +119,9 @@ run(admin, { type: 'schedule.propose', requestId, startAt: future, note: 'Site v
 let scheduleId = currentSchedule(request())!.id
 run(customer, { type: 'schedule.respond', requestId, scheduleId, accept: false, note: 'Later date please' })
 run(admin, { type: 'schedule.propose', requestId, startAt: new Date(Date.parse(future) + 86400000).toISOString(), note: 'Revised date' })
+
 const oldScheduleId = scheduleId
+
 scheduleId = currentSchedule(request())!.id
 fails(provider, { type: 'schedule.respond', requestId, scheduleId: oldScheduleId, accept: true, note: '' })
 run(customer, { type: 'schedule.respond', requestId, scheduleId, accept: true, note: '' })
@@ -116,12 +134,15 @@ assert(!visibleMessages(request(), customer).some(item => item.channel !== 'cust
 assert(!visibleMessages(request(), provider).some(item => item.channel !== 'provider'))
 assert.equal(visibleMessages(request(), stranger).length, 0)
 fails(customer, { type: 'message.send', requestId, channel: 'internal', text: 'Forbidden', attachments: [] })
+
 // Customer and provider responses never carry personal names.
 assert.deepEqual(currentSchedule(request())!.responses, ['Customer: Confirmed', 'Provider: Confirmed'])
 assert(!currentSchedule(request())!.responses.concat(request().schedules.flatMap(item => item.responses)).some(item => item.includes('Ada') || item.includes('Tunde')))
 assert(request().schedules.some(item => item.responses.includes('Customer: Later date please')))
+
 // Progress updates are held for XPro review before they change the job or reach the customer.
 const reviewUpdate = (approve: boolean, note = '') => run(operations, { type: 'progress.review', requestId, updateId: request().updates[0].id, approve, note })
+
 before = state.notifications.length
 run(provider, { type: 'progress.add', requestId, status: 'in_progress', note: 'Work started', attachments: [] })
 assert.equal(request().status, 'scheduled', 'A pending update does not change the job status')
@@ -169,9 +190,12 @@ run(admin, { type: 'issue.resolve', requestId, issueId: request().issues[0].id, 
 run(customer, { type: 'completion.respond', requestId, acknowledge: true, note: '' })
 run(admin, { type: 'request.close', requestId })
 assert.equal(request().status, 'closed')
+
 const otherId = state.requests.find(item => item.service === 'Design')!.id
+
 // Customer cancellation is a request until XPro approves it.
 const otherRequest = () => state.requests.find(item => item.id === otherId)!
+
 before = state.notifications.length
 run(customer, { type: 'request.cancel', requestId: otherId, note: 'No longer needed.' })
 assert.notEqual(otherRequest().status, 'cancelled')
@@ -193,6 +217,7 @@ assert.equal(otherRequest().status, 'cancelled')
 assert.equal(otherRequest().cancellationRequest!.review.state, 'approved')
 assert(state.audit.length > 20)
 assert(state.notifications.every(item => Boolean(item.recipientId)))
+
 // Staff roles, request ownership, quote sign-off and staff accounts.
 const find = (id: string) => state.requests.find(item => item.id === id)!
 const staffRecord = (id: string) => state.staff.find(item => item.id === id)!
@@ -202,13 +227,15 @@ const draftLine = (rate: number) => [{ description: 'Staff test service', quanti
 
 // Role limits are enforced by the reducer and stay atomic.
 state = createOperationsState()
-assert.equal(state.schema, 3)
+assert.equal(state.schema, 4)
 assert.equal(state.settings.quoteApprovalThreshold, null)
 assert.equal(find('XPR-00001').staffOwnerId, '')
 assert.equal(find('XPR-00002').staffOwnerId, 'usr-operations')
 failsWith(operations, { type: 'quote.save', requestId: 'XPR-00003', items: draftLine(100000), note: 'Not pricing' }, denied)
 run(pricing, { type: 'quote.save', requestId: 'XPR-00003', items: draftLine(100000), note: 'Pricing draft' })
+
 const pricedQuoteId = find('XPR-00003').quotes.at(-1)!.id
+
 failsWith(operations, { type: 'quote.publish', requestId: 'XPR-00003', quoteId: pricedQuoteId }, denied)
 failsWith(relations, { type: 'quote.publish', requestId: 'XPR-00003', quoteId: pricedQuoteId }, denied)
 failsWith(pricing, { type: 'assignment.offer', requestId: 'XPR-00001', providerId: 'provider-nneka', note: 'Not dispatch' }, denied)
@@ -228,7 +255,9 @@ assert.equal(find('XPR-00003').staffOwnerId, 'usr-operations', 'Pricing staff ne
 before = state.notifications.length
 run(customer, { type: 'request.create', input: { title: 'Ownership request', service: 'Hire', city: 'Abuja', address: 'Demo site', phone: '0800 000 0000', description: 'A sufficiently detailed demo brief for ownership.', budget: 0, startDate: '', attachments: [], details: { hireType: 'Professional', trade: 'Surveyor', quantity: '1', endDate: future.slice(0, 10) } } })
 assert.deepEqual(recipientsSince(before), ['provider-nneka', 'usr-admin', 'usr-operations', 'usr-relations'])
+
 const ownedId = state.requests[0].id
+
 assert.equal(find(ownedId).staffOwnerId, '')
 assert.equal(find(ownedId).claimedAt, '')
 
@@ -248,11 +277,13 @@ before = state.notifications.length
 run(customer, { type: 'quote.respond', requestId: 'XPR-00003', quoteId: find('XPR-00003').quotes.find(item => item.status === 'sent')!.id, decision: 'revision_requested', note: 'Please revise.' })
 assert.deepEqual(recipientsSince(before), ['usr-operations', 'usr-pricing'], 'Pricing events reach the owner and pricing role only, not super admins or client relations')
 before = state.notifications.length
-run(provider, { type: 'provider.submit', input: { phone: '0800 000 0001', trade: 'Construction', city: 'Abuja', services: ['Construction'], experience: 8, bio: 'Demo introduction', documents: [{ id: 'identity-2', name: 'Identity.pdf', size: 1000, type: 'application/pdf' }], portfolio: [] } })
-assert.deepEqual(recipientsSince(before), ['usr-admin', 'usr-operations'], 'Only provider reviewers hear about provider submissions')
+run(provider, { type: 'provider.submit', input: { phone: '0800 000 0001', trade: 'Construction', city: 'Abuja', services: ['Construction'], experience: 8, bio: 'Demo introduction', documents: [{ id: 'identity-2', name: 'Identity.pdf', size: 1000, type: 'application/pdf' }], portfolio: [], photo: demoPhoto, bank: demoBank } })
+assert.deepEqual(recipientsSince(before), ['usr-admin', 'usr-finance', 'usr-operations'], 'Only provider and bank reviewers hear about provider submissions')
+assert(!recipientsSince(before).includes('usr-pricing'))
 
 // Claiming and reassigning.
 const unclaimedId = 'XPR-00001'
+
 failsWith(operations, { type: 'request.claim', requestId: 'XPR-00002' }, /already has an owner/)
 failsWith(pricing, { type: 'request.claim', requestId: unclaimedId }, denied)
 run(relations, { type: 'request.claim', requestId: unclaimedId })
@@ -284,7 +315,9 @@ run(pricing, { type: 'quote.publish', requestId: 'XPR-00003', quoteId: find('XPR
 assert.equal(find('XPR-00003').quotes.at(-1)!.status, 'sent')
 assert.equal(find('XPR-00003').quotes.at(-1)!.publishedBy, 'usr-pricing')
 run(pricing, { type: 'quote.save', requestId: 'XPR-00003', items: draftLine(400000), note: 'High value' })
+
 const highQuoteId = find('XPR-00003').quotes.at(-1)!.id
+
 before = state.notifications.length
 run(pricing, { type: 'quote.publish', requestId: 'XPR-00003', quoteId: highQuoteId })
 assert.equal(find('XPR-00003').quotes.at(-1)!.status, 'draft')
@@ -312,10 +345,14 @@ failsWith(admin, { type: 'staff.invite', name: 'X', email: 'short@xpro.test', ro
 failsWith(admin, { type: 'staff.invite', name: 'No Roles', email: 'noroles@xpro.test', roles: [] }, /role/)
 failsWith(admin, { type: 'staff.invite', name: 'Bad Email', email: 'not-an-email', roles: ['pricing'] }, /email/)
 run(admin, { type: 'staff.invite', name: 'Ngozi Eze', email: 'ngozi@xpro.test', roles: ['super_admin'] })
+
 const invited = state.staff.at(-1)!
+
 assert.equal(invited.status, 'invited')
 assert.equal(invited.history[0].action, 'Invited')
+
 const invitedActor = staffActor(invited.id, invited.name, invited.email)
+
 failsWith(invitedActor, { type: 'request.review', requestId: 'XPR-00001', clarify: false, note: '' }, /not active/)
 failsWith(admin, { type: 'staff.status', staffId: 'usr-admin', status: 'suspended', reassignTo: '' }, /own account status/)
 failsWith(admin, { type: 'staff.roles', staffId: 'usr-admin', roles: ['operations'] }, /At least one active super admin/)
@@ -329,6 +366,7 @@ run(invitedActor, { type: 'staff.roles', staffId: 'usr-admin', roles: ['super_ad
 
 // Suspending an owner requires a successor.
 const ownedByOperations = state.requests.filter(item => item.staffOwnerId === 'usr-operations' && !['closed', 'cancelled'].includes(item.status)).map(item => item.id)
+
 assert(ownedByOperations.length > 0)
 failsWith(admin, { type: 'staff.status', staffId: 'usr-operations', status: 'suspended', reassignTo: '' }, /takes over/)
 failsWith(admin, { type: 'staff.status', staffId: 'usr-operations', status: 'suspended', reassignTo: 'usr-pricing' }, /can own requests/)
@@ -346,12 +384,15 @@ run(operations, { type: 'request.claim', requestId: 'XPR-00001' })
 
 // Customers and providers never see staff names.
 const seeded = createOperationsState().requests[0].messages[0]
+
 assert.equal(messageAuthorLabel(seeded, 'customer'), 'XPro Team')
 assert.equal(messageAuthorLabel({ ...seeded, channel: 'provider' }, 'provider'), 'XPro Dispatch')
 run(relations, { type: 'message.send', requestId: 'XPR-00003', channel: 'customer', text: 'Customer-facing note', attachments: [] })
 run(relations, { type: 'message.send', requestId: 'XPR-00003', channel: 'provider', text: 'Provider-facing note', attachments: [] })
+
 const customerNote = find('XPR-00003').messages.find(item => item.text === 'Customer-facing note')!
 const providerNote = find('XPR-00003').messages.find(item => item.text === 'Provider-facing note')!
+
 assert.equal(customerNote.author, 'Zainab')
 assert.equal(messageAuthorLabel(customerNote, 'customer'), 'XPro Team')
 assert.equal(messageAuthorLabel(providerNote, 'provider'), 'XPro Dispatch')
@@ -360,7 +401,7 @@ assert.equal(messageAuthorLabel({ ...customerNote, authorRole: 'customer', autho
 
 // Approval queue seed data and permission-gated reviews.
 state = createOperationsState()
-assert.deepEqual(pendingApprovals(state).map(item => item.kind).sort(), ['assignment', 'cancellation', 'progress', 'provider'])
+assert.deepEqual(pendingApprovals(state).map(item => item.kind).sort(), ['assignment', 'bank', 'bank', 'cancellation', 'progress', 'provider'])
 assert.deepEqual(pendingApprovals(state).map(item => item.createdAt), [...pendingApprovals(state).map(item => item.createdAt)].sort(), 'Queue is oldest first')
 assert.equal(visibleUpdates(find('XPR-00002'), customer).length, 1, 'Customers only see approved updates')
 assert.equal(visibleUpdates(find('XPR-00002'), nneka).length, 2)
@@ -377,11 +418,133 @@ assert.equal(find('XPR-00002').status, 'in_progress')
 assert.equal(visibleUpdates(find('XPR-00002'), customer).length, 2)
 run(relations, { type: 'cancellation.review', requestId: 'XPR-00003', approve: true, note: '' })
 assert.equal(find('XPR-00003').status, 'cancelled')
-assert.deepEqual(pendingApprovals(state).map(item => item.kind), ['provider'], 'Reviewed items leave the queue')
+assert.deepEqual(pendingApprovals(state).map(item => item.kind).sort(), ['bank', 'bank', 'provider'], 'Reviewed items leave the queue')
+
 // An admin cancelling directly clears a pending customer request.
 state = createOperationsState()
 run(relations, { type: 'request.cancel', requestId: 'XPR-00003', note: 'Cancelled by XPro.' })
 assert.equal(find('XPR-00003').status, 'cancelled')
 assert.equal(find('XPR-00003').cancellationRequest!.review.state, 'approved')
 
-console.log('PASS: all six intake forms; verification; dispatch; costing and immutable quote revisions; rescheduling and dual confirmation; channel privacy; execution, issue resolution and closure; role guards and atomic failures; staff roles and permissions; request ownership, claiming and reassignment; quote sign-off threshold; staff invitations and suspension; admin approval gates for provider alerts, assignments, progress, completion and cancellation.')
+// Provider onboarding, bank verification and payout details.
+const onboarding = (patch: Partial<ProviderInput> = {}): ProviderInput => ({ phone: '0800 000 0001', trade: 'Construction', city: 'Abuja', services: ['Construction'], experience: 8, bio: 'Demo introduction', documents: [{ id: 'identity-3', name: 'Identity.pdf', size: 1000, type: 'application/pdf' }], portfolio: [], photo: demoPhoto, bank: demoBank, ...patch })
+const profileOf = (id: string) => state.providers.find(item => item.id === id)!
+
+state = createOperationsState()
+assert(staffCan(staffRecord('usr-finance'), 'bank.review'))
+assert(!staffCan(staffRecord('usr-finance'), 'provider.review'))
+assert(!staffCan(staffRecord('usr-operations'), 'bank.review'))
+failsWith(finance, { type: 'request.claim', requestId: 'XPR-00001' }, denied)
+assert(payoutReady(profileOf('provider-nneka')), 'Seeded verified provider can be paid')
+assert(!payoutReady(profileOf('provider-ibrahim')), 'First bank details are still pending')
+assert(!payoutReady(profileOf('provider-aisha')), 'A pending bank change blocks payouts')
+assert.equal(profileOf('provider-aisha').payout.current!.accountNumber, '0690000031', 'The old account stays on record')
+assert.equal(profileOf('usr-provider').payout.current, null)
+assert.deepEqual(pendingApprovals(state).filter(item => item.kind === 'bank').map(item => item.providerId).sort(), ['provider-aisha', 'provider-ibrahim'])
+
+// Provider submission requires a photo and valid bank details, atomically.
+failsWith(provider, { type: 'provider.submit', input: onboarding({ photo: null }) }, /face photo/)
+failsWith(provider, { type: 'provider.submit', input: onboarding({ photo: { ...demoPhoto, type: 'application/pdf' } }) }, /face photo/)
+failsWith(provider, { type: 'provider.submit', input: onboarding({ bank: { ...demoBank, accountNumber: '012345678' } }) }, /10-digit/)
+failsWith(provider, { type: 'provider.submit', input: onboarding({ bank: { ...demoBank, bankCode: '000' } }) }, /Choose a bank/)
+failsWith(provider, { type: 'provider.submit', input: onboarding({ bank: { ...demoBank, accountName: ' ' } }) }, /Verify the account name/)
+before = state.notifications.length
+run(provider, { type: 'provider.submit', input: onboarding() })
+assert.equal(profileOf(provider.id).payout.pending!.bankName, 'Guaranty Trust Bank')
+assert.equal(profileOf(provider.id).payout.review!.state, 'pending')
+assert.equal(profileOf(provider.id).payout.current, null)
+assert.equal(profileOf(provider.id).photo!.name, 'Face.jpg')
+assert(!('bank' in profileOf(provider.id)), 'The bank input is not stored on the profile')
+assert.equal(profileOf(provider.id).payout.history[0].action, 'Bank details submitted')
+assert(recipientsSince(before).includes('usr-finance'))
+assert(!recipientsSince(before).includes('usr-pricing'))
+assert(state.notifications.some(item => item.recipientId === 'usr-finance' && item.title === 'Bank details to verify' && item.message === 'Tunde'))
+assert(!payoutReady(profileOf(provider.id)))
+assert(pendingApprovals(state).some(item => item.kind === 'bank' && item.providerId === provider.id))
+
+// Resubmitting the same pending bank does not notify Finance again.
+before = state.notifications.length
+run(provider, { type: 'provider.submit', input: onboarding() })
+assert(!newNotes(before).some(item => item.title === 'Bank details to verify'))
+assert.equal(profileOf(provider.id).payout.history.length, 1)
+
+// Only bank reviewers decide, and a rejection needs a reason.
+failsWith(operations, { type: 'payout.review', providerId: provider.id, approve: true, note: '' }, denied)
+failsWith(pricing, { type: 'payout.review', providerId: provider.id, approve: true, note: '' }, denied)
+failsWith(provider, { type: 'payout.review', providerId: provider.id, approve: true, note: '' }, /not available for your account type/)
+failsWith(finance, { type: 'payout.review', providerId: provider.id, approve: false, note: ' ' }, /Explain/)
+failsWith(finance, { type: 'payout.review', providerId: 'provider-nneka', approve: true, note: '' }, /not awaiting review/)
+before = state.notifications.length
+run(finance, { type: 'payout.review', providerId: provider.id, approve: true, note: 'Name matches.' })
+assert.equal(profileOf(provider.id).payout.current!.accountNumber, '0123456789')
+assert.equal(profileOf(provider.id).payout.pending, null)
+assert.equal(profileOf(provider.id).payout.review!.state, 'approved')
+assert.equal(profileOf(provider.id).payout.review!.by, 'usr-finance')
+assert(payoutReady(profileOf(provider.id)))
+assert(newNotes(before).some(item => item.recipientId === provider.id && item.title === 'Payout details approved'))
+assert(state.audit.some(item => item.action === 'Bank details approved'))
+assert(!pendingApprovals(state).some(item => item.kind === 'bank' && item.providerId === provider.id))
+
+// Changing details later keeps the old account and blocks payouts until reviewed.
+const newBank = { bankCode: '033', accountNumber: '2109876543', accountName: 'TUNDE BAKARE' }
+
+failsWith(provider, { type: 'payout.update', bank: demoBank }, /already your payout details/)
+failsWith(provider, { type: 'payout.update', bank: { ...newBank, accountNumber: '123' } }, /10-digit/)
+failsWith(customer, { type: 'payout.update', bank: newBank }, /not available for your account type/)
+failsWith({ ...provider, id: 'new-provider' }, { type: 'payout.update', bank: newBank }, /Complete your provider profile/)
+
+const verificationBefore = profileOf(provider.id).verification
+
+before = state.notifications.length
+run(provider, { type: 'payout.update', bank: newBank })
+assert.equal(profileOf(provider.id).payout.current!.bankName, 'Guaranty Trust Bank', 'Current account unchanged until approval')
+assert.equal(profileOf(provider.id).payout.pending!.bankName, 'United Bank for Africa')
+assert.equal(profileOf(provider.id).verification, verificationBefore, 'A bank change does not reopen identity verification')
+assert(!payoutReady(profileOf(provider.id)))
+assert(recipientsSince(before).includes('usr-finance') && !recipientsSince(before).includes('usr-operations'))
+assert.equal(profileOf(provider.id).payout.history[0].action, 'Bank change requested')
+failsWith(provider, { type: 'payout.update', bank: { ...newBank, accountNumber: '3109876543' } }, /still awaiting XPro review/)
+failsWith(finance, { type: 'payout.review', providerId: provider.id, approve: false, note: '' }, /Explain/)
+before = state.notifications.length
+run(finance, { type: 'payout.review', providerId: provider.id, approve: false, note: 'Account name does not match.' })
+assert.equal(profileOf(provider.id).payout.current!.accountNumber, '0123456789', 'Rejection keeps the current account')
+assert.equal(profileOf(provider.id).payout.pending, null)
+assert.equal(profileOf(provider.id).payout.review!.state, 'rejected')
+assert.equal(profileOf(provider.id).payout.review!.note, 'Account name does not match.')
+assert(payoutReady(profileOf(provider.id)))
+assert(newNotes(before).some(item => item.recipientId === provider.id && item.title === 'Payout details not approved' && item.message === 'Account name does not match.'))
+run(provider, { type: 'payout.update', bank: newBank })
+run(admin, { type: 'payout.review', providerId: provider.id, approve: true, note: '' })
+assert.equal(profileOf(provider.id).payout.current!.accountNumber, '2109876543', 'Super admins hold every permission')
+
+// Submitting the profile again with the current account is not a bank change.
+before = state.notifications.length
+run(provider, { type: 'provider.submit', input: onboarding({ bank: newBank }) })
+assert(!newNotes(before).some(item => item.title === 'Bank details to verify'))
+assert.equal(profileOf(provider.id).payout.pending, null)
+assert(payoutReady(profileOf(provider.id)))
+
+// The seeded bank change is approved from the queue.
+run(finance, { type: 'payout.review', providerId: 'provider-aisha', approve: true, note: '' })
+assert.equal(profileOf('provider-aisha').payout.current!.bankName, 'United Bank for Africa')
+assert(payoutReady(profileOf('provider-aisha')))
+
+// The public projection never exposes the face photo or payout details.
+for (const item of state.providers.filter(entry => entry.verification === 'approved')) {
+  assert(item.payout, 'Approved provider records carry payout details')
+
+  const projection = publicProvider(item)
+
+  assert(!('photo' in projection) && !('payout' in projection) && !('documents' in projection) && !('email' in projection))
+  assert(!JSON.stringify(projection).includes(item.payout.current?.accountNumber ?? 'no-account'))
+}
+
+// Simulated bank lookup.
+assert.equal(await resolveAccountDemo('058', '0123456789', 'Tunde Bakare'), 'TUNDE BAKARE')
+await assert.rejects(resolveAccountDemo('000', '0123456789', 'Tunde'), /Choose a bank/)
+await assert.rejects(resolveAccountDemo('058', '12345', 'Tunde'), /10-digit/)
+await assert.rejects(resolveAccountDemo('058', '0123450000', 'Tunde'), /could not verify/)
+assert(isNuban('0123456789') && !isNuban('012345678') && !isNuban('01234567ab'))
+assert.equal(maskAccount('0123456789'), '******6789')
+
+console.log('PASS: all six intake forms; verification; dispatch; costing and immutable quote revisions; rescheduling and dual confirmation; channel privacy; execution, issue resolution and closure; role guards and atomic failures; staff roles and permissions; request ownership, claiming and reassignment; quote sign-off threshold; staff invitations and suspension; admin approval gates for provider alerts, assignments, progress, completion and cancellation; provider onboarding with face photo and bank details; Finance bank verification, bank changes and payout readiness.')
