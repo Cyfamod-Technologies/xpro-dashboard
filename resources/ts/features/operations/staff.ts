@@ -1,4 +1,5 @@
 import type { Message, OperationsState, ServiceRequest, StaffMember, StaffPermission, StaffRole } from '@/features/operations/types'
+import { isFinished } from '@/features/operations/types'
 import type { WorkspaceRole } from '@/features/workspace/config'
 
 export const staffRolePermissions: Record<StaffRole, StaffPermission[] | '*'> = {
@@ -6,6 +7,7 @@ export const staffRolePermissions: Record<StaffRole, StaffPermission[] | '*'> = 
   operations: ['request.claim', 'request.review', 'request.cancel', 'request.flag', 'provider.review', 'dispatch.manage', 'progress.review', 'schedule.manage', 'issue.resolve', 'request.close', 'message.customer', 'message.provider', 'message.internal'],
   pricing: ['quote.manage', 'message.provider', 'message.internal'],
   client_relations: ['request.claim', 'request.review', 'request.cancel', 'request.flag', 'issue.resolve', 'message.customer', 'message.provider', 'message.internal'],
+  finance: ['bank.review', 'message.provider', 'message.internal'],
 }
 
 export const staffRoleLabels: Record<StaffRole, string> = {
@@ -13,6 +15,7 @@ export const staffRoleLabels: Record<StaffRole, string> = {
   operations: 'Operations',
   pricing: 'Pricing',
   client_relations: 'Client relations',
+  finance: 'Finance',
 }
 
 export const staffCan = (member: StaffMember | undefined, permission: StaffPermission) => Boolean(member && member.status === 'active' && member.roles.some(role => {
@@ -27,6 +30,6 @@ export const activeStaffInRole = (state: OperationsState, role: StaffRole) => st
 
 export const UNCLAIMED_ALERT_MS = 2 * 60 * 60 * 1000
 
-export const isUnclaimedOverdue = (request: ServiceRequest, nowMs = Date.now()) => !request.staffOwnerId && !['closed', 'cancelled'].includes(request.status) && nowMs - Date.parse(request.createdAt) > UNCLAIMED_ALERT_MS
+export const isUnclaimedOverdue = (request: ServiceRequest, nowMs = Date.now()) => !request.staffOwnerId && !isFinished(request.status) && nowMs - Date.parse(request.createdAt) > UNCLAIMED_ALERT_MS
 
 export const messageAuthorLabel = (message: Message, viewer: WorkspaceRole) => message.authorRole === 'admin' && viewer !== 'admin' ? (message.channel === 'provider' ? 'XPro Dispatch' : 'XPro Team') : message.author

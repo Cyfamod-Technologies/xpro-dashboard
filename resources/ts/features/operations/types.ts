@@ -5,8 +5,8 @@ export type RequestStatus = 'submitted' | 'under_review' | 'matched' | 'quoted' 
 export type VerificationStatus = 'draft' | 'pending' | 'changes_requested' | 'approved' | 'rejected'
 export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'declined' | 'revision_requested' | 'superseded'
 export type Channel = 'customer' | 'provider' | 'internal'
-export type StaffRole = 'super_admin' | 'operations' | 'pricing' | 'client_relations'
-export type StaffPermission = 'request.claim' | 'request.review' | 'request.cancel' | 'request.flag' | 'request.reassign' | 'provider.review' | 'dispatch.manage' | 'quote.manage' | 'quote.approve' | 'schedule.manage' | 'issue.resolve' | 'request.close' | 'message.customer' | 'message.provider' | 'message.internal' | 'progress.review' | 'staff.manage' | 'settings.manage'
+export type StaffRole = 'super_admin' | 'operations' | 'pricing' | 'client_relations' | 'finance'
+export type StaffPermission = 'request.claim' | 'request.review' | 'request.cancel' | 'request.flag' | 'request.reassign' | 'provider.review' | 'dispatch.manage' | 'quote.manage' | 'quote.approve' | 'schedule.manage' | 'issue.resolve' | 'request.close' | 'message.customer' | 'message.provider' | 'message.internal' | 'progress.review' | 'staff.manage' | 'settings.manage' | 'bank.review'
 
 export type ReviewState = 'pending' | 'approved' | 'rejected'
 export interface Review { state: ReviewState; by: string; note: string; at: string }
