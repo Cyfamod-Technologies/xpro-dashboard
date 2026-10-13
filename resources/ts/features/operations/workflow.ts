@@ -1,6 +1,7 @@
 /* eslint indent: ["error", 2, { "SwitchCase": 1 }] */
-import type { Actor, Command, OperationsState, Preferences, ProgressUpdate, QuoteItem, Review, ServiceRequest, StaffMember, StaffPermission, StaffRole } from '@/features/operations/types'
-import { intakeFields } from '@/features/operations/types'
+import type { Actor, Assignment, BankAccount, BankInput, Command, OperationsState, PendingProfileChanges, Preferences, ProgressUpdate, ProviderProfile, QuoteItem, Review, ServiceRequest, StaffMember, StaffPermission, StaffRole } from '@/features/operations/types'
+import { intakeFields, isFinished, lineTotal } from '@/features/operations/types'
+import { isNuban, maskAccount, nigerianBanks } from '@/features/operations/banks'
 import { activeStaffInRole, activeStaffWith, staffCan, staffRoleLabels, staffRolePermissions } from '@/features/operations/staff'
 
 const id = () => crypto.randomUUID()
@@ -19,12 +20,12 @@ export const currentAssignment = (request: ServiceRequest) => {
 export const pendingReview = (): Review => ({ state: 'pending', by: '', note: '', at: '' })
 export const visibleUpdates = (request: ServiceRequest, actor: Actor): ProgressUpdate[] => request.updates.filter(update => actor.role === 'admin' || (actor.role === 'provider' && update.authorId === actor.id) || (actor.role === 'customer' && update.review.state === 'approved'))
 
-export interface PendingApproval { kind: 'assignment' | 'progress' | 'completion' | 'cancellation' | 'quote' | 'provider'; requestId?: string; providerId?: string; itemId: string; title: string; createdAt: string }
+export interface PendingApproval { kind: 'assignment' | 'progress' | 'completion' | 'cancellation' | 'quote' | 'provider' | 'provider_changes' | 'bank'; requestId?: string; providerId?: string; itemId: string; title: string; createdAt: string }
 
 export const pendingApprovals = (state: OperationsState): PendingApproval[] => {
   const items: PendingApproval[] = []
 
-  for (const request of state.requests.filter(item => !['closed', 'cancelled'].includes(item.status))) {
+  for (const request of state.requests.filter(item => !isFinished(item.status))) {
     for (const assignment of request.assignments.filter(item => item.status === 'pending_approval'))
       items.push({ kind: 'assignment', requestId: request.id, providerId: assignment.providerId, itemId: assignment.id, title: request.title, createdAt: assignment.createdAt })
     for (const update of request.updates.filter(item => item.review.state === 'pending'))
@@ -36,10 +37,82 @@ export const pendingApprovals = (state: OperationsState): PendingApproval[] => {
   }
   for (const profile of state.providers.filter(item => item.verification === 'pending'))
     items.push({ kind: 'provider', providerId: profile.id, itemId: profile.id, title: profile.name, createdAt: profile.history[0]?.createdAt ?? '' })
+  for (const profile of state.providers.filter(item => item.pendingChanges && item.changesReview?.state === 'pending'))
+    items.push({ kind: 'provider_changes', providerId: profile.id, itemId: profile.id, title: profile.name, createdAt: profile.pendingChanges!.submittedAt })
+  for (const profile of state.providers.filter(item => item.payout.pending && item.payout.review?.state === 'pending'))
+    items.push({ kind: 'bank', providerId: profile.id, itemId: profile.id, title: profile.name, createdAt: profile.payout.pending!.submittedAt })
 
   return items.sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0))
 }
+
+/** A provider can be paid only once a bank account is verified and no change is awaiting review. */
+export const payoutReady = (profile: ProviderProfile) => Boolean(profile.payout.current) && profile.payout.review?.state !== 'pending'
+
+/** Public projection of an approved provider. Never includes the face photo or payout details. */
+export const publicProvider = (profile: ProviderProfile) => ({ id: profile.id, name: profile.name, trade: profile.trade, city: profile.city, services: profile.services, experience: profile.experience, bio: profile.bio, rating: profile.rating, reviewCount: profile.reviewCount, portfolio: profile.portfolio, available: profile.available })
+
+const sameAccount = (a: { bankCode: string; accountNumber: string }, b: { bankCode: string; accountNumber: string }) => a.bankCode === b.bankCode && a.accountNumber === b.accountNumber
+
+export const validateBank = (input: BankInput): BankAccount => {
+  const bank = nigerianBanks.find(item => item.code === input.bankCode)
+
+  need(bank, 'Choose a bank from the list.')
+  need(isNuban(input.accountNumber), 'Enter a 10-digit account number.')
+  need(input.accountName.trim().length >= 3, 'Verify the account name before continuing.')
+
+  return { bankCode: bank!.code, bankName: bank!.name, accountNumber: input.accountNumber, accountName: input.accountName.trim(), submittedAt: now() }
+}
+
 export const publicQuote = (request: ServiceRequest) => request.quotes.filter(quote => quote.status !== 'draft' && quote.status !== 'superseded').at(-1)
+
+export interface ProviderQuoteView { quoteId: string; version: number; status: 'sent' | 'accepted'; lines: { description: string; quantity: number }[] }
+
+/** What a provider may see of the customer quote: line descriptions and quantities of the accepted (or latest sent) quote. Never rates, totals or the quote note. */
+export const providerQuoteView = (request: ServiceRequest): ProviderQuoteView | null => {
+  const quote = request.quotes.filter(item => item.status === 'accepted').at(-1) ?? request.quotes.filter(item => item.status === 'sent').at(-1)
+
+  return quote ? { quoteId: quote.id, version: quote.version, status: quote.status as 'sent' | 'accepted', lines: quote.items.map(item => ({ description: item.description, quantity: item.quantity })) } : null
+}
+
+/** Request details as the viewer may see them. Providers never see the customer's provider preference. */
+export const visibleDetails = (request: ServiceRequest, actor: Actor): Record<string, string> => Object.fromEntries(Object.entries(request.details).filter(([key]) => actor.role !== 'provider' || key !== 'preferredProviderId'))
+
+/** Assignments as the viewer may see them: providers only their own, customers without the internal dispatch note. */
+export const visibleAssignments = (request: ServiceRequest, actor: Actor): Assignment[] => {
+  if (actor.role === 'admin')
+    return request.assignments
+  if (actor.role === 'provider')
+    return request.assignments.filter(item => item.providerId === actor.id)
+
+  return request.assignments.map(item => ({ ...item, note: '' }))
+}
+
+export type ProfileChangeRow = { label: string; current: string; proposed: string }
+
+const names = (files: { name: string }[]) => files.map(file => file.name).join(', ') || 'None'
+const sameIds = (a: { id: string }[], b: { id: string }[]) => a.length === b.length && a.every((file, index) => file.id === b[index].id)
+const sameServices = (a: string[], b: string[]) => [...a].sort().join('|') === [...b].sort().join('|')
+
+const sameSensitive = (a: Pick<PendingProfileChanges, 'trade' | 'services' | 'documents' | 'photo'>, b: Pick<PendingProfileChanges, 'trade' | 'services' | 'documents' | 'photo'>) => a.trade.trim() === b.trade.trim() && sameServices(a.services, b.services) && sameIds(a.documents, b.documents) && a.photo?.id === b.photo?.id
+
+/** Current to proposed rows for the sensitive profile fields an approved provider has asked to change. */
+export const profileChangeRows = (profile: ProviderProfile): ProfileChangeRow[] => {
+  const proposed = profile.pendingChanges
+  const rows: ProfileChangeRow[] = []
+
+  if (!proposed)
+    return rows
+  if (proposed.trade.trim() !== profile.trade.trim())
+    rows.push({ label: 'Trade', current: profile.trade, proposed: proposed.trade })
+  if (!sameServices(proposed.services, profile.services))
+    rows.push({ label: 'Services', current: profile.services.join(', ') || 'None', proposed: proposed.services.join(', ') || 'None' })
+  if (!sameIds(proposed.documents, profile.documents))
+    rows.push({ label: 'Verification documents', current: names(profile.documents), proposed: names(proposed.documents) })
+  if (proposed.photo?.id !== profile.photo?.id)
+    rows.push({ label: 'Face photo', current: profile.photo?.name ?? 'None', proposed: proposed.photo?.name ?? 'None' })
+
+  return rows
+}
 export const currentSchedule = (request: ServiceRequest) => request.schedules.at(-1)
 export const canViewRequest = (request: ServiceRequest, actor: Actor) => actor.role === 'admin' || (actor.role === 'customer' && request.ownerId === actor.id) || (actor.role === 'provider' && currentAssignment(request)?.providerId === actor.id)
 export const visibleRequests = (state: OperationsState, actor: Actor) => state.requests.filter(request => canViewRequest(request, actor))
@@ -52,10 +125,11 @@ export const visibleMessages = (request: ServiceRequest, actor: Actor, channel?:
   return actor.role === 'admin' || (actor.role === 'customer' && message.channel === 'customer') || (actor.role === 'provider' && message.channel === 'provider' && message.providerId === actor.id)
 })
 export const defaultPreferences = (actor: Actor): Preferences => ({ name: actor.name, phone: '', email: true, push: true, inApp: true, timezone: 'Africa/Lagos' })
+/** Total in kobo. Every `rate` is a positive whole number of kobo; each line is rounded to a whole kobo. */
 export const quoteTotal = (items: QuoteItem[]) => {
-  need(items.length > 0 && items.every(item => item.description.trim().length > 0 && Number.isFinite(item.quantity) && item.quantity > 0 && Number.isFinite(item.rate) && item.rate > 0), 'Add a description, positive quantity and unit price for every line item.')
+  need(items.length > 0 && items.every(item => item.description.trim().length > 0 && Number.isFinite(item.quantity) && item.quantity > 0 && Number.isSafeInteger(item.rate) && item.rate > 0), 'Add a description, positive quantity and unit price for every line item.')
 
-  const total = items.reduce((sum, item) => sum + Math.round(item.quantity * item.rate * 100), 0)
+  const total = items.reduce((sum, item) => sum + lineTotal(item), 0)
 
   need(Number.isSafeInteger(total), 'The quote total is too large.')
 
@@ -78,7 +152,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
     ...(extra ? activeStaffInRole(state, extra).map(item => item.id) : []),
   ]
 
-  const isOpen = (request: ServiceRequest) => !['closed', 'cancelled'].includes(request.status)
+  const isOpen = (request: ServiceRequest) => !isFinished(request.status)
   const isLastSuperAdmin = (member: StaffMember) => member.status === 'active' && member.roles.includes('super_admin') && !state.staff.some(item => item.id !== member.id && item.status === 'active' && item.roles.includes('super_admin'))
 
   const requestFor = (requestId: string): ServiceRequest => {
@@ -89,22 +163,38 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
     return request!
   }
 
-  const audit = (action: string, resource: string, requestId?: string) => state.audit.unshift({ id: id(), actor: actor.name, action, resource, requestId, createdAt: now() })
+  const audit = (action: string, resource: string, requestId?: string, note = '') => state.audit.unshift({ id: id(), actor: actor.name, actorId: actor.id, action, resource, note: note.trim(), requestId, createdAt: now() })
 
+  /** A provider is only linked to a request they can open at this moment. */
+  const canOpen = (recipientId: string, requestId: string) => {
+    const target = state.requests.find(item => item.id === requestId)
+
+    return Boolean(target) && (target!.ownerId === recipientId || state.staff.some(item => item.id === recipientId) || currentAssignment(target!)?.providerId === recipientId)
+  }
+
+  // The in-app preference only decides which delivery channels are listed; the inbox always shows the notification.
   const notify = (recipientId: string, title: string, message: string, requestId?: string) => {
     const prefs = state.preferences[recipientId]
     const channels = [prefs?.inApp !== false ? 'In-app' : '', prefs?.email !== false ? 'Email' : '', prefs?.push !== false ? 'Push' : ''].filter(Boolean)
 
-    state.notifications.unshift({ id: id(), recipientId, title, message, requestId, read: false, channels, createdAt: now() })
+    state.notifications.unshift({ id: id(), recipientId, title, message, ...(requestId && canOpen(recipientId, requestId) ? { requestId } : {}), read: false, channels, createdAt: now() })
   }
 
-  const event = (request: ServiceRequest, action: string, recipients: string[] = [request.ownerId, ...staffFor(request)]) => {
-    audit(action, request.title, request.id)
+  const event = (request: ServiceRequest, action: string, recipients: string[] = [request.ownerId, ...staffFor(request)], note = '') => {
+    audit(action, request.title, request.id, note)
     for (const recipient of new Set(recipients.filter(target => target && target !== actor.id)))
       notify(recipient, action, `${request.id} · ${request.title}`, request.id)
   }
 
-  const editable = (request: ServiceRequest) => need(!['closed', 'cancelled', 'acknowledged'].includes(request.status), 'This job is no longer open for changes.')
+  const requestBankReview = (profile: ProviderProfile, account: BankAccount, action: string) => {
+    profile.payout.pending = account
+    profile.payout.review = pendingReview()
+    profile.payout.history.unshift({ action, by: actor.name, byId: actor.id, note: '', createdAt: now() })
+    audit(action, profile.name)
+  }
+
+  const editable = (request: ServiceRequest) => need(!isFinished(request.status) && request.status !== 'acknowledged', 'This job is no longer open for changes.')
+  const stillOpen = (request: ServiceRequest) => need(isOpen(request), 'This request is closed.')
 
   const providerAssignment = (request: ServiceRequest) => {
     requireRole('provider')
@@ -126,6 +216,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       need(input.city.trim() && input.address.trim() && input.phone.trim(), 'Complete your contact and site details.')
       need(Number.isSafeInteger(Math.round(input.budget * 100)) && input.budget >= 0, 'Budget must be zero or a positive amount.')
       need(Object.hasOwn(intakeFields, input.service), 'Choose a valid service.')
+      need(input.contactMethod === undefined || ['email', 'phone', 'both'].includes(input.contactMethod), 'Choose how XPro should contact you: email, phone or both.')
       for (const field of intakeFields[input.service]) {
         const value = input.details[field.key]?.trim() ?? ''
 
@@ -144,12 +235,13 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
         details.preferredProviderId = input.details.preferredProviderId
       }
 
-      const request: ServiceRequest = { ...input, details, budget: Math.round(input.budget * 100), id: `XPR-${String(state.nextRequest++).padStart(5, '0')}`, ownerId: actor.id, customer: actor.name, status: 'submitted', createdAt: now(), staffOwnerId: '', claimedAt: '', flag: '', assignments: [], contributions: [], quotes: [], schedules: [], updates: [], messages: [], issues: [], alertedProviderIds: [], cancellationRequest: null }
+      const request: ServiceRequest = { ...input, details, contactMethod: input.contactMethod ?? 'phone', budget: Math.round(input.budget * 100), id: `XPR-${String(state.nextRequest++).padStart(5, '0')}`, ownerId: actor.id, customer: actor.name, status: 'submitted', createdAt: now(), staffOwnerId: '', claimedAt: '', flag: '', assignments: [], contributions: [], quotes: [], schedules: [], updates: [], messages: [], issues: [], alertedProviderIds: [], cancellationRequest: null }
 
       state.requests.unshift(request)
       event(request, 'Request submitted', staffFor(request))
+      notify(request.ownerId, 'Request received', `${request.id} · ${request.title}`, request.id)
 
-      const alerted = details.preferredProviderId ? state.providers.filter(item => item.id === details.preferredProviderId) : state.providers.filter(item => item.verification === 'approved' && item.available && item.services.includes(request.service) && item.city.toLowerCase() === request.city.toLowerCase())
+      const alerted = details.preferredProviderId ? state.providers.filter(item => item.id === details.preferredProviderId && item.verification === 'approved' && item.available && item.services.includes(request.service)) : state.providers.filter(item => item.verification === 'approved' && item.available && item.services.includes(request.service) && item.city.toLowerCase() === request.city.toLowerCase())
 
       request.alertedProviderIds = alerted.map(item => item.id)
       for (const target of alerted)
@@ -168,20 +260,60 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       need(input.services.every(service => Object.hasOwn(intakeFields, service)), 'Choose valid service lines.')
       need(Number.isFinite(input.experience) && input.experience >= 0, 'Experience must be zero or positive.')
       need(input.documents.length, 'Attach at least one verification document.')
+      need(input.photo && ['image/png', 'image/jpeg', 'image/webp'].includes(input.photo.type), 'Add a clear face photo.')
+
+      const { bank, ...profileInput } = input
+      const submittedBank = validateBank(bank)
       let profile = state.providers.find(item => item.id === actor.id)
+      const awaitingBank = profile?.payout.pending && profile.payout.review?.state === 'pending' ? profile.payout.pending : null
+
+      need(!awaitingBank || sameAccount(awaitingBank, submittedBank), 'Your previous bank change is still awaiting XPro review.')
       if (!profile) {
-        profile = { id: actor.id, name: actor.name, email: actor.email, ...input, rating: 0, reviewCount: 0, available: false, verification: 'draft', reviewNote: '', history: [] }
+        profile = { id: actor.id, name: actor.name, email: actor.email, ...profileInput, rating: 0, reviewCount: 0, available: false, verification: 'draft', reviewNote: '', history: [], pendingChanges: null, changesReview: null, payout: { current: null, pending: null, review: null, history: [] } }
         state.providers.push(profile)
       }
-      Object.assign(profile, input, { name: actor.name, verification: 'pending', reviewNote: '' })
-      profile.history.unshift({ status: 'pending', note: 'Profile submitted for review.', createdAt: now() })
-      audit('Provider profile submitted', profile.name)
-      for (const member of activeStaffWith(state, 'provider.review'))
-        notify(member.id, 'Provider verification submitted', profile.name)
+      if (profile.verification === 'approved') {
+        // An approved provider stays public. Contact and presentation changes apply now; identity-related changes wait for XPro.
+        Object.assign(profile, { name: actor.name, phone: input.phone, city: input.city, experience: input.experience, bio: input.bio, portfolio: input.portfolio })
+
+        const proposed = { trade: input.trade, services: input.services, documents: input.documents, photo: input.photo }
+
+        if (sameSensitive(proposed, profile)) {
+          audit(profile.pendingChanges ? 'Provider profile changes withdrawn' : 'Provider profile updated', profile.name)
+          profile.pendingChanges = null
+          profile.changesReview = null
+        }
+        else if (!(profile.pendingChanges && profile.changesReview?.state === 'pending' && sameSensitive(proposed, profile.pendingChanges))) {
+          profile.pendingChanges = { ...proposed, submittedAt: now() }
+          profile.changesReview = pendingReview()
+          profile.history.unshift({ status: 'approved', note: 'Profile changes submitted for review.', createdAt: now() })
+          audit('Provider profile changes submitted', profile.name)
+          for (const member of activeStaffWith(state, 'provider.review'))
+            notify(member.id, 'Profile changes to review', profile.name)
+        }
+        else {
+          audit('Provider profile updated', profile.name)
+        }
+      }
+      else {
+        Object.assign(profile, profileInput, { name: actor.name, verification: 'pending', reviewNote: '' })
+        profile.history.unshift({ status: 'pending', note: 'Profile submitted for review.', createdAt: now() })
+        audit('Provider profile submitted', profile.name)
+        for (const member of activeStaffWith(state, 'provider.review'))
+          notify(member.id, 'Provider verification submitted', profile.name)
+      }
+
+      const unchanged = (profile.payout.current && sameAccount(profile.payout.current, submittedBank)) || awaitingBank
+      if (!unchanged) {
+        requestBankReview(profile, submittedBank, 'Bank details submitted')
+        for (const member of activeStaffWith(state, 'bank.review'))
+          notify(member.id, 'Bank details to verify', profile.name)
+      }
 
       return state
     }
     case 'provider.review': {
+      need(['approved', 'changes_requested', 'rejected'].includes(command.decision), 'Choose approve, request changes or reject.')
       requireStaff('provider.review')
 
       const profile = state.providers.find(item => item.id === command.providerId)
@@ -191,8 +323,82 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       profile!.verification = command.decision
       profile!.reviewNote = command.note.trim()
       profile!.history.unshift({ status: command.decision, note: command.note || 'Documents approved.', createdAt: now() })
-      audit(`Provider ${command.decision.replaceAll('_', ' ')}`, profile!.name)
+      audit(`Provider ${command.decision.replaceAll('_', ' ')}`, profile!.name, undefined, command.note)
       notify(profile!.id, 'Verification review updated', command.note || 'Your profile has been approved for dispatch.')
+
+      return state
+    }
+    case 'provider.changes.review': {
+      requireStaff('provider.review')
+
+      const profile = state.providers.find(item => item.id === command.providerId)
+      const proposed = profile?.pendingChanges
+
+      need(profile && proposed && profile.changesReview?.state === 'pending', 'These profile changes are not awaiting review.')
+
+      const note = command.note.trim()
+
+      if (command.approve) {
+        Object.assign(profile!, { trade: proposed!.trade, services: proposed!.services, documents: proposed!.documents, photo: proposed!.photo })
+        profile!.changesReview = { state: 'approved', by: actor.id, note, at: now() }
+        profile!.history.unshift({ status: 'approved', note: note || 'Profile changes approved.', createdAt: now() })
+        audit('Provider profile changes approved', profile!.name, undefined, note)
+        notify(profile!.id, 'Profile changes approved', note || 'Your updated trade, services, documents and photo are now live.')
+      }
+      else {
+        need(note, 'Explain why the profile changes are not approved.')
+        profile!.changesReview = { state: 'rejected', by: actor.id, note, at: now() }
+        profile!.history.unshift({ status: 'approved', note: `Profile changes not approved: ${note}`, createdAt: now() })
+        audit('Provider profile changes rejected', profile!.name, undefined, note)
+        notify(profile!.id, 'Profile changes not approved', note)
+      }
+      profile!.pendingChanges = null
+
+      return state
+    }
+    case 'payout.update': {
+      requireRole('provider')
+
+      const profile = state.providers.find(item => item.id === actor.id)
+
+      need(profile, 'Complete your provider profile before changing bank details.')
+
+      const account = validateBank(command.bank)
+
+      need(!(profile!.payout.pending && profile!.payout.review?.state === 'pending'), 'Your previous bank change is still awaiting XPro review.')
+      need(!(profile!.payout.current && sameAccount(profile!.payout.current, account)), 'These are already your payout details.')
+      requestBankReview(profile!, account, 'Bank change requested')
+      for (const member of activeStaffWith(state, 'bank.review'))
+        notify(member.id, 'Bank details changed — verify before payouts', profile!.name)
+
+      return state
+    }
+    case 'payout.review': {
+      requireStaff('bank.review')
+
+      const profile = state.providers.find(item => item.id === command.providerId)
+      const payout = profile?.payout
+
+      need(payout?.pending && payout.review?.state === 'pending', 'These bank details are not awaiting review.')
+
+      const note = command.note.trim()
+
+      if (command.approve) {
+        payout!.current = payout!.pending
+        payout!.pending = null
+        payout!.review = { state: 'approved', by: actor.id, note, at: now() }
+        payout!.history.unshift({ action: 'Bank details approved', by: actor.name, byId: actor.id, note, createdAt: now() })
+        audit('Bank details approved', profile!.name, undefined, note)
+        notify(profile!.id, 'Payout details approved', `${payout!.current!.bankName} ${maskAccount(payout!.current!.accountNumber)} is verified for payouts.`)
+      }
+      else {
+        need(note, 'Explain why the bank details are not approved.')
+        payout!.pending = null
+        payout!.review = { state: 'rejected', by: actor.id, note, at: now() }
+        payout!.history.unshift({ action: 'Bank details rejected', by: actor.name, byId: actor.id, note, createdAt: now() })
+        audit('Bank details rejected', profile!.name, undefined, note)
+        notify(profile!.id, 'Payout details not approved', note)
+      }
 
       return state
     }
@@ -202,6 +408,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       const profile = state.providers.find(item => item.id === actor.id)
 
       need(profile, 'Submit your provider profile before changing availability.')
+      need(profile!.verification === 'approved', 'Your profile must be approved before you can change availability.')
       profile!.available = command.available
       audit('Provider availability updated', actor.name)
 
@@ -232,7 +439,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       need(/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email), 'Enter a valid email address.')
       need(!state.staff.some(item => item.email.toLowerCase() === email.toLowerCase()), 'A staff member with this email already exists.')
       need(roles.length > 0 && roles.every(role => Object.hasOwn(staffRolePermissions, role)), 'Choose at least one valid staff role.')
-      state.staff.push({ id: `staff-${id()}`, name, email, roles, status: 'invited', invitedAt: now(), history: [{ action: 'Invited', by: actor.name, createdAt: now() }] })
+      state.staff.push({ id: `staff-${id()}`, name, email, roles, status: 'invited', invitedAt: now(), history: [{ action: 'Invited', by: actor.name, byId: actor.id, createdAt: now() }] })
       audit('Staff invited', `${name} · ${roles.map(role => staffRoleLabels[role]).join(', ')}`)
 
       return state
@@ -250,7 +457,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       const label = roles.map(role => staffRoleLabels[role]).join(', ')
 
       member!.roles = roles
-      member!.history.unshift({ action: `Roles changed to ${label}`, by: actor.name, createdAt: now() })
+      member!.history.unshift({ action: `Roles changed to ${label}`, by: actor.name, byId: actor.id, createdAt: now() })
       audit('Staff roles updated', `${member!.name} · ${label}`)
       if (member!.status === 'active')
         notify(member!.id, 'Your staff roles changed', `You are now: ${label}.`)
@@ -258,6 +465,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       return state
     }
     case 'staff.status': {
+      need(['active', 'suspended'].includes(command.status), 'Choose active or suspended.')
       requireStaff('staff.manage')
 
       const member = state.staff.find(item => item.id === command.staffId)
@@ -287,7 +495,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
         }
       }
       member!.status = command.status
-      member!.history.unshift({ action: command.status === 'active' ? 'Activated' : 'Suspended', by: actor.name, createdAt: now() })
+      member!.history.unshift({ action: command.status === 'active' ? 'Activated' : 'Suspended', by: actor.name, byId: actor.id, createdAt: now() })
       audit(command.status === 'active' ? 'Staff activated' : 'Staff suspended', member!.name)
 
       return state
@@ -308,27 +516,28 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
   const request = requestFor(command.requestId)
   const assignment = currentAssignment(request)
 
-  const performCancel = (reason: string) => {
+  const performCancel = (reason: string, reviewNote = reason) => {
     request.status = 'cancelled'
     if (assignment)
       assignment.status = 'withdrawn'
     for (const schedule of request.schedules)
       schedule.status = 'cancelled'
     request.messages.push({ id: id(), authorId: actor.id, author: actor.name, authorRole: actor.role, channel: 'customer', text: `Cancelled: ${reason}`, attachments: [], createdAt: now() })
-    event(request, 'Request cancelled', [request.ownerId, assignment?.providerId ?? '', ...staffFor(request)])
+    event(request, 'Request cancelled', [request.ownerId, assignment?.providerId ?? '', ...staffFor(request)], reviewNote)
   }
 
   switch (command.type) {
     case 'request.claim':
       requireStaff('request.claim')
       need(!request.staffOwnerId, 'This request already has an owner.')
-      need(isOpen(request), 'Closed or cancelled requests cannot be claimed.')
+      need(isOpen(request), 'Closed, cancelled or rejected requests cannot be claimed.')
       request.staffOwnerId = actor.id
       request.claimedAt = now()
       audit('Request claimed', request.title, request.id)
       break
     case 'request.reassign': {
       requireStaff('request.reassign')
+      stillOpen(request)
 
       const target = state.staff.find(item => item.id === command.staffId)
 
@@ -340,7 +549,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
 
       request.staffOwnerId = target!.id
       request.claimedAt = now()
-      audit('Request owner reassigned', `${request.title} · ${target!.name}`, request.id)
+      audit('Request owner reassigned', `${request.title} · ${target!.name}`, request.id, command.note)
       if (target!.id !== actor.id)
         notify(target!.id, 'Request assigned to you', `${request.id} · ${request.title}`, request.id)
       if (previousOwnerId && previousOwnerId !== actor.id)
@@ -354,8 +563,29 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       request.status = 'under_review'
       if (command.note.trim())
         request.messages.push({ id: id(), authorId: actor.id, author: actor.name, authorRole: actor.role, channel: command.clarify ? 'customer' : 'internal', text: command.note.trim(), attachments: [], createdAt: now() })
-      event(request, command.clarify ? 'Clarification requested' : 'Request review started')
+      event(request, command.clarify ? 'Clarification requested' : 'Request review started', undefined, command.note)
       break
+    case 'request.reject': {
+      requireStaff('request.review')
+      need(['submitted', 'under_review'].includes(request.status), 'Only a request still in intake review can be rejected.')
+
+      const reason = command.note.trim()
+
+      need(reason, 'Add a reason for rejecting this request.')
+      if (assignment)
+        assignment.status = 'withdrawn'
+      request.status = 'rejected'
+      for (const schedule of request.schedules)
+        schedule.status = 'cancelled'
+      if (request.cancellationRequest?.review.state === 'pending')
+        request.cancellationRequest.review = { state: 'approved', by: actor.id, note: reason, at: now() }
+      request.messages.push({ id: id(), authorId: actor.id, author: actor.name, authorRole: actor.role, channel: 'customer', text: `Not accepted: ${reason}`, attachments: [], createdAt: now() })
+      audit('Request rejected', request.title, request.id, reason)
+      notify(request.ownerId, 'Request not accepted', reason, request.id)
+      for (const providerId of new Set([...request.alertedProviderIds, assignment?.providerId ?? ''].filter(Boolean)))
+        notify(providerId, 'Request not proceeding', 'A request you were alerted about or offered is no longer open.')
+      break
+    }
     case 'request.cancel':
       requireRole('admin', 'customer')
       if (actor.role === 'admin')
@@ -371,7 +601,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       else {
         need(request.cancellationRequest?.review.state !== 'pending', 'Your cancellation request is already awaiting XPro.')
         request.cancellationRequest = { note: command.note.trim(), requestedAt: now(), review: pendingReview() }
-        event(request, 'Cancellation requested', staffFor(request))
+        event(request, 'Cancellation requested', staffFor(request), command.note)
       }
       break
     case 'cancellation.review': {
@@ -384,20 +614,25 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       need(command.approve || command.note.trim(), 'Explain why the cancellation is not approved.')
       if (command.approve) {
         cancellation!.review = { state: 'approved', by: actor.id, note: command.note.trim(), at: now() }
-        performCancel(cancellation!.note)
+        performCancel(cancellation!.note, command.note)
       }
       else {
         cancellation!.review = { state: 'rejected', by: actor.id, note: command.note.trim(), at: now() }
-        audit('Cancellation not approved', request.title, request.id)
+        audit('Cancellation not approved', request.title, request.id, command.note)
         notify(request.ownerId, 'Cancellation not approved', command.note.trim(), request.id)
       }
       break
     }
-    case 'request.flag':
+    case 'request.flag': {
       requireStaff('request.flag')
-      request.flag = command.note.trim()
-      audit(command.note ? 'Escalation flagged' : 'Escalation cleared', request.title, request.id)
+      stillOpen(request)
+
+      const note = command.note.trim()
+
+      request.flag = note
+      audit(note ? 'Escalation flagged' : 'Escalation cleared', request.title, request.id, note)
       break
+    }
     case 'assignment.offer': {
       requireStaff('dispatch.manage')
       editable(request)
@@ -408,7 +643,9 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
 
       need(profile?.verification === 'approved' && profile.available && profile.services.includes(request.service), 'Choose an approved, available provider for this service.')
       request.assignments.push({ id: id(), providerId: profile!.id, status: 'offered', note: command.note, response: '', createdAt: now() })
-      event(request, 'Assignment offered', [profile!.id])
+      if (request.status === 'submitted')
+        request.status = 'under_review'
+      event(request, 'Assignment offered', [profile!.id], command.note)
       break
     }
     case 'assignment.respond':
@@ -424,7 +661,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       assignment!.response = command.note
       if (!command.accept)
         request.status = 'under_review'
-      event(request, command.accept ? 'Provider accepted — approval needed' : 'Provider declined assignment', staffFor(request))
+      event(request, command.accept ? 'Provider accepted — approval needed' : 'Provider declined assignment', staffFor(request), command.note)
       break
     case 'assignment.review':
       requireStaff('dispatch.manage')
@@ -434,7 +671,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       if (command.approve) {
         assignment!.status = 'accepted'
         request.status = 'matched'
-        audit('Assignment approved', request.title, request.id)
+        audit('Assignment approved', request.title, request.id, command.note)
         notify(request.ownerId, 'Provider matched', `${request.id} · ${request.title}`, request.id)
         notify(assignment!.providerId, 'Assignment confirmed by XPro', `${request.id} · ${request.title}`, request.id)
       }
@@ -442,7 +679,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
         assignment!.status = 'withdrawn'
         assignment!.response = command.note.trim()
         request.status = 'under_review'
-        audit('Assignment rejected', request.title, request.id)
+        audit('Assignment rejected', request.title, request.id, command.note)
         notify(assignment!.providerId, 'Assignment not confirmed', command.note.trim())
       }
       break
@@ -459,13 +696,13 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       request.status = 'under_review'
       for (const schedule of request.schedules)
         schedule.status = 'cancelled'
-      event(request, 'Assignment withdrawn', [request.ownerId, assignment!.providerId, ...staffFor(request)])
+      event(request, 'Assignment withdrawn', [request.ownerId, assignment!.providerId, ...staffFor(request)], command.note)
       break
     case 'quote.contribute':
       editable(request)
       providerAssignment(request)
       request.contributions.push({ id: id(), providerId: actor.id, items: command.items, total: quoteTotal(command.items), note: command.note, createdAt: now() })
-      event(request, 'Provider pricing submitted', staffFor(request, 'pricing'))
+      event(request, 'Provider pricing submitted', staffFor(request, 'pricing'), command.note)
       break
     case 'quote.save': {
       requireStaff('quote.manage')
@@ -476,7 +713,8 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       if (command.quoteId) {
         const quote = request.quotes.find(item => item.id === command.quoteId)
 
-        need(quote?.status === 'draft', 'Published quote versions cannot be edited. Create a new version.')
+        need(quote, 'This quote version no longer exists.')
+        need(quote!.status === 'draft', 'Published quote versions cannot be edited. Create a new version.')
         Object.assign(quote!, { items: command.items, total, note: command.note })
         if (quote!.approvalRequestedBy) {
           quote!.approvalRequestedBy = ''
@@ -486,7 +724,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       else {
         request.quotes.push({ id: id(), version: Math.max(0, ...request.quotes.map(item => item.version)) + 1, status: 'draft', items: command.items, total, note: command.note, responseNote: '', approvalRequestedBy: '', publishedBy: '', createdAt: now() })
       }
-      audit('Quote draft saved', request.title, request.id)
+      audit('Quote draft saved', request.title, request.id, command.note)
       break
     }
     case 'quote.publish': {
@@ -508,7 +746,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
           notify(approver.id, 'Quote approval needed', `${request.id} · ${request.title}`, request.id)
         break
       }
-      for (const previousQuote of request.quotes.filter(item => item.status === 'sent'))
+      for (const previousQuote of request.quotes.filter(item => ['sent', 'accepted'].includes(item.status)))
         previousQuote.status = 'superseded'
       quote!.status = 'sent'
       quote!.publishedBy = actor.id
@@ -517,9 +755,11 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       for (const schedule of request.schedules)
         schedule.status = 'cancelled'
       event(request, 'Quote ready to review', [request.ownerId])
+      notify(assignment!.providerId, 'Quote sent to customer', `${request.id} · ${request.title}`, request.id)
       break
     }
     case 'quote.respond': {
+      need(['accepted', 'declined', 'revision_requested'].includes(command.decision), 'Choose accept, decline or request a revision.')
       requireRole('customer')
       editable(request)
 
@@ -530,7 +770,9 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       quote!.status = command.decision
       quote!.responseNote = command.note
       request.status = command.decision === 'accepted' ? 'matched' : 'under_review'
-      event(request, `Quote ${command.decision.replaceAll('_', ' ')}`, staffFor(request, 'pricing'))
+      event(request, `Quote ${command.decision.replaceAll('_', ' ')}`, staffFor(request, 'pricing'), command.note)
+      if (command.decision === 'accepted' && assignment)
+        notify(assignment.providerId, 'Customer accepted the quote', `${request.id} · ${request.title}`, request.id)
       break
     }
     case 'schedule.propose': {
@@ -550,7 +792,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
         schedule.status = 'cancelled'
       request.schedules.push({ id: id(), startAt: command.startAt, note: command.note, quoteId: quote!.id, status: 'proposed', customer: 'pending', provider: 'pending', responses: [] })
       request.status = 'matched'
-      event(request, 'Schedule proposed', [request.ownerId, assignment!.providerId])
+      event(request, 'Schedule proposed', [request.ownerId, assignment!.providerId], command.note)
       break
     }
     case 'schedule.respond': {
@@ -574,21 +816,23 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
         schedule!.status = 'confirmed'
         request.status = 'scheduled'
       }
-      event(request, command.accept ? 'Schedule response recorded' : 'Schedule change requested', [request.ownerId, assignment?.providerId ?? '', ...staffFor(request)])
+      event(request, command.accept ? 'Schedule response recorded' : 'Schedule change requested', [request.ownerId, assignment?.providerId ?? '', ...staffFor(request)], command.note)
       break
     }
     case 'progress.add':
+      need(['in_progress', 'blocked', 'completion_pending'].includes(command.status), 'Choose a valid update type.')
       editable(request)
       providerAssignment(request)
       need(currentSchedule(request)?.status === 'confirmed', 'Confirm the schedule before starting work.')
       need(command.note.trim(), 'Add a progress note.')
       need(['scheduled', 'in_progress', 'blocked'].includes(request.status), 'This job is not open for execution updates.')
+      need(!request.issues.some(item => item.status === 'open'), 'XPro is resolving the issue reported at completion. You can update the job once it is resolved.')
       need(command.status !== 'blocked' || request.status === 'in_progress', 'Start the job before reporting a blocker.')
       need(command.status !== 'completion_pending' || request.status === 'in_progress', 'Resume or start work before reporting completion.')
       need(command.status !== 'completion_pending' || command.attachments.length || request.updates.some(update => update.attachments.length), 'Attach work evidence before reporting completion.')
       need(!request.updates.some(update => update.authorId === actor.id && update.review.state === 'pending'), 'Wait for XPro to review your previous update.')
       request.updates.unshift({ id: id(), authorId: actor.id, author: actor.name, status: command.status, note: command.note, attachments: command.attachments, createdAt: now(), review: pendingReview() })
-      event(request, command.status === 'completion_pending' ? 'Completion report — approval needed' : 'Progress update — approval needed', staffFor(request))
+      event(request, command.status === 'completion_pending' ? 'Completion report — approval needed' : 'Progress update — approval needed', staffFor(request), command.note)
       break
     case 'progress.review': {
       requireStaff('progress.review')
@@ -603,25 +847,26 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
         need(update!.status !== 'completion_pending' || update!.attachments.length || request.updates.some(item => item.id !== update!.id && item.review.state === 'approved' && item.attachments.length), 'Work evidence is required before completion can be approved.')
         update!.review = { state: 'approved', by: actor.id, note: command.note.trim(), at: now() }
         request.status = update!.status
-        audit('Progress update approved', request.title, request.id)
+        audit('Progress update approved', request.title, request.id, command.note)
         notify(request.ownerId, update!.status === 'completion_pending' ? 'Please confirm your job is complete' : 'Progress update', `${request.id} · ${request.title}`, request.id)
         notify(update!.authorId, 'Update approved', `${request.id} · ${request.title}`, request.id)
       }
       else {
         update!.review = { state: 'rejected', by: actor.id, note: command.note.trim(), at: now() }
-        audit('Progress update rejected', request.title, request.id)
+        audit('Progress update rejected', request.title, request.id, command.note)
         notify(update!.authorId, 'Update not approved', command.note.trim(), request.id)
       }
       break
     }
     case 'completion.respond':
       requireRole('customer')
-      need(request.status === 'completion_pending' && !request.issues.some(item => item.status === 'open'), 'Resolve open issues before completion review.')
+      need(request.status === 'completion_pending', 'This job is not awaiting your confirmation.')
+      need(!request.issues.some(item => item.status === 'open'), 'Resolve open issues before completion review.')
       need(command.acknowledge || command.note.trim(), 'Explain the unresolved issue.')
       request.status = command.acknowledge ? 'acknowledged' : 'blocked'
       if (!command.acknowledge)
         request.issues.unshift({ id: id(), note: command.note, status: 'open', resolution: '', createdAt: now() })
-      event(request, command.acknowledge ? 'Customer acknowledged completion' : 'Completion issue reported', [...staffFor(request), assignment?.providerId ?? ''])
+      event(request, command.acknowledge ? 'Customer acknowledged completion' : 'Completion issue reported', [...staffFor(request), assignment?.providerId ?? ''], command.note)
       break
     case 'issue.resolve': {
       requireStaff('issue.resolve')
@@ -629,11 +874,14 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       const issue = request.issues.find(item => item.id === command.issueId)
 
       need(issue?.status === 'open' && command.note.trim(), 'Add a resolution for the open issue.')
+      need(request.status === 'blocked', 'Only a blocked job with an open issue can be resolved.')
       issue!.status = 'resolved'
       issue!.resolution = command.note
       if (!request.issues.some(item => item.status === 'open'))
         request.status = 'completion_pending'
-      event(request, 'Completion issue resolved')
+      event(request, 'Completion issue resolved', undefined, command.note)
+      if (assignment)
+        notify(assignment.providerId, 'Issue resolved', `${request.id} · ${request.title}`, request.id)
       break
     }
     case 'request.close':
@@ -645,10 +893,12 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       break
     case 'message.send':
       need(command.text.trim() || command.attachments.length, 'Write a message or attach a file.')
+      need(['customer', 'provider', 'internal'].includes(command.channel), 'Choose a valid conversation.')
       if (actor.role === 'admin')
         requireStaff(`message.${command.channel}`)
       else
         need(command.channel === actor.role, 'Choose a conversation available to your account.')
+      stillOpen(request)
       need(command.channel !== 'provider' || assignment, 'Assign a provider before starting a provider conversation.')
       request.messages.push({ id: id(), authorId: actor.id, author: actor.name, authorRole: actor.role, channel: command.channel, providerId: command.channel === 'provider' ? assignment?.providerId : undefined, text: command.text.trim(), attachments: command.attachments, createdAt: now() })
       event(request, 'New conversation update', command.channel === 'customer' ? [request.ownerId, ...staffFor(request)] : command.channel === 'provider' ? [assignment!.providerId, ...staffFor(request)] : staffFor(request))
