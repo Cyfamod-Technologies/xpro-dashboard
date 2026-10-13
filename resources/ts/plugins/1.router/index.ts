@@ -6,7 +6,8 @@ import type { RouteRecordRaw } from 'vue-router/auto'
 import { createRouter, createWebHistory } from 'vue-router/auto'
 import { store } from '@/plugins/2.pinia'
 import { useAuthStore } from '@/stores/auth'
-import { isWorkspaceRole, workspaceSections } from '@/features/workspace/config'
+import { useOperationsStore } from '@/stores/operations'
+import { isWorkspaceRole, sectionPath, workspaceSections } from '@/features/workspace/config'
 
 function recursiveLayouts(route: RouteRecordRaw): RouteRecordRaw {
   if (route.children) {
@@ -48,6 +49,35 @@ router.beforeEach(async to => {
     return '/login'
   }
 
+  // Suspended or unknown staff accounts cannot keep a session.
+  if (auth.user?.role === 'admin' && to.path !== '/login') {
+    const ops = useOperationsStore(store)
+
+    if (ops.staffMember?.status !== 'active') {
+      auth.logout()
+
+      return { path: '/login', query: { reason: 'staff-inactive' } }
+    }
+  }
+
+  // Old `/workspace/:section` bookmarks move to the role-specific URL.
+  if (to.path.startsWith('/workspace/')) {
+    const segment = to.path.slice('/workspace/'.length).split('/')[0]
+    const role = auth.user?.role
+
+    if (auth.isAuthenticated && isWorkspaceRole(role) && segment) {
+      return {
+        path: sectionPath(role, segment),
+        query: to.query,
+      }
+    }
+
+    return {
+      path: '/login',
+      query: segment ? { redirect: `/${segment}` } : {},
+    }
+  }
+
   if (to.meta.public) {
     if (to.meta.unauthenticatedOnly && auth.isAuthenticated)
       return auth.homePath
@@ -62,14 +92,33 @@ router.beforeEach(async to => {
     }
   }
 
-  if (to.path.startsWith('/workspace/')) {
-    const section = 'section' in to.params ? String(to.params.section) : ''
-    const role = auth.user?.role
+  const role = auth.user?.role
 
-    if (!isWorkspaceRole(role) || !workspaceSections[role].some(item => item.id === section))
+  if (to.path === '/admin' || to.path.startsWith('/admin/')) {
+    const section = to.path === '/admin' ? 'overview' : String(to.params && 'section' in to.params ? to.params.section : '')
+
+    const adminSection = workspaceSections.admin.find(item => item.id === section)
+
+    if (role !== 'admin' || !adminSection)
+      return '/access-denied'
+
+    if (adminSection.permission && !useOperationsStore(store).can(adminSection.permission))
       return '/access-denied'
   }
-  else if (!['/', '/access-denied'].includes(to.path)) {
+  else if (typeof to.meta.section === 'string') {
+    const section = to.meta.section
+
+    if (role === 'admin' && workspaceSections.admin.some(item => item.id === section)) {
+      return {
+        path: sectionPath('admin', section),
+        query: to.query,
+      }
+    }
+
+    if (!isWorkspaceRole(role) || role === 'admin' || !workspaceSections[role].some(item => item.id === section))
+      return '/access-denied'
+  }
+  else if (to.path !== '/access-denied') {
     return '/access-denied'
   }
 

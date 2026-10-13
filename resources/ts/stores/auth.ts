@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { homePathFor, isWorkspaceRole } from '@/features/workspace/config'
 import { authApi } from '@/services/xpro-api'
 import type { LoginPayload, User, UserRole } from '@/types/domain'
 
@@ -10,7 +11,12 @@ export const useAuthStore = defineStore('auth', () => {
   const pendingMfa = ref<{ token: string; user: User } | null>(null)
 
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
-  const homePath = computed(() => isAuthenticated.value ? (user.value?.role === 'customer' ? '/workspace/overview' : '/') : '/login')
+
+  const homePath = computed(() => {
+    const role = user.value?.role
+
+    return isAuthenticated.value && isWorkspaceRole(role) ? homePathFor(role) : '/login'
+  })
 
   async function login(payload: LoginPayload) {
     pendingMfa.value = null

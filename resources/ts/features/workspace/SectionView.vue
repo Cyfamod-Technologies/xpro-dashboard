@@ -6,11 +6,13 @@ import ProviderProfile from '@/features/operations/ProviderProfile.vue'
 import ProviderReview from '@/features/operations/ProviderReview.vue'
 import WorkspaceUtilities from '@/features/operations/WorkspaceUtilities.vue'
 import WorkspaceOverview from '@/features/operations/WorkspaceOverview.vue'
+import ApprovalQueue from '@/features/operations/ApprovalQueue.vue'
+import StaffDirectory from '@/features/operations/StaffDirectory.vue'
 import Feedback from '@/features/operations/Feedback.vue'
 
+const props = defineProps<{ sectionId: string }>()
 const auth = useAuthStore()
-const route = useRoute('workspace-section')
-const section = computed(() => isWorkspaceRole(auth.user?.role) ? workspaceSections[auth.user.role].find(item => item.id === route.params.section) : undefined)
+const section = computed(() => isWorkspaceRole(auth.user?.role) ? workspaceSections[auth.user.role].find(item => item.id === props.sectionId) : undefined)
 </script>
 
 <template>
@@ -40,6 +42,8 @@ const section = computed(() => isWorkspaceRole(auth.user?.role) ? workspaceSecti
       :availability="section.id === 'availability'"
     />
     <ProviderReview v-else-if="section.id === 'providers'" />
+    <ApprovalQueue v-else-if="section.id === 'approvals'" />
+    <StaffDirectory v-else-if="section.id === 'staff'" />
     <WorkspaceUtilities
       v-else
       :key="section.id"
