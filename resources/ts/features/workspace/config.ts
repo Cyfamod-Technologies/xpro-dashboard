@@ -24,10 +24,12 @@ const schedule = section('schedule', 'Schedule', 'tabler-calendar', 'Coordinate 
 
 export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
   customer: [
+    section('overview', 'Overview', 'tabler-layout-dashboard', 'Your requests and the next steps awaiting your attention.', 'Your activity will appear here.'),
     section('requests', 'My requests', 'tabler-clipboard-list', 'Follow your requests from the initial brief to completion.', 'Your service requests will appear here.'),
     quotes,
     schedule,
     messages,
+    section('notifications', 'Notifications', 'tabler-bell', 'Updates about your requests and assignments.', 'You are all caught up.'),
     settings,
     account,
   ],
@@ -37,6 +39,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
     section('availability', 'Availability', 'tabler-clock', 'Let dispatch know when you are ready to take on work.', 'Your availability preferences will appear here.'),
     schedule,
     messages,
+    section('notifications', 'Notifications', 'tabler-bell', 'Updates about your requests and assignments.', 'You are all caught up.'),
     settings,
     account,
   ],
@@ -48,6 +51,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
     schedule,
     messages,
     section('audit', 'Activity history', 'tabler-history', 'Follow the decisions made across requests, quotes and jobs.', 'Operational actions and their history will appear here.'),
+    section('notifications', 'Notifications', 'tabler-bell', 'Updates about your requests and assignments.', 'You are all caught up.'),
     settings,
     account,
   ],
