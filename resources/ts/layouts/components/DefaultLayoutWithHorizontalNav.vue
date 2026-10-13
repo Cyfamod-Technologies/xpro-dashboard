@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { getHorizontalNavItems } from '@/navigation/horizontal'
 import { useAuthStore } from '@/stores/auth'
+import { useOperationsStore } from '@/stores/operations'
 
 import { themeConfig } from '@themeConfig'
 
@@ -12,7 +13,8 @@ import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 
 const auth = useAuthStore()
-const navItems = computed(() => getHorizontalNavItems(auth.user?.role))
+const ops = useOperationsStore()
+const navItems = computed(() => getHorizontalNavItems(auth.user?.role, ops.can))
 </script>
 
 <template>

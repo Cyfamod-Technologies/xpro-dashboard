@@ -42,23 +42,31 @@ export const resolveNavLinkRouteName = (link: NavLink, router: Router) => {
   return router.resolve(link.to).name
 }
 
+const normalizePath = (path: string) => (path.length > 1 ? path.replace(/\/+$/, '') : path) || '/'
+
 /**
  * Check if nav-link is active
+ * Links are matched by resolved path (query/hash ignored), because several links can
+ * share one route name (e.g. `/admin/:section`). `meta.navActiveLink` is still honoured.
  * @param {object} link nav-link object
  */
 export const isNavLinkActive = (link: NavLink, router: Router) => {
-  // Matched routes array of current route
-  const matchedRoutes = router.currentRoute.value.matched
-
-  // Check if provided route matches route's matched route
-  const resolveRoutedName = resolveNavLinkRouteName(link, router)
-
-  if (!resolveRoutedName)
+  if (!link.to)
     return false
 
-  return matchedRoutes.some(route => {
-    return route.name === resolveRoutedName || route.meta.navActiveLink === resolveRoutedName
-  })
+  const currentRoute = router.currentRoute.value
+  const resolvedLink = router.resolve(link.to)
+
+  if (normalizePath(resolvedLink.path) === normalizePath(currentRoute.path))
+    return true
+
+  // Check if provided route is the `navActiveLink` of any matched route
+  const resolvedRouteName = resolveNavLinkRouteName(link, router)
+
+  if (!resolvedRouteName)
+    return false
+
+  return currentRoute.matched.some(route => route.meta.navActiveLink === resolvedRouteName)
 }
 
 /**
