@@ -8,8 +8,11 @@ import type { PopularJob } from '@/features/discovery/popular-jobs'
 import type { ServiceLine } from '@/features/operations/types'
 import { useOperationsStore } from '@/stores/operations'
 
-/** Drop a client photo into /public/images and set its path here, e.g. '/images/hero.jpg'. */
-const heroImage: string = ''
+/**
+ * Hero photo, shown behind a light-blue tonal overlay. Temporary 1024x764 image; a wider
+ * ~2048x830 replacement can be dropped at the same path. Set to '' to fall back to the plain card.
+ */
+const heroImage: string = '/images/generated/hero/home-hero.jpg'
 
 const ops = useOperationsStore()
 const route = useRoute()
@@ -21,11 +24,7 @@ const search = reactive({ service: serviceLines[1].name, title: '', city: 'Abuja
 const serviceNames = serviceLines.map(item => item.name)
 const jobs = computed(() => popularJobs[activeService.value as keyof typeof popularJobs] ?? [])
 
-const heroStyle = computed(() =>
-  heroImage
-    ? { backgroundImage: `linear-gradient(rgba(16, 42, 58, 0.62), rgba(16, 42, 58, 0.62)), url(${heroImage})` }
-    : undefined,
-)
+const heroStyle = computed(() => (heroImage ? { '--hero-image': `url(${heroImage})` } : undefined))
 
 const trust = [
   {
@@ -369,10 +368,27 @@ watch(() => route.hash, scrollToHash)
   min-block-size: 420px;
   padding-block-end: 112px !important;
 
+  // Decorative photo under the same light-blue tint as the plain card. The tint is near-opaque
+  // behind the text (left) and thins out to the right so the image shows through. Alpha stops are
+  // sized so the dark body copy keeps >= 4.5:1 over the photo where the text sits.
   &--photo {
-    background-position: center;
+    --hero-a0: 0.92;
+    --hero-a1: 0.85;
+    --hero-a2: 0.55;
+    --hero-tint: color-mix(in srgb, rgb(var(--v-theme-primary)) 20%, rgb(var(--v-theme-surface)));
+
+    background-color: var(--hero-tint);
+    background-image:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--hero-tint) calc(var(--hero-a0) * 100%), transparent) 0%,
+        color-mix(in srgb, var(--hero-tint) calc(var(--hero-a1) * 100%), transparent) 45%,
+        color-mix(in srgb, var(--hero-tint) calc(var(--hero-a2) * 100%), transparent) 100%
+      ),
+      var(--hero-image);
+    background-position: center, right center;
+    background-repeat: no-repeat;
     background-size: cover;
-    color: #fff;
   }
 
   &__eyebrow {
@@ -393,11 +409,6 @@ watch(() => route.hash, scrollToHash)
     font-size: 1.125rem;
     line-height: 1.6;
     max-inline-size: 540px;
-  }
-
-  &--photo &__eyebrow,
-  &--photo &__copy {
-    color: #fff;
   }
 }
 
@@ -544,10 +555,23 @@ watch(() => route.hash, scrollToHash)
   }
 }
 
+// Below md the copy spans most of the card, so keep the tint heavier across the full width.
+@media (max-width: 959px) {
+  .hero--photo {
+    --hero-a0: 0.94;
+    --hero-a1: 0.92;
+    --hero-a2: 0.85;
+  }
+}
+
 @media (max-width: 600px) {
   .hero {
     min-block-size: 360px;
     padding-block-end: 96px !important;
+
+    &--photo {
+      background-position: center, center;
+    }
   }
 }
 </style>

@@ -33,3 +33,9 @@ cards. Six jobs reuse a service image instead of a separate file:
 | Residential waste collection | `services/waste-management.jpg` — **temporary**. Its own image wasn't generated because the Figma AI limit was hit; generate `jobs/waste-residential-waste-collection.jpg` later |
 
 Images are 1024 px wide JPEGs. Card layouts should use `object-fit: cover`.
+
+## Hero (`hero/`)
+
+| File | Used for |
+|---|---|
+| `hero/home-hero.jpg` | Homepage banner background, under a light-blue overlay. **Temporary**: a copy of `providers/provider-nneka.jpg` because the Figma AI limit was hit. Replace it with a wide (~2048×830) image: building on the right, calm sky on the left for the text. No code change needed. |
