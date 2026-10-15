@@ -14,6 +14,9 @@ module.exports = {
     "plugin:case-police/recommended",
     "plugin:regexp/recommended",
 
+    // Keep last so formatting rules that conflict with Prettier are turned off.
+    "prettier",
+
     // 'plugin:unicorn/recommended',
   ],
   parser: "vue-eslint-parser",
@@ -34,19 +37,15 @@ module.exports = {
     "n/prefer-global/process": ["off"],
     "sonarjs/cognitive-complexity": ["off"],
 
-    "vue/first-attribute-linebreak": [
-      "error",
-      {
-        singleline: "beside",
-        multiline: "below",
-      },
-    ],
+    // Prettier owns layout, so these stylistic rules defer to its output.
+    "vue/first-attribute-linebreak": "off",
+    indent: "off",
+    "lines-around-comment": "off",
+    "padding-line-between-statements": "off",
+    "antfu/if-newline": "off",
 
     "antfu/top-level-function": "off",
     "@typescript-eslint/no-explicit-any": "off",
-
-    // indentation (Already present in TypeScript)
-    indent: ["error", 2],
 
     // Enforce trailing comma (Already present in TypeScript)
     "comma-dangle": ["error", "always-multiline"],
@@ -69,22 +68,6 @@ module.exports = {
     // add new line above comment
     "newline-before-return": "error",
 
-    // add new line above comment
-    "lines-around-comment": [
-      "error",
-      {
-        beforeBlockComment: true,
-        beforeLineComment: true,
-        allowBlockStart: true,
-        allowClassStart: true,
-        allowObjectStart: true,
-        allowArrayStart: true,
-
-        // We don't want to add extra space above closing SECTION
-        ignorePattern: "!SECTION",
-      },
-    ],
-
     // Ignore _ as unused variable
     "@typescript-eslint/no-unused-vars": ["error", { varsIgnorePattern: "^_+$", argsIgnorePattern: "^_+$" }],
 
@@ -92,14 +75,6 @@ module.exports = {
     "array-bracket-newline": ["error", "consistent"],
 
     "vue/multi-word-component-names": "off",
-
-    "padding-line-between-statements": [
-      "error",
-      { blankLine: "always", prev: "expression", next: "const" },
-      { blankLine: "always", prev: "const", next: "expression" },
-      { blankLine: "always", prev: "multiline-const", next: "*" },
-      { blankLine: "always", prev: "*", next: "multiline-const" },
-    ],
 
     // Plugin: eslint-plugin-import
     "import/prefer-default-export": "off",
