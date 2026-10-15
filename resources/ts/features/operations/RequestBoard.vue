@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
 import type { ServiceLine, ServiceRequest } from '@/features/operations/types'
-import { statusLabels, when } from '@/features/operations/types'
+import { requestStatuses, statusLabelFor, when } from '@/features/operations/types'
 import { isUnclaimedOverdue } from '@/features/operations/staff'
 import { currentAssignment, pendingApprovals } from '@/features/operations/workflow'
 import RequestDetail from '@/features/operations/RequestDetail.vue'
@@ -31,7 +31,7 @@ const filtered = computed(() => ops.requests.filter(item => {
   return sectionMatch && ownerMatch && (!status.value || item.status === status.value) && (!service.value || item.service === service.value) && `${item.id} ${item.title} ${item.city}`.toLowerCase().includes(search.value.toLowerCase())
 }))
 
-const statuses = Object.entries(statusLabels).map(([value, title]) => ({ title, value }))
+const statuses = computed(() => requestStatuses.map(value => ({ title: statusLabelFor(value, ops.actor?.role ?? 'customer'), value })))
 const select = (id?: string) => router.push({ path: route.path, query: id ? { request: id } : {} })
 </script>
 
@@ -142,7 +142,7 @@ const select = (id?: string) => router.push({ path: route.path, query: id ? { re
                 size="small"
                 :color="request.status === 'blocked' ? 'warning' : 'primary'"
               >
-                {{ statusLabels[request.status] }}
+                {{ statusLabelFor(request.status, ops.actor?.role ?? 'customer') }}
               </VChip>
             </div><div
               v-if="isAdmin"

@@ -1,132 +1,577 @@
 <script setup lang="ts">
 import { serviceLines } from '@/features/workspace/config'
 import ProviderCards from '@/features/discovery/ProviderCards.vue'
+import ServiceTabs from '@/features/discovery/ServiceTabs.vue'
+import { jobCoverAlt, jobCoverImage, serviceCoverAlt, serviceCoverImage } from '@/features/discovery/images'
+import { popularJobs } from '@/features/discovery/popular-jobs'
+import type { PopularJob } from '@/features/discovery/popular-jobs'
+import type { ServiceLine } from '@/features/operations/types'
 import { useOperationsStore } from '@/stores/operations'
 
+/**
+ * Hero photo, shown behind a light-blue tonal overlay. Temporary 1024x764 image; a wider
+ * ~2048x830 replacement can be dropped at the same path. Set to '' to fall back to the plain card.
+ */
+const heroImage: string = '/images/generated/hero/home-hero.jpg'
+
 const ops = useOperationsStore()
+const route = useRoute()
+const router = useRouter()
+
+const activeService = ref(serviceLines[1].name)
+const activeLine = computed(() => activeService.value as ServiceLine)
+const search = reactive({ service: serviceLines[1].name, title: '', city: 'Abuja', start: '' })
+const serviceNames = serviceLines.map(item => item.name)
+const jobs = computed(() => popularJobs[activeService.value as keyof typeof popularJobs] ?? [])
+
+const heroStyle = computed(() => (heroImage ? { '--hero-image': `url(${heroImage})` } : undefined))
+
+const trust = [
+  {
+    title: 'Verified providers',
+    body: 'Identity, skills and bank details are checked by XPro.',
+    icon: 'tabler-shield-check',
+  },
+  {
+    title: 'Payment held by XPro',
+    body: 'Providers are paid only after you confirm the job is done.',
+    icon: 'tabler-credit-card',
+  },
+  {
+    title: 'One accountable team',
+    body: 'XPro reviews every quote, schedule and update for you.',
+    icon: 'tabler-users-group',
+  },
+  { title: 'No consultation fee', body: 'Requesting and receiving a quote is free.', icon: 'tabler-circle-check' },
+]
+
+const steps = [
+  { icon: 'tabler-search', title: 'Explore', body: 'Find a service and view verified provider profiles.' },
+  {
+    icon: 'tabler-file-description',
+    title: 'Share your brief',
+    body: 'Tell us about the job. Sign in when you are ready to submit.',
+  },
+  {
+    icon: 'tabler-clipboard-check',
+    title: 'Follow your project',
+    body: 'Review quotes, confirm dates and track updates in your dashboard.',
+  },
+]
+
+watch(activeService, value => {
+  search.service = value
+})
+
+const clean = (query: Record<string, string>) =>
+  Object.fromEntries(
+    Object.entries(query)
+      .filter(([, value]) => value.trim())
+      .map(([key, value]) => [key, value.trim()]),
+  )
+
+const submit = () =>
+  router.push({
+    path: '/request',
+    query: clean({ service: search.service, title: search.title, city: search.city, start: search.start }),
+  })
+
+const jobLocation = (job: PopularJob) => ({
+  path: '/request',
+  query: { service: activeService.value, title: job.name, ...job.details },
+})
+
+const scrollToHash = () => {
+  if (route.hash)
+    nextTick(() => document.querySelector(route.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+}
+
+onMounted(scrollToHash)
+watch(() => route.hash, scrollToHash)
 </script>
 
 <template>
-  <VCard
-    color="primary"
-    variant="tonal"
-    class="pa-6 pa-md-12 mb-10"
-  >
-    <div class="text-overline mb-3">
-      YOUR NEXT PROJECT STARTS HERE
+  <section class="xp-container pt-6">
+    <div
+      class="hero pa-6 pa-md-12"
+      :class="{ 'hero--photo': heroImage }"
+      :style="heroStyle"
+    >
+      <p class="hero__eyebrow mb-4">
+        Design · Construction · Hire · Procurement · Facility · Waste
+      </p>
+      <h1 class="hero__title mb-4">
+        Book trusted professionals for any building job.
+      </h1>
+      <p class="hero__copy mb-0">
+        Request once. XPro matches a verified provider, sends your quote and holds your payment until the job is done.
+      </p>
     </div>
-    <h1 class="text-h2 mb-5 public-title">
-      Find the expertise.<br>Bring your project to life.
-    </h1>
-    <p class="text-body-1 mb-6 public-copy">
-      Explore services and meet XPro providers. From a design brief to site maintenance, share what you need and let XPro coordinate the next step.
-    </p>
-    <div class="d-flex gap-3 flex-wrap">
-      <VBtn
-        to="/request"
-        size="large"
-        prepend-icon="tabler-plus"
+  </section>
+
+  <div class="xp-container search-wrap">
+    <VCard
+      class="search-card"
+      elevation="6"
+    >
+      <VForm
+        aria-label="Request a service"
+        class="search-form"
+        @submit.prevent="submit"
       >
-        Request a service
-      </VBtn><VBtn
-        to="/providers"
-        size="large"
+        <div class="seg">
+          <VSelect
+            v-model="search.service"
+            :items="serviceNames"
+            label="Service"
+            prepend-inner-icon="tabler-building"
+            variant="plain"
+            density="comfortable"
+            hide-details
+            persistent-placeholder
+          />
+        </div>
+        <div class="seg seg--grow">
+          <VTextField
+            v-model="search.title"
+            label="What needs doing?"
+            placeholder="e.g. Tile the living room"
+            prepend-inner-icon="tabler-list"
+            variant="plain"
+            density="comfortable"
+            hide-details
+            persistent-placeholder
+          />
+        </div>
+        <div class="seg">
+          <VTextField
+            v-model="search.city"
+            label="Where"
+            placeholder="e.g. Asokoro, Abuja"
+            prepend-inner-icon="tabler-map-pin"
+            variant="plain"
+            density="comfortable"
+            hide-details
+            persistent-placeholder
+          />
+        </div>
+        <div class="seg">
+          <VTextField
+            v-model="search.start"
+            label="When"
+            type="date"
+            prepend-inner-icon="tabler-calendar"
+            variant="plain"
+            density="comfortable"
+            hide-details
+            persistent-placeholder
+          />
+        </div>
+        <VBtn
+          type="submit"
+          size="x-large"
+          class="go"
+          prepend-icon="tabler-search"
+        >
+          Get a quote
+        </VBtn>
+      </VForm>
+    </VCard>
+  </div>
+
+  <section class="xp-container pt-10">
+    <ServiceTabs v-model="activeService" />
+  </section>
+
+  <section class="xp-container pt-8 pb-12">
+    <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
+      <div>
+        <h2 class="text-h4 mb-1">
+          Popular {{ activeService.toLowerCase() }} jobs
+        </h2>
+        <p class="text-medium-emphasis mb-0">
+          Tap a job to start your request with it filled in.
+        </p>
+      </div>
+      <RouterLink :to="{ path: '/services', query: { service: activeService } }">
+        All {{ activeService.toLowerCase() }} services →
+      </RouterLink>
+    </div>
+    <div class="job-grid">
+      <VCard
+        v-for="job in jobs"
+        :key="`${activeService}-${job.name}`"
+        :to="jobLocation(job)"
+        class="job-card"
+      >
+        <div class="job-card__media">
+          <VChip
+            class="job-card__group"
+            size="small"
+            color="surface"
+            variant="flat"
+          >
+            {{ job.group }}
+          </VChip>
+          <img
+            :src="jobCoverImage(activeLine, job.name)"
+            :alt="jobCoverAlt(activeLine, job.name)"
+            class="job-card__img"
+            loading="lazy"
+            width="400"
+            height="160"
+          >
+          <VAvatar
+            class="job-card__badge"
+            color="surface"
+            size="40"
+          >
+            <VIcon
+              :icon="job.icon"
+              color="primary-darken-1"
+            />
+          </VAvatar>
+        </div>
+        <VCardText class="d-flex flex-column gap-1">
+          <strong class="text-h6">{{ job.name }}</strong>
+          <span class="text-body-2 text-medium-emphasis">{{ job.body }}</span>
+          <span class="d-flex justify-space-between align-center pt-2 text-body-2">
+            <span class="text-medium-emphasis">Free quote</span>
+            <span class="font-weight-medium text-primary-darken-1">Request →</span>
+          </span>
+        </VCardText>
+      </VCard>
+    </div>
+  </section>
+
+  <section
+    aria-label="Why XPro"
+    class="xp-container pb-12"
+  >
+    <VCard variant="outlined">
+      <VCardText class="trust-grid pa-7">
+        <div
+          v-for="item in trust"
+          :key="item.title"
+          class="d-flex align-start gap-4"
+        >
+          <VAvatar
+            variant="outlined"
+            color="primary"
+            size="44"
+          >
+            <VIcon :icon="item.icon" />
+          </VAvatar>
+          <div>
+            <strong class="d-block mb-1">{{ item.title }}</strong>
+            <span class="text-body-2 text-medium-emphasis">{{ item.body }}</span>
+          </div>
+        </div>
+      </VCardText>
+    </VCard>
+  </section>
+
+  <section
+    id="providers"
+    class="xp-container pb-12"
+  >
+    <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
+      <h2 class="text-h4">
+        Verified providers
+      </h2>
+      <RouterLink to="/providers">
+        View all providers →
+      </RouterLink>
+    </div>
+    <ProviderCards :providers="ops.publicProviders.slice(0, 4)" />
+  </section>
+
+  <section
+    id="how-it-works"
+    class="xp-container pb-12"
+  >
+    <h2 class="text-h4 mb-5">
+      How it works
+    </h2>
+    <div class="steps-grid">
+      <VCard
+        v-for="(step, index) in steps"
+        :key="step.title"
         variant="outlined"
       >
-        Explore providers
-      </VBtn>
-    </div>
-  </VCard>
-  <div class="d-flex justify-space-between align-center flex-wrap gap-3 mb-5">
-    <h2 class="text-h4">
-      One place for your project needs
-    </h2><VBtn
-      to="/services"
-      variant="text"
-    >
-      All services
-    </VBtn>
-  </div>
-  <VRow class="mb-10">
-    <VCol
-      v-for="service in serviceLines"
-      :key="service.name"
-      cols="12"
-      sm="6"
-      md="4"
-    >
-      <VCard
-        :to="{ path: '/services', query: { service: service.name } }"
-        class="h-100"
-      >
-        <VCardText class="pa-6">
+        <VCardText class="d-flex gap-4">
           <VAvatar
             color="primary"
             variant="tonal"
-            class="mb-4"
+            size="44"
           >
-            <VIcon :icon="service.icon" />
-          </VAvatar><h3 class="text-h5 mb-2">
-            {{ service.name }}
-          </h3><p class="text-body-1 text-medium-emphasis">
-            {{ service.description }}
-          </p><span class="text-primary">Explore service <VIcon
-            icon="tabler-arrow-right"
-            size="18"
-          /></span>
+            <VIcon :icon="step.icon" />
+          </VAvatar>
+          <div>
+            <strong class="d-block mb-1">{{ index + 1 }}. {{ step.title }}</strong>
+            <span class="text-body-2 text-medium-emphasis">{{ step.body }}</span>
+          </div>
         </VCardText>
       </VCard>
-    </VCol>
-  </VRow>
-  <div class="d-flex justify-space-between align-center flex-wrap gap-3 mb-5">
-    <div>
-      <h2 class="text-h4 mb-2">
-        Meet our providers
-      </h2><p class="text-medium-emphasis mb-0">
-        Approved profiles, experience and services. Ratings are sample data in this preview.
-      </p>
-    </div><VBtn
-      to="/providers"
-      variant="text"
-    >
-      View all providers
-    </VBtn>
-  </div>
-  <ProviderCards :providers="ops.publicProviders.slice(0, 3)" />
-  <VCard
-    variant="outlined"
-    class="mt-10 pa-6"
+    </div>
+  </section>
+
+  <section
+    id="join"
+    class="xp-container pb-14"
   >
-    <h2 class="text-h5 mb-4">
-      From browsing to getting things done
-    </h2><VRow>
-      <VCol
-        cols="12"
-        md="4"
-      >
-        <strong>01 · Explore</strong><p class="mt-2 mb-0">
-          Find a service and view provider profiles.
-        </p>
-      </VCol><VCol
-        cols="12"
-        md="4"
-      >
-        <strong>02 · Share your brief</strong><p class="mt-2 mb-0">
-          Tell us about the job. Sign in when you are ready to submit.
-        </p>
-      </VCol><VCol
-        cols="12"
-        md="4"
-      >
-        <strong>03 · Follow your project</strong><p class="mt-2 mb-0">
-          Review quotes, confirm dates and track updates in your dashboard.
-        </p>
-      </VCol>
-    </VRow>
-  </VCard>
+    <VCard variant="outlined">
+      <div class="join">
+        <div class="join__media">
+          <img
+            :src="serviceCoverImage('Construction')"
+            :alt="`${serviceCoverAlt('Construction')} — XPro artisans at work`"
+            class="join__img"
+            loading="lazy"
+            width="400"
+            height="300"
+          >
+        </div>
+        <div class="join__body">
+          <div class="join__text">
+            <h2 class="text-h5 mb-2">
+              Are you a professional, artisan or supplier?
+            </h2>
+            <p class="text-medium-emphasis mb-0">
+              Join XPro free. Get verified, get matched to jobs near you and get paid through XPro.
+            </p>
+          </div>
+          <VBtn
+            to="/auth/signup?role=provider"
+            size="large"
+          >
+            Become a provider
+          </VBtn>
+        </div>
+      </div>
+    </VCard>
+  </section>
 </template>
 
-<style scoped>
-.public-copy { max-inline-size: 670px; }
-@media (max-width: 600px) { .public-title { font-size: 2rem !important; line-height: 1.25; } }
+<style lang="scss" scoped>
+.hero {
+  background-color: rgba(var(--v-theme-primary), 0.2);
+  background-image:
+    linear-gradient(rgba(var(--v-theme-primary-darken-1), 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--v-theme-primary-darken-1), 0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  border-radius: 6px;
+  color: rgb(var(--v-theme-on-surface));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: 420px;
+  padding-block-end: 112px !important;
+
+  // Decorative photo under the same light-blue tint as the plain card. The tint is near-opaque
+  // behind the text (left) and thins out to the right so the image shows through. Alpha stops are
+  // sized so the dark body copy keeps >= 4.5:1 over the photo where the text sits.
+  &--photo {
+    --hero-a0: 0.92;
+    --hero-a1: 0.85;
+    --hero-a2: 0.55;
+    --hero-tint: color-mix(in srgb, rgb(var(--v-theme-primary)) 20%, rgb(var(--v-theme-surface)));
+
+    background-color: var(--hero-tint);
+    background-image:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--hero-tint) calc(var(--hero-a0) * 100%), transparent) 0%,
+        color-mix(in srgb, var(--hero-tint) calc(var(--hero-a1) * 100%), transparent) 45%,
+        color-mix(in srgb, var(--hero-tint) calc(var(--hero-a2) * 100%), transparent) 100%
+      ),
+      var(--hero-image);
+    background-position: center, right center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  &__eyebrow {
+    color: rgb(var(--v-theme-secondary-darken-1));
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  &__title {
+    font-size: clamp(2.125rem, 4.4vw, 3.25rem);
+    font-weight: 700;
+    line-height: 1.12;
+    max-inline-size: 640px;
+  }
+
+  &__copy {
+    color: rgb(var(--v-theme-secondary-darken-1));
+    font-size: 1.125rem;
+    line-height: 1.6;
+    max-inline-size: 540px;
+  }
+}
+
+.search-wrap {
+  margin-block-start: -64px;
+  position: relative;
+}
+
+.search-card {
+  margin-inline: 32px;
+  padding: 8px;
+}
+
+.search-form {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.seg {
+  border-inline-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  flex: 1 1 180px;
+  min-inline-size: 0;
+  padding: 10px 12px;
+
+  &:first-child {
+    border-inline-start: 0;
+  }
+  &--grow {
+    flex-grow: 2;
+  }
+  &:hover {
+    background: rgba(var(--v-theme-primary), 0.05);
+  }
+}
+
+.go {
+  block-size: 64px !important;
+  flex: 0 0 auto;
+  font-size: 1rem;
+  padding-inline: 28px !important;
+}
+
+.job-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+}
+
+.job-card {
+  display: flex;
+  flex-direction: column;
+
+  &__media {
+    background: rgba(var(--v-theme-primary), 0.14);
+    block-size: 160px;
+    position: relative;
+  }
+
+  &__img {
+    block-size: 100%;
+    display: block;
+    inline-size: 100%;
+    object-fit: cover;
+  }
+
+  &__badge {
+    inset-block-end: 12px;
+    inset-inline-start: 12px;
+    position: absolute;
+  }
+
+  &__group {
+    inset-block-start: 12px;
+    inset-inline-start: 12px;
+    position: absolute;
+  }
+}
+
+.trust-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+
+.steps-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
+
+.join {
+  display: flex;
+  flex-wrap: wrap;
+
+  &__media {
+    background: rgba(var(--v-theme-primary), 0.14);
+    flex: 1 1 280px;
+    min-block-size: 180px;
+    position: relative;
+  }
+
+  &__img {
+    block-size: 100%;
+    inline-size: 100%;
+    inset: 0;
+    object-fit: cover;
+    position: absolute;
+  }
+
+  &__body {
+    align-items: center;
+    display: flex;
+    flex: 2 1 420px;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 28px;
+  }
+
+  &__text {
+    max-inline-size: 460px;
+  }
+}
+
+@media (max-width: 860px) {
+  .search-card {
+    margin-inline: 0;
+  }
+
+  .seg {
+    border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    border-inline-start: 0;
+    flex: 1 1 100%;
+
+    &:first-child {
+      border-block-start: 0;
+    }
+  }
+
+  .go {
+    flex: 1 1 100%;
+    margin-block-start: 8px;
+  }
+}
+
+// Below md the copy spans most of the card, so keep the tint heavier across the full width.
+@media (max-width: 959px) {
+  .hero--photo {
+    --hero-a0: 0.94;
+    --hero-a1: 0.92;
+    --hero-a2: 0.85;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero {
+    min-block-size: 360px;
+    padding-block-end: 96px !important;
+
+    &--photo {
+      background-position: center, center;
+    }
+  }
+}
 </style>

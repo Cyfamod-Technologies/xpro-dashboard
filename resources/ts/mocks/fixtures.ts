@@ -7,6 +7,7 @@ export const demoCredentials = [
   { role: 'Staff · Operations', email: 'operations@xpro.test', password: 'Password123!' },
   { role: 'Staff · Pricing', email: 'pricing@xpro.test', password: 'Password123!' },
   { role: 'Staff · Client relations', email: 'relations@xpro.test', password: 'Password123!' },
+  { role: 'Staff · Finance', email: 'finance@xpro.test', password: 'Password123!' },
 ] as const
 
 export const users: User[] = [
@@ -73,6 +74,17 @@ export const users: User[] = [
     status: 'active',
     title: 'Client relations',
     initials: 'ZL',
+    scopes: [],
+    mfaRequired: false,
+  },
+  {
+    id: 'usr-finance',
+    name: 'Ngozi Eze',
+    email: 'finance@xpro.test',
+    role: 'admin',
+    status: 'active',
+    title: 'Finance',
+    initials: 'NE',
     scopes: [],
     mfaRequired: false,
   },

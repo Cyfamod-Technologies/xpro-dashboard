@@ -3,7 +3,7 @@ import { computed, ref, toRaw } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { isWorkspaceRole } from '@/features/workspace/config'
 import { createOperationsState } from '@/features/operations/fixtures'
-import { applyCommand, defaultPreferences, visibleRequests } from '@/features/operations/workflow'
+import { applyCommand, defaultPreferences, inbox, publicProvider, visibleRequests } from '@/features/operations/workflow'
 import { staffCan } from '@/features/operations/staff'
 import type { Actor, Command, OperationsState, StaffPermission } from '@/features/operations/types'
 
@@ -12,7 +12,7 @@ const storageKey = 'xpro-ui-workspace-v1'
 const readState = (): OperationsState => {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as OperationsState | null
-    if (saved?.schema === 3 && Array.isArray(saved.staff) && saved.settings && Array.isArray(saved.requests) && Array.isArray(saved.providers) && Array.isArray(saved.audit) && Array.isArray(saved.notifications) && saved.preferences)
+    if (saved?.schema === 5 && Array.isArray(saved.staff) && saved.settings && Array.isArray(saved.requests) && Array.isArray(saved.providers) && Array.isArray(saved.audit) && Array.isArray(saved.notifications) && saved.preferences)
       return saved
   }
   catch { /* A new local preview can recover from an old or damaged snapshot. */ }
@@ -42,8 +42,8 @@ export const useOperationsStore = defineStore('operations', () => {
   const requests = computed(() => actor.value ? visibleRequests(state.value, actor.value) : [])
   const profile = computed(() => state.value.providers.find(item => item.id === actor.value?.id))
   const preferences = computed(() => actor.value ? state.value.preferences[actor.value.id] ?? defaultPreferences(actor.value) : undefined)
-  const notifications = computed(() => state.value.notifications.filter(item => item.recipientId === actor.value?.id && item.channels.includes('In-app')))
-  const publicProviders = computed(() => state.value.providers.filter(item => item.verification === 'approved').map(item => ({ id: item.id, name: item.name, trade: item.trade, city: item.city, services: item.services, experience: item.experience, bio: item.bio, rating: item.rating, reviewCount: item.reviewCount, portfolio: item.portfolio, available: item.available })))
+  const notifications = computed(() => actor.value ? inbox(state.value, actor.value.id) : [])
+  const publicProviders = computed(() => state.value.providers.filter(item => item.verification === 'approved').map(publicProvider))
 
   async function run(command: Command) {
     if (busy.value)

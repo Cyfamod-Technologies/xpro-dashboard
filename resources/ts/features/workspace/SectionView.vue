@@ -3,6 +3,7 @@ import { isWorkspaceRole, workspaceSections } from '@/features/workspace/config'
 import { useAuthStore } from '@/stores/auth'
 import RequestBoard from '@/features/operations/RequestBoard.vue'
 import ProviderProfile from '@/features/operations/ProviderProfile.vue'
+import PayoutDetails from '@/features/operations/PayoutDetails.vue'
 import ProviderReview from '@/features/operations/ProviderReview.vue'
 import WorkspaceUtilities from '@/features/operations/WorkspaceUtilities.vue'
 import WorkspaceOverview from '@/features/operations/WorkspaceOverview.vue'
@@ -41,6 +42,7 @@ const section = computed(() => isWorkspaceRole(auth.user?.role) ? workspaceSecti
       :key="section.id"
       :availability="section.id === 'availability'"
     />
+    <PayoutDetails v-else-if="section.id === 'payouts'" />
     <ProviderReview v-else-if="section.id === 'providers'" />
     <ApprovalQueue v-else-if="section.id === 'approvals'" />
     <StaffDirectory v-else-if="section.id === 'staff'" />

@@ -35,11 +35,12 @@ All prototype accounts use the password `Password123!`.
 | Staff · Operations | `operations@xpro.test` | None |
 | Staff · Pricing | `pricing@xpro.test` | None |
 | Staff · Client relations | `relations@xpro.test` | None |
+| Staff · Finance | `finance@xpro.test` | None |
 
 Staff accounts share the same password as the other prototype accounts.
 
 Every admin account has one or more staff roles (super admin, operations,
-pricing, client relations). Roles are presets of permissions, and the workflow
+pricing, client relations, finance). Roles are presets of permissions, and the workflow
 reducer checks one permission per action, so staff can see everything but only
 act within their role. New requests land unclaimed in a shared queue and alert
 every staff member who can claim requests. A staff member claims a request, or
@@ -55,8 +56,20 @@ Saved prototype data from before staff roles is reset on first load.
 Provider and customer actions that affect the other party are held for XPro. The
 admin Approvals queue (`/admin/approvals`) lists provider acceptances, progress and
 completion reports and customer cancellation requests, each approved or rejected
-inline by staff with the matching permission; quotes and provider verifications
-link to their own review screens.
+inline by staff with the matching permission (including bank details, for Finance);
+quotes and provider verifications link to their own review screens.
+
+Providers sign up themselves: the public site's "Become a provider" button opens
+sign-up with Provider preselected. After verifying their email, a provider
+completes the onboarding form at `/verification` (profile, documents, a face photo
+that only staff see, and bank details) with a checklist of what is left. The bank
+account name comes from a simulated lookup (no API call; account numbers ending in
+`0000` fail it). Staff review in two separate approvals: Operations verifies
+identity (`provider.review`) and Finance verifies the bank account (`bank.review`),
+both from `/admin/approvals`. Providers can change bank details later under
+*Payout details* (`/payouts`); the old account stays in use until Finance approves
+the change, and account numbers are masked for staff without `bank.review`.
+Saved prototype data is reset once on first load after this update.
 
 ## Frontend flow 1
 

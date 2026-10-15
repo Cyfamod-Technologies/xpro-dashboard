@@ -1,30 +1,40 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
-import type { QuoteItem, ServiceRequest } from '@/features/operations/types'
-import { money, when } from '@/features/operations/types'
-import { currentAssignment } from '@/features/operations/workflow'
+import type { ServiceRequest } from '@/features/operations/types'
+import { lineTotal, money, when } from '@/features/operations/types'
+import { currentAssignment, providerQuoteView } from '@/features/operations/workflow'
+
+// The form is typed in naira; every stored amount is kobo, so convert once on the way in and out.
+interface FormItem { description: string; quantity: number; rate: number }
 
 const props = defineProps<{ request: ServiceRequest }>()
+const blankItem = (): FormItem => ({ description: '', quantity: 1, rate: 0 })
+const toKobo = (naira: number) => Math.round(Number(naira) * 100)
+
 const ops = useOperationsStore()
-const items = ref<QuoteItem[]>([{ description: '', quantity: 1, rate: 0 }])
+const items = ref<FormItem[]>([blankItem()])
 const note = ref('')
 const quoteId = ref<string>()
 const editing = ref(false)
-const quotes = computed(() => props.request.quotes.filter(item => ops.actor?.role === 'admin' || item.status !== 'draft'))
-const total = computed(() => items.value.reduce((sum, item) => sum + Math.round(Number(item.quantity) * Number(item.rate) * 100), 0))
-const pricingOpen = computed(() => !['in_progress', 'blocked', 'completion_pending', 'acknowledged', 'closed', 'cancelled'].includes(props.request.status))
+const isProvider = computed(() => ops.actor?.role === 'provider')
+const quotes = computed(() => isProvider.value ? [] : props.request.quotes.filter(item => ops.actor?.role === 'admin' || item.status !== 'draft'))
+const scope = computed(() => isProvider.value ? providerQuoteView(props.request) : null)
+const costings = computed(() => ops.actor?.role === 'customer' ? [] : props.request.contributions.filter(item => ops.actor?.role === 'admin' || item.providerId === ops.actor?.id))
+const kobo = computed(() => items.value.map(item => ({ description: item.description, quantity: Number(item.quantity), rate: toKobo(item.rate) })))
+const total = computed(() => kobo.value.reduce((sum, item) => sum + lineTotal(item), 0))
+const pricingOpen = computed(() => !['in_progress', 'blocked', 'completion_pending', 'acknowledged', 'closed', 'cancelled', 'rejected'].includes(props.request.status))
 
 const edit = (id?: string) => {
   const quote = props.request.quotes.find(item => item.id === id)
 
   quoteId.value = quote?.status === 'draft' ? quote.id : undefined
-  items.value = quote ? quote.items.map(item => ({ ...item })) : [{ description: '', quantity: 1, rate: 0 }]
+  items.value = quote ? quote.items.map(item => ({ ...item, rate: item.rate / 100 })) : [blankItem()]
   note.value = quote?.note ?? ''
   editing.value = true
 }
 
 const save = async () => {
-  const command = ops.actor?.role === 'provider' ? { type: 'quote.contribute' as const, requestId: props.request.id, items: items.value, note: note.value } : { type: 'quote.save' as const, requestId: props.request.id, quoteId: quoteId.value, items: items.value, note: note.value }
+  const command = isProvider.value ? { type: 'quote.contribute' as const, requestId: props.request.id, items: kobo.value, note: note.value } : { type: 'quote.save' as const, requestId: props.request.id, quoteId: quoteId.value, items: kobo.value, note: note.value }
   if (await ops.run(command))
     editing.value = false
 }
@@ -36,7 +46,7 @@ const save = async () => {
     color="info"
     class="mb-5"
   >
-    XPro prepares and publishes the customer quote. Published versions retain their original line items. Provider costing is visible only to the provider and XPro.
+    {{ isProvider ? 'XPro prepares the customer quote. You see the scope agreed with the customer, never the customer price. Your own costing is visible only to you and XPro.' : 'XPro prepares and publishes the customer quote. Published versions retain their original line items. Provider costing is visible only to the provider and XPro.' }}
   </VAlert>
   <VBtn
     v-if="pricingOpen && (ops.can('quote.manage') || (ops.actor?.role === 'provider' && currentAssignment(request)?.status === 'accepted'))"
@@ -98,7 +108,7 @@ const save = async () => {
       </VRow><VBtn
         variant="text"
         prepend-icon="tabler-plus"
-        @click="items.push({ description: '', quantity: 1, rate: 0 })"
+        @click="items.push(blankItem())"
       >
         Add line item
       </VBtn><VTextarea
@@ -107,7 +117,7 @@ const save = async () => {
         rows="2"
         class="mt-4"
       /><p class="text-h6">
-        Total: {{ money(total) }}
+        Total: {{ Number.isFinite(total) ? money(total) : '—' }}
       </p><div class="d-flex gap-3">
         <VBtn
           :loading="ops.busy"
@@ -143,7 +153,7 @@ const save = async () => {
         :key="index"
         class="d-flex justify-space-between flex-wrap gap-2 py-2"
       >
-        <span>{{ item.description }} · {{ item.quantity }} × {{ money(item.rate * 100) }}</span><strong>{{ money(Math.round(item.quantity * item.rate * 100)) }}</strong>
+        <span>{{ item.description }} · {{ item.quantity }} × {{ money(item.rate) }}</span><strong>{{ money(lineTotal(item)) }}</strong>
       </div><VDivider class="my-3" /><p class="text-h5">
         {{ money(quote.total) }}
       </p><p>{{ quote.note }}</p><p
@@ -212,18 +222,41 @@ const save = async () => {
       </div>
     </VCardText>
   </VCard>
+  <VCard
+    v-if="scope"
+    class="mb-5"
+  >
+    <VCardText>
+      <div class="d-flex justify-space-between flex-wrap gap-2 mb-4">
+        <h3 class="text-h5">
+          Scope agreed with the customer
+        </h3><VChip
+          variant="tonal"
+          color="primary"
+        >
+          {{ scope.status === 'accepted' ? 'accepted' : 'awaiting customer decision' }}
+        </VChip>
+      </div><div
+        v-for="(line, index) in scope.lines"
+        :key="index"
+        class="d-flex justify-space-between flex-wrap gap-2 py-2"
+      >
+        <span>{{ line.description }}</span><strong>Qty {{ line.quantity }}</strong>
+      </div>
+    </VCardText>
+  </VCard>
   <p
-    v-if="!quotes.length"
+    v-if="isProvider ? !scope : !quotes.length"
     class="text-medium-emphasis"
   >
-    No customer quote has been published for this request yet.
+    {{ isProvider ? 'The agreed scope appears here once XPro has sent the customer quote.' : 'No customer quote has been published for this request yet.' }}
   </p>
-  <VCard v-if="ops.actor?.role !== 'customer' && request.contributions.length">
+  <VCard v-if="costings.length">
     <VCardText>
       <h3 class="text-h5 mb-4">
         Private provider costing
       </h3><div
-        v-for="costing in request.contributions.filter(item => ops.actor?.role === 'admin' || item.providerId === ops.actor?.id)"
+        v-for="costing in costings"
         :key="costing.id"
         class="mb-4"
       >
@@ -232,7 +265,7 @@ const save = async () => {
           :key="index"
           class="text-body-2"
         >
-          {{ item.description }} · {{ item.quantity }} × {{ money(item.rate * 100) }}
+          {{ item.description }} · {{ item.quantity }} × {{ money(item.rate) }}
         </div>
       </div>
     </VCardText>

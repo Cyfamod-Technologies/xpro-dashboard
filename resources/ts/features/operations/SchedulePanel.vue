@@ -10,7 +10,7 @@ const startAt = ref('')
 const note = ref('')
 const latest = computed(() => currentSchedule(props.request))
 const responseRole = computed(() => ops.actor?.role === 'provider' ? 'provider' : 'customer')
-const canPropose = computed(() => ops.actor?.role === 'admin' && ops.can('schedule.manage') && publicQuote(props.request)?.status === 'accepted' && !['in_progress', 'blocked', 'completion_pending', 'acknowledged', 'closed', 'cancelled'].includes(props.request.status))
+const canPropose = computed(() => ops.actor?.role === 'admin' && ops.can('schedule.manage') && publicQuote(props.request)?.status === 'accepted' && !['in_progress', 'blocked', 'completion_pending', 'acknowledged', 'closed', 'cancelled', 'rejected'].includes(props.request.status))
 </script>
 
 <template>

@@ -11,8 +11,9 @@ const resetDialog = ref(false)
 const approvalOn = ref(ops.state.settings.quoteApprovalThreshold !== null)
 const threshold = ref<number | string>(ops.state.settings.quoteApprovalThreshold === null ? '' : ops.state.settings.quoteApprovalThreshold / 100)
 const prefs = reactive({ name: '', phone: '', email: true, push: true, inApp: true, timezone: 'Africa/Lagos', ...ops.preferences })
-const audit = computed(() => ops.state.audit.filter(item => `${item.action} ${item.actor} ${item.resource}`.toLowerCase().includes(search.value.toLowerCase())))
+const audit = computed(() => ops.state.audit.filter(item => `${item.action} ${item.actor} ${item.resource} ${item.note}`.toLowerCase().includes(search.value.toLowerCase())))
 const notifications = computed(() => ops.notifications.filter(item => !unreadOnly.value || !item.read))
+const canOpen = (requestId?: string) => Boolean(requestId) && ops.requests.some(item => item.id === requestId)
 
 const requestPath = computed(() => {
   const role = ops.actor?.role
@@ -25,7 +26,7 @@ const requestPath = computed(() => {
   <template v-if="props.section === 'audit'">
     <VTextField
       v-model="search"
-      label="Search activity, actor or request"
+      label="Search activity, actor, note or request"
       prepend-inner-icon="tabler-search"
       class="mb-5"
     /><VCard>
@@ -37,6 +38,11 @@ const requestPath = computed(() => {
         >
           <strong>{{ entry.action }}</strong><p class="text-body-2 text-medium-emphasis mb-2">
             {{ entry.actor }} · {{ entry.resource }} · {{ when(entry.createdAt) }}
+          </p><p
+            v-if="entry.note"
+            class="text-body-2 mb-2"
+          >
+            Note: {{ entry.note }}
           </p><VBtn
             v-if="entry.requestId"
             :to="{ path: requestPath, query: { request: entry.requestId } }"
@@ -84,7 +90,7 @@ const requestPath = computed(() => {
           {{ item.title }}
         </h2><p>{{ item.message }}</p><small>{{ when(item.createdAt) }}</small><div class="d-flex flex-wrap gap-3 mt-4">
           <VBtn
-            v-if="item.requestId"
+            v-if="canOpen(item.requestId)"
             :to="{ path: requestPath, query: { request: item.requestId } }"
             variant="text"
             @click="ops.run({ type: 'notification.read', notificationId: item.id })"

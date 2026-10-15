@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useOperationsStore } from '@/stores/operations'
 import type { ServiceRequest } from '@/features/operations/types'
-import { statusLabels, when } from '@/features/operations/types'
+import { statusLabelFor, when } from '@/features/operations/types'
 import { visibleUpdates } from '@/features/operations/workflow'
 import { prepareFiles } from '@/features/operations/files'
 import Attachments from '@/features/operations/Attachments.vue'
@@ -171,7 +171,7 @@ const addProgress = async () => {
             color="primary"
             variant="tonal"
           >
-            {{ statusLabels[update.status] }}
+            {{ statusLabelFor(update.status, ops.actor?.role ?? 'customer') }}
           </VChip><VChip
             v-if="ops.actor?.role !== 'customer'"
             size="small"

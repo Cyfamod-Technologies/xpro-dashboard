@@ -2,8 +2,9 @@
 import { useOperationsStore } from '@/stores/operations'
 import type { Command, StaffPermission } from '@/features/operations/types'
 import { money } from '@/features/operations/types'
+import { accountNameMatches, maskAccount } from '@/features/operations/banks'
 import type { PendingApproval } from '@/features/operations/workflow'
-import { pendingApprovals } from '@/features/operations/workflow'
+import { pendingApprovals, profileChangeRows } from '@/features/operations/workflow'
 import { workspaceSections } from '@/features/workspace/config'
 
 type Kind = PendingApproval['kind']
@@ -21,9 +22,11 @@ const kinds: { value: Kind; label: string; color: string }[] = [
   { value: 'cancellation', label: 'Cancellation', color: 'error' },
   { value: 'quote', label: 'Quote', color: 'warning' },
   { value: 'provider', label: 'Provider', color: 'secondary' },
+  { value: 'provider_changes', label: 'Profile changes', color: 'secondary' },
+  { value: 'bank', label: 'Bank', color: 'secondary' },
 ]
 
-const permissions: Partial<Record<Kind, StaffPermission>> = { assignment: 'dispatch.manage', progress: 'progress.review', completion: 'progress.review', cancellation: 'request.cancel' }
+const permissions: Partial<Record<Kind, StaffPermission>> = { assignment: 'dispatch.manage', progress: 'progress.review', completion: 'progress.review', cancellation: 'request.cancel', provider_changes: 'provider.review', bank: 'bank.review' }
 const items = computed(() => pendingApprovals(ops.state))
 const shown = computed(() => items.value.filter(item => filter.value === 'all' || item.kind === filter.value))
 const kindMeta = (kind: Kind) => kinds.find(item => item.value === kind)!
@@ -32,7 +35,7 @@ const providerName = (id?: string) => ops.state.providers.find(item => item.id =
 const requestOf = (item: PendingApproval) => ops.state.requests.find(request => request.id === item.requestId)
 const canDecide = (item: PendingApproval) => Boolean(permissions[item.kind] && ops.can(permissions[item.kind]!))
 const keyOf = (item: PendingApproval) => `${item.kind}:${item.itemId}`
-const linkFor = (item: PendingApproval) => item.kind === 'provider' ? '/admin/providers' : `/admin/requests?request=${item.requestId}`
+const linkFor = (item: PendingApproval) => item.kind === 'provider' || item.kind === 'provider_changes' || item.kind === 'bank' ? '/admin/providers' : `/admin/requests?request=${item.requestId}`
 
 const age = (value: string) => {
   const minutes = Math.max(0, Math.round((Date.now() - Date.parse(value)) / 60000))
@@ -47,8 +50,28 @@ const age = (value: string) => {
   return `${Math.round(minutes / 1440)}d`
 }
 
+const bankOf = (item: PendingApproval) => ops.state.providers.find(entry => entry.id === item.providerId)?.payout
+
 const summary = (item: PendingApproval) => {
   const request = requestOf(item)
+
+  if (item.kind === 'bank') {
+    const payout = bankOf(item)
+    const account = payout?.pending
+
+    if (!account)
+      return ''
+    const mismatch = accountNameMatches(account.accountName, item.title) ? '' : ' · Account name differs from profile name'
+
+    return `${payout.current ? 'Bank change' : 'New bank details'}: ${account.bankName} ${maskAccount(account.accountNumber)} · ${account.accountName}${mismatch}`
+  }
+
+  if (item.kind === 'provider_changes') {
+    const profile = ops.state.providers.find(entry => entry.id === item.providerId)
+    const rows = profile ? profileChangeRows(profile) : []
+
+    return rows.length ? `Proposed changes: ${rows.map(row => `${row.label}: ${row.current} → ${row.proposed}`).join(' · ')}` : 'Profile changes awaiting review.'
+  }
 
   if (item.kind === 'assignment') {
     const assignment = request?.assignments.find(entry => entry.id === item.itemId)
@@ -80,6 +103,10 @@ const commandFor = (item: PendingApproval, approve: boolean, note: string): Comm
     return { type: 'progress.review', requestId, updateId: item.itemId, approve, note }
   if (item.kind === 'cancellation')
     return { type: 'cancellation.review', requestId, approve, note }
+  if (item.kind === 'bank')
+    return { type: 'payout.review', providerId: item.providerId ?? '', approve, note }
+  if (item.kind === 'provider_changes')
+    return { type: 'provider.changes.review', providerId: item.providerId ?? '', approve, note }
 
   return undefined
 }
@@ -133,7 +160,7 @@ const decide = async (item: PendingApproval, approve: boolean) => {
               :color="kindMeta(item.kind).color"
             >
               {{ kindMeta(item.kind).label }}
-            </VChip><span class="text-body-2 text-medium-emphasis">{{ item.requestId ?? 'Provider profile' }} · waiting {{ age(item.createdAt) }}</span>
+            </VChip><span class="text-body-2 text-medium-emphasis">{{ item.requestId ?? (item.kind === 'bank' ? 'Payout details' : 'Provider profile') }} · waiting {{ age(item.createdAt) }}</span>
           </div><h2 class="text-h6 mb-1">
             <RouterLink
               :to="linkFor(item)"
