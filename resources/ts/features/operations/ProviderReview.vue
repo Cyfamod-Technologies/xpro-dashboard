@@ -88,10 +88,12 @@ const pendingBank = computed(() =>
           <VBtn
             variant="outlined"
             @click="
-              selectedId = provider.id
-              note = ''
-              bankNote = ''
-              changesNote = ''
+              () => {
+                selectedId = provider.id
+                note = ''
+                bankNote = ''
+                changesNote = ''
+              }
             "
           >
             Review profile

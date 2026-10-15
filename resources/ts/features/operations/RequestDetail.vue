@@ -226,8 +226,10 @@ const reject = async () => {
                     color="warning"
                     :disabled="ops.busy"
                     @click="
-                      rejecting = 'assignment'
-                      reviewNote = ''
+                      () => {
+                        rejecting = 'assignment'
+                        reviewNote = ''
+                      }
                     "
                   >
                     Reject </VBtn
@@ -267,8 +269,10 @@ const reject = async () => {
                     color="warning"
                     :disabled="ops.busy"
                     @click="
-                      rejecting = 'cancellation'
-                      reviewNote = ''
+                      () => {
+                        rejecting = 'cancellation'
+                        reviewNote = ''
+                      }
                     "
                   >
                     Reject </VBtn
@@ -328,8 +332,10 @@ const reject = async () => {
                   color="error"
                   :disabled="ops.busy"
                   @click="
-                    rejectNote = ''
-                    rejectDialog = true
+                    () => {
+                      rejectNote = ''
+                      rejectDialog = true
+                    }
                   "
                 >
                   Reject request
@@ -450,8 +456,10 @@ const reject = async () => {
           color="error"
           class="mt-5"
           @click="
-            note = ''
-            cancelDialog = true
+            () => {
+              note = ''
+              cancelDialog = true
+            }
           "
         >
           {{ role === "customer" ? "Request cancellation" : "Cancel request" }}

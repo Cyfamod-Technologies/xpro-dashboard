@@ -185,8 +185,10 @@ const elementId = computed(() => {
                 :disabled="isReadonly.value"
                 @on-open="isCalendarOpen = true"
                 @on-close="
-                  isCalendarOpen = false
-                  validate()
+                  () => {
+                    isCalendarOpen = false
+                    validate()
+                  }
                 "
                 @update:model-value="emitModelValue"
               />

@@ -220,8 +220,10 @@ const offerExcluded = (item: ExcludedProvider) => {
             color="warning"
             :disabled="ops.busy"
             @click="
-              withdrawing = true
-              withdrawNote = ''
+              () => {
+                withdrawing = true
+                withdrawNote = ''
+              }
             "
           >
             Withdraw assignment

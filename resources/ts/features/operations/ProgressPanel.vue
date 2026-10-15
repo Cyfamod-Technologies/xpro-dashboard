@@ -184,8 +184,10 @@ const addProgress = async () => {
                 color="warning"
                 :disabled="ops.busy"
                 @click="
-                  rejectingId = update.id
-                  rejectNote = ''
+                  () => {
+                    rejectingId = update.id
+                    rejectNote = ''
+                  }
                 "
               >
                 Reject

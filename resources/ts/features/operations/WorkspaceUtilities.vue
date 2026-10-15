@@ -169,8 +169,10 @@ const requestPath = computed(() => {
             ><VBtn
               color="warning"
               @click="
-                ops.reset()
-                resetDialog = false
+                () => {
+                  ops.reset()
+                  resetDialog = false
+                }
               "
             >
               Restore samples
