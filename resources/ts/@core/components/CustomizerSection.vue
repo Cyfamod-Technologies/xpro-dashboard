@@ -14,10 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
 
   <div class="customizer-section">
     <div>
-      <VChip
-        size="small"
-        color="primary"
-      >
+      <VChip size="small" color="primary">
         <span class="font-weight-medium">{{ props.title }}</span>
       </VChip>
     </div>

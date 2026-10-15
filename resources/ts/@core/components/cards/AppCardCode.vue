@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { getSingletonHighlighter } from 'shiki'
-import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+import { getSingletonHighlighter } from "shiki"
+import { PerfectScrollbar } from "vue3-perfect-scrollbar"
 
-type CodeLanguages = 'ts' | 'js'
+type CodeLanguages = "ts" | "js"
 
 interface Props {
   title: string
@@ -14,12 +14,12 @@ interface Props {
 type CodeProp = Record<CodeLanguages, string>
 
 const props = withDefaults(defineProps<Props>(), {
-  codeLanguage: 'markup',
+  codeLanguage: "markup",
   noPadding: false,
 })
 
-const preferredCodeLanguage = useCookie<CodeLanguages>('preferredCodeLanguage', {
-  default: () => 'ts',
+const preferredCodeLanguage = useCookie<CodeLanguages>("preferredCodeLanguage", {
+  default: () => "ts",
   maxAge: COOKIE_MAX_AGE_1_YEAR,
 })
 
@@ -28,14 +28,14 @@ const isCodeShown = ref(false)
 const { copy, copied } = useClipboard({ source: computed(() => props.code[preferredCodeLanguage.value]) })
 
 const highlighter = await getSingletonHighlighter({
-  themes: ['dracula', 'dracula-soft'],
-  langs: ['vue'],
+  themes: ["dracula", "dracula-soft"],
+  langs: ["vue"],
 })
 
 const codeSnippet = computed(() =>
   highlighter.codeToHtml(props.code[preferredCodeLanguage.value], {
-    lang: 'vue',
-    theme: 'dracula',
+    lang: "vue",
+    theme: "dracula",
   }),
 )
 </script>
@@ -52,10 +52,7 @@ const codeSnippet = computed(() =>
           :class="isCodeShown ? '' : 'text-disabled'"
           @click="isCodeShown = !isCodeShown"
         >
-          <VIcon
-            size="20"
-            icon="tabler-code"
-          />
+          <VIcon size="20" icon="tabler-code" />
         </IconBtn>
       </template>
     </VCardItem>
@@ -69,11 +66,7 @@ const codeSnippet = computed(() =>
 
         <VCardText class="d-flex gap-y-3 flex-column">
           <div class="d-flex justify-end">
-            <VBtnToggle
-              v-model="preferredCodeLanguage"
-              mandatory
-              density="compact"
-            >
+            <VBtnToggle v-model="preferredCodeLanguage" mandatory density="compact">
               <VBtn
                 value="ts"
                 icon
@@ -102,7 +95,7 @@ const codeSnippet = computed(() =>
 
           <div class="position-relative">
             <PerfectScrollbar
-              style="border-radius: 6px;max-block-size: 500px;"
+              style="border-radius: 6px; max-block-size: 500px"
               :options="{ wheelPropagation: false, suppressScrollX: false }"
             >
               <!-- eslint-disable-next-line vue/no-v-html -->
@@ -111,12 +104,13 @@ const codeSnippet = computed(() =>
             <IconBtn
               class="position-absolute app-card-code-copy-icon"
               color="white"
-              @click="() => { copy() }"
+              @click="
+                () => {
+                  copy()
+                }
+              "
             >
-              <VIcon
-                :icon="copied ? 'tabler-check' : 'tabler-copy'"
-                size="20"
-              />
+              <VIcon :icon="copied ? 'tabler-check' : 'tabler-copy'" size="20" />
             </IconBtn>
           </div>
         </VCardText>

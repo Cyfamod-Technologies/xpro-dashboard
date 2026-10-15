@@ -1,7 +1,8 @@
-export type UserRole = 'admin' | 'customer' | 'provider' | 'super_admin' | 'manager' | 'budget_viewer'
-export type AccountStatus = 'active' | 'invited' | 'unverified' | 'suspended'
-export type ApprovalStatus = 'draft' | 'submitted' | 'changes_requested' | 'rejected' | 'published'
-export type TrackingStatus = 'not_started' | 'in_progress' | 'stalled' | 'action_required' | 'action_in_progress' | 'completed'
+export type UserRole = "admin" | "customer" | "provider" | "super_admin" | "manager" | "budget_viewer"
+export type AccountStatus = "active" | "invited" | "unverified" | "suspended"
+export type ApprovalStatus = "draft" | "submitted" | "changes_requested" | "rejected" | "published"
+export type TrackingStatus =
+  "not_started" | "in_progress" | "stalled" | "action_required" | "action_in_progress" | "completed"
 
 export interface User {
   id: string
@@ -22,7 +23,7 @@ export interface Program {
   description: string
   countries: string[]
   managers: string[]
-  status: 'active' | 'draft' | 'archived'
+  status: "active" | "draft" | "archived"
   projectCount: number
   allocationTotal: number
   currency: string
@@ -71,9 +72,9 @@ export interface Submission {
   projectTitle: string
   managerName: string
   submittedAt: string
-  type: 'new_project' | 'project_revision' | 'allocation_revision' | 'outcome'
-  status: 'pending' | 'changes_requested' | 'approved' | 'rejected'
-  risk: 'normal' | 'attention'
+  type: "new_project" | "project_revision" | "allocation_revision" | "outcome"
+  status: "pending" | "changes_requested" | "approved" | "rejected"
+  risk: "normal" | "attention"
   changedFields: number
 }
 
@@ -83,7 +84,7 @@ export interface NotificationItem {
   message: string
   createdAt: string
   read: boolean
-  tone: 'info' | 'success' | 'warning'
+  tone: "info" | "success" | "warning"
 }
 
 export interface AuditEvent {
@@ -92,7 +93,7 @@ export interface AuditEvent {
   action: string
   resource: string
   createdAt: string
-  tone: 'info' | 'success' | 'warning'
+  tone: "info" | "success" | "warning"
 }
 
 export interface DashboardMetric {
@@ -100,7 +101,7 @@ export interface DashboardMetric {
   value: string
   helper: string
   icon: string
-  color: 'primary' | 'success' | 'warning' | 'info' | 'error'
+  color: "primary" | "success" | "warning" | "info" | "error"
 }
 
 export interface DashboardResponse {
@@ -152,7 +153,7 @@ export interface AddEvidencePayload {
   source: string
 }
 
-export type ReviewDecision = 'approved' | 'changes_requested' | 'rejected'
+export type ReviewDecision = "approved" | "changes_requested" | "rejected"
 
 export interface ReviewDecisionPayload {
   decision: ReviewDecision
@@ -160,10 +161,10 @@ export interface ReviewDecisionPayload {
 }
 
 export const roleLabels: Record<UserRole, string> = {
-  admin: 'Admin / Dispatch',
-  customer: 'Customer',
-  provider: 'Provider',
-  super_admin: 'Super Admin',
-  manager: 'Manager',
-  budget_viewer: 'Budget Viewer',
+  admin: "Admin / Dispatch",
+  customer: "Customer",
+  provider: "Provider",
+  super_admin: "Super Admin",
+  manager: "Manager",
+  budget_viewer: "Budget Viewer",
 }

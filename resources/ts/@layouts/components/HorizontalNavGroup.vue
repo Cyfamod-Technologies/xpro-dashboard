@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { layoutConfig } from '@layouts'
-import { HorizontalNavLink, HorizontalNavPopper } from '@layouts/components'
-import { canViewNavMenuGroup } from '@layouts/plugins/casl'
-import { useLayoutConfigStore } from '@layouts/stores/config'
-import type { NavGroup } from '@layouts/types'
-import { getDynamicI18nProps, isNavGroupActive } from '@layouts/utils'
+import { layoutConfig } from "@layouts"
+import { HorizontalNavLink, HorizontalNavPopper } from "@layouts/components"
+import { canViewNavMenuGroup } from "@layouts/plugins/casl"
+import { useLayoutConfigStore } from "@layouts/stores/config"
+import type { NavGroup } from "@layouts/types"
+import { getDynamicI18nProps, isNavGroupActive } from "@layouts/utils"
 
 interface Props {
   item: NavGroup
@@ -15,7 +15,7 @@ interface Props {
 }
 
 defineOptions({
-  name: 'HorizontalNavGroup',
+  name: "HorizontalNavGroup",
 })
 
 const props = withDefaults(defineProps<Props>(), {
@@ -54,10 +54,10 @@ watch(
     content-container-tag="ul"
     :class="[
       {
-        'active': isGroupActive,
+        active: isGroupActive,
         'children-at-end': childrenAtEnd,
         'sub-item': isSubItem,
-        'disabled': item.disable,
+        disabled: item.disable,
       },
     ]"
     :popper-inline-end="childrenAtEnd"

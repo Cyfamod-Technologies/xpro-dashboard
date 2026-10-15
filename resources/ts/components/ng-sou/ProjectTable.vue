@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import type { TrackedProject } from '@/types/domain'
+import type { TrackedProject } from "@/types/domain"
 
-withDefaults(defineProps<{
-  projects: TrackedProject[]
-  viewer?: boolean
-}>(), {
-  viewer: false,
-})
+withDefaults(
+  defineProps<{
+    projects: TrackedProject[]
+    viewer?: boolean
+  }>(),
+  {
+    viewer: false,
+  },
+)
 
-const formatMoney = (amount: number, currency: string) => new Intl.NumberFormat('en-NG', {
-  style: 'currency',
-  currency,
-  notation: 'compact',
-  maximumFractionDigits: 1,
-}).format(amount)
+const formatMoney = (amount: number, currency: string) =>
+  new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency,
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(amount)
 </script>
 
 <template>
@@ -24,28 +28,19 @@ const formatMoney = (amount: number, currency: string) => new Intl.NumberFormat(
         <th>Location</th>
         <th>Allocation</th>
         <th>Tracking status</th>
-        <th v-if="!viewer">
-          Approval
-        </th>
+        <th v-if="!viewer">Approval</th>
         <th aria-label="Open project" />
       </tr>
     </thead>
     <tbody>
-      <tr
-        v-for="project in projects"
-        :key="project.id"
-      >
-        <td style="min-inline-size: 18rem;">
+      <tr v-for="project in projects" :key="project.id">
+        <td style="min-inline-size: 18rem">
           <div class="font-weight-semibold text-high-emphasis">
             {{ project.title }}
           </div>
-          <div class="text-caption text-medium-emphasis">
-            {{ project.programName }} · {{ project.fiscalYear }}
-          </div>
+          <div class="text-caption text-medium-emphasis">{{ project.programName }} · {{ project.fiscalYear }}</div>
         </td>
-        <td>
-          {{ project.state }}, {{ project.lga }}
-        </td>
+        <td>{{ project.state }}, {{ project.lga }}</td>
         <td class="font-weight-semibold">
           {{ formatMoney(project.allocation, project.currency) }}
         </td>

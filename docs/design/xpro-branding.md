@@ -8,15 +8,15 @@ Its primary colour is the supplied Xpro blue `#4AA7DF`.
 Define runtime colours in `resources/ts/plugins/vuetify/theme.ts` and consume
 Vuetify semantic tokens in components and styles.
 
-| Token | Light | Dark |
-| --- | --- | --- |
-| Primary | `#4AA7DF` | `#4AA7DF` |
-| Primary darken | `#318EC6` | `#318EC6` |
-| On primary | `#FFFFFF` | `#FFFFFF` |
-| Brand backdrop | `#102A3A` | `#102A3A` |
-| Secondary | `#526A82` | `#A7C3DA` |
+| Token           | Light     | Dark      |
+| --------------- | --------- | --------- |
+| Primary         | `#4AA7DF` | `#4AA7DF` |
+| Primary darken  | `#318EC6` | `#318EC6` |
+| On primary      | `#FFFFFF` | `#FFFFFF` |
+| Brand backdrop  | `#102A3A` | `#102A3A` |
+| Secondary       | `#526A82` | `#A7C3DA` |
 | Page background | `#F5F8FB` | `#101E2A` |
-| Card surface | `#FFFFFF` | `#172B3B` |
+| Card surface    | `#FFFFFF` | `#172B3B` |
 
 Text and icons on filled primary buttons, active navigation and primary
 backgrounds use white, as requested. The auth story uses a separate navy

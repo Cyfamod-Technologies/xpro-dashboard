@@ -5,21 +5,13 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  icon: 'tabler-x',
-  iconSize: '20',
+  icon: "tabler-x",
+  iconSize: "20",
 })
 </script>
 
 <template>
-  <IconBtn
-    variant="elevated"
-    size="30"
-    :ripple="false"
-    class="v-dialog-close-btn"
-  >
-    <VIcon
-      :icon="props.icon"
-      :size="props.iconSize"
-    />
+  <IconBtn variant="elevated" size="30" :ripple="false" class="v-dialog-close-btn">
+    <VIcon :icon="props.icon" :size="props.iconSize" />
   </IconBtn>
 </template>

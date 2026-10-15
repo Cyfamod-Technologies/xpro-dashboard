@@ -1,6 +1,6 @@
-import { useAbility } from '@casl/vue'
-import type { RouteLocationNormalized } from 'vue-router'
-import type { NavGroup } from '@layouts/types'
+import { useAbility } from "@casl/vue"
+import type { RouteLocationNormalized } from "vue-router"
+import type { NavGroup } from "@layouts/types"
 
 /**
  * Returns ability result if ACL is configured or else just return true
@@ -15,10 +15,9 @@ import type { NavGroup } from '@layouts/types'
 export const can = (action: string | undefined, subject: string | undefined) => {
   const vm = getCurrentInstance()
 
-  if (!vm)
-    return false
+  if (!vm) return false
 
-  const localCan = vm.proxy && '$can' in vm.proxy
+  const localCan = vm.proxy && "$can" in vm.proxy
 
   // @ts-expect-error We will get TS error in below line because we aren't using $can in component instance
   return localCan ? vm.proxy?.$can(action, subject) : true
@@ -34,8 +33,7 @@ export const canViewNavMenuGroup = (item: NavGroup) => {
 
   // If subject and action is defined in item => Return based on children visibility (Hide group if no child is visible)
   // Else check for ability using provided subject and action along with checking if has any visible child
-  if (!(item.action && item.subject))
-    return hasAnyVisibleChild
+  if (!(item.action && item.subject)) return hasAnyVisibleChild
 
   return can(item.action, item.subject) && hasAnyVisibleChild
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import themeselectionQr from '@images/pages/themeselection-qr.png'
+import themeselectionQr from "@images/pages/themeselection-qr.png"
 
 interface Emit {
-  (e: 'update:isDialogVisible', value: boolean): void
-  (e: 'submit', value: string): void
+  (e: "update:isDialogVisible", value: boolean): void
+  (e: "submit", value: string): void
 }
 interface Props {
   authCode?: string
@@ -16,14 +16,14 @@ const authCode = ref(structuredClone(toRaw(props.authCode)))
 
 const formSubmit = () => {
   if (authCode.value) {
-    emit('submit', authCode.value)
-    emit('update:isDialogVisible', false)
+    emit("submit", authCode.value)
+    emit("update:isDialogVisible", false)
   }
 }
 
 const resetAuthCode = () => {
   authCode.value = structuredClone(toRaw(props.authCode))
-  emit('update:isDialogVisible', false)
+  emit("update:isDialogVisible", false)
 }
 </script>
 
@@ -31,7 +31,7 @@ const resetAuthCode = () => {
   <VDialog
     :width="$vuetify.display.smAndDown ? 'auto' : 900"
     :model-value="props.isDialogVisible"
-    @update:model-value="(val) => $emit('update:isDialogVisible', val)"
+    @update:model-value="val => $emit('update:isDialogVisible', val)"
   >
     <!-- Dialog close btn -->
     <DialogCloseBtn @click="$emit('update:isDialogVisible', false)" />
@@ -39,23 +39,16 @@ const resetAuthCode = () => {
     <VCard class="pa-2 pa-sm-10">
       <VCardText>
         <!-- 👉 Title -->
-        <h4 class="text-h4 text-center mb-6">
-          Add Authenticator App
-        </h4>
-        <h5 class="text-h5 mb-2">
-          Authenticator Apps
-        </h5>
+        <h4 class="text-h4 text-center mb-6">Add Authenticator App</h4>
+        <h5 class="text-h5 mb-2">Authenticator Apps</h5>
 
         <p class="text-body-1 mb-6">
-          Using an authenticator app like Google Authenticator, Microsoft Authenticator, Authy, or 1Password, scan the QR code. It will generate a 6 digit code for you to enter below.
+          Using an authenticator app like Google Authenticator, Microsoft Authenticator, Authy, or 1Password, scan the
+          QR code. It will generate a 6 digit code for you to enter below.
         </p>
 
         <div class="mb-6">
-          <VImg
-            width="150"
-            :src="themeselectionQr"
-            class="mx-auto"
-          />
+          <VImg width="150" :src="themeselectionQr" class="mx-auto" />
         </div>
 
         <VAlert
@@ -74,24 +67,11 @@ const resetAuthCode = () => {
           />
 
           <div class="d-flex justify-end flex-wrap gap-4">
-            <VBtn
-              color="secondary"
-              variant="tonal"
-              @click="resetAuthCode"
-            >
-              Cancel
-            </VBtn>
+            <VBtn color="secondary" variant="tonal" @click="resetAuthCode"> Cancel </VBtn>
 
-            <VBtn
-              type="submit"
-              @click="formSubmit"
-            >
+            <VBtn type="submit" @click="formSubmit">
               Continue
-              <VIcon
-                end
-                icon="tabler-arrow-right"
-                class="flip-in-rtl"
-              />
+              <VIcon end icon="tabler-arrow-right" class="flip-in-rtl" />
             </VBtn>
           </div>
         </VForm>

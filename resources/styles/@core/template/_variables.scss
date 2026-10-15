@@ -1,8 +1,9 @@
 @forward "@core-scss/base/variables" with (
   $default-layout-with-vertical-nav-navbar-footer-roundness: 6px !default,
 
-  $vertical-nav-navbar-style: "floating" !default, // options: elevated, floating
+  $vertical-nav-navbar-style: "floating" !default,
 
+  // options: elevated, floating
   // 👉 Vertical nav
   $vertical-nav-background-color-rgb: var(--v-theme-surface) !default,
   // ℹ️ This is used to keep consistency between nav items and nav header left & right margin
@@ -46,7 +47,7 @@
     Here we assume we will always use shorthand property which will apply same padding on four side
     This is because this have been used as value of top property by `.popper-content`
   */
-  $horizontal-nav-padding: 0.5rem !default,
+    $horizontal-nav-padding: 0.5rem !default,
 
   // 👉 Navbar
   $layout-vertical-nav-navbar-height: 54px !default,
@@ -54,37 +55,39 @@
 
   // Font sizes
   $font-sizes: (
-    "xs": 0.6875rem,
-    "sm": 0.8125rem,
-    "base": 0.9375rem,
-    "lg": 1.125rem,
-    "xl": 1.5rem,
-    "2xl": 1.75rem,
-    "3xl": 2rem,
-    "4xl": 2.375rem,
-    "5xl": 3rem,
-    "6xl": 3.5rem,
-    "7xl": 4rem,
-    "8xl": 4.5rem,
-    "9xl": 5.25rem,
-  ) !default,
+      "xs": 0.6875rem,
+      "sm": 0.8125rem,
+      "base": 0.9375rem,
+      "lg": 1.125rem,
+      "xl": 1.5rem,
+      "2xl": 1.75rem,
+      "3xl": 2rem,
+      "4xl": 2.375rem,
+      "5xl": 3rem,
+      "6xl": 3.5rem,
+      "7xl": 4rem,
+      "8xl": 4.5rem,
+      "9xl": 5.25rem,
+    )
+    !default,
 
   // Line heights
   $font-line-height: (
-    "xs": 0.9375rem,
-    "sm": 1.25rem,
-    "base": 1.375rem,
-    "lg": 1.75rem,
-    "xl": 2.375rem,
-    "2xl": 2.625rem,
-    "3xl": 2.75rem,
-    "4xl": 3.25rem,
-    "5xl": 1,
-    "6xl": 1,
-    "7xl": 1,
-    "8xl": 1,
-    "9xl": 1
-  ) !default,
+      "xs": 0.9375rem,
+      "sm": 1.25rem,
+      "base": 1.375rem,
+      "lg": 1.75rem,
+      "xl": 2.375rem,
+      "2xl": 2.625rem,
+      "3xl": 2.75rem,
+      "4xl": 3.25rem,
+      "5xl": 1,
+      "6xl": 1,
+      "7xl": 1,
+      "8xl": 1,
+      "9xl": 1,
+    )
+    !default
 );
 
 /* Custom shadow opacity */

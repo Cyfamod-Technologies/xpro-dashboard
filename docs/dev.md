@@ -6,17 +6,17 @@ Iconify stylesheet and MSW service worker; both are ignored by Git.
 
 ## Scripts
 
-| Script | Purpose |
-| --- | --- |
-| `pnpm dev` | Vite development server |
-| `pnpm build` | Production build in `dist/` |
-| `pnpm preview` | Serve the production build |
-| `pnpm typecheck` | Vue and TypeScript checks |
-| `pnpm lint:check` | Check the inherited ESLint rules without modifying files |
-| `pnpm lint` | Apply ESLint fixes |
-| `pnpm build:icons` | Generate Iconify CSS |
-| `pnpm msw:init` | Generate the local mock service worker |
-| `pnpm postinstall` | Generate both local assets |
+| Script             | Purpose                                                  |
+| ------------------ | -------------------------------------------------------- |
+| `pnpm dev`         | Vite development server                                  |
+| `pnpm build`       | Production build in `dist/`                              |
+| `pnpm preview`     | Serve the production build                               |
+| `pnpm typecheck`   | Vue and TypeScript checks                                |
+| `pnpm lint:check`  | Check the inherited ESLint rules without modifying files |
+| `pnpm lint`        | Apply ESLint fixes                                       |
+| `pnpm build:icons` | Generate Iconify CSS                                     |
+| `pnpm msw:init`    | Generate the local mock service worker                   |
+| `pnpm postinstall` | Generate both local assets                               |
 
 ## Structure
 

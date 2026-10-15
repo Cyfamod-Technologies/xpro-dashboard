@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
+import { storeToRefs } from "pinia"
 
-import { useViewerLocationStore } from '@/stores/viewer-location'
-import { NIGERIAN_STATES } from '@/utils/constants'
+import { useViewerLocationStore } from "@/stores/viewer-location"
+import { NIGERIAN_STATES } from "@/utils/constants"
 
 const location = useViewerLocationStore()
 const { selectedCountry, selectedState } = storeToRefs(location)
@@ -12,11 +12,7 @@ const { selectedCountry, selectedState } = storeToRefs(location)
   <div class="viewer-state-switcher px-4 pb-4">
     <div class="d-flex align-center justify-space-between mb-2">
       <span class="text-caption font-weight-semibold text-medium-emphasis">Budget location</span>
-      <VChip
-        color="primary"
-        size="x-small"
-        variant="tonal"
-      >
+      <VChip color="primary" size="x-small" variant="tonal">
         {{ selectedCountry }}
       </VChip>
     </div>

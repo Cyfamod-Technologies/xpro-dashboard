@@ -1,17 +1,26 @@
-import type { PluginOptionsByType } from 'chart.js'
-import { Chart as ChartJS, Filler, Legend, LineElement, PointElement, RadialLinearScale, Title, Tooltip } from 'chart.js'
-import type { PropType } from 'vue'
-import { defineComponent } from 'vue'
-import { Radar } from 'vue-chartjs'
+import type { PluginOptionsByType } from "chart.js"
+import {
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LineElement,
+  PointElement,
+  RadialLinearScale,
+  Title,
+  Tooltip,
+} from "chart.js"
+import type { PropType } from "vue"
+import { defineComponent } from "vue"
+import { Radar } from "vue-chartjs"
 
 ChartJS.register(Title, Tooltip, Legend, PointElement, RadialLinearScale, LineElement, Filler)
 
 export default defineComponent({
-  name: 'RadarChart',
+  name: "RadarChart",
   props: {
     chartId: {
       type: String,
-      default: 'radar-chart',
+      default: "radar-chart",
     },
     width: {
       type: Number,
@@ -22,7 +31,7 @@ export default defineComponent({
       default: 400,
     },
     cssClasses: {
-      default: '',
+      default: "",
       type: String,
     },
     styles: {
@@ -30,7 +39,7 @@ export default defineComponent({
       default: () => ({}),
     },
     plugins: {
-      type: Array as PropType<PluginOptionsByType<'radar'>[]>,
+      type: Array as PropType<PluginOptionsByType<"radar">[]>,
       default: () => [],
     },
     chartData: {

@@ -1,12 +1,8 @@
 <script lang="ts" setup>
-import { layoutConfig } from '@layouts'
-import { can } from '@layouts/plugins/casl'
-import type { NavLink } from '@layouts/types'
-import {
-  getComputedNavLinkToProp,
-  getDynamicI18nProps,
-  isNavLinkActive,
-} from '@layouts/utils'
+import { layoutConfig } from "@layouts"
+import { can } from "@layouts/plugins/casl"
+import type { NavLink } from "@layouts/types"
+import { getComputedNavLinkToProp, getDynamicI18nProps, isNavLinkActive } from "@layouts/utils"
 
 interface Props {
   item: NavLink
@@ -27,7 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
     :class="[
       {
         'sub-item': props.isSubItem,
-        'disabled': item.disable,
+        disabled: item.disable,
       },
     ]"
   >
@@ -35,10 +31,7 @@ const props = withDefaults(defineProps<Props>(), {
       :is="item.to ? 'RouterLink' : 'a'"
       v-bind="getComputedNavLinkToProp(item)"
       :class="{
-        'router-link-active router-link-exact-active': isNavLinkActive(
-          item,
-          $router,
-        ),
+        'router-link-active router-link-exact-active': isNavLinkActive(item, $router),
       }"
     >
       <Component

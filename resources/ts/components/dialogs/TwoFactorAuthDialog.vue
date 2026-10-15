@@ -1,6 +1,6 @@
 <script setup lang="ts">
 interface Emit {
-  (e: 'update:isDialogVisible', value: boolean): void
+  (e: "update:isDialogVisible", value: boolean): void
 }
 interface Props {
   isDialogVisible: boolean
@@ -10,41 +10,41 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   isDialogVisible: false,
-  smsCode: '',
-  authAppCode: '',
+  smsCode: "",
+  authAppCode: "",
 })
 
 const emit = defineEmits<Emit>()
 
 const authMethods = [
   {
-    icon: 'tabler-settings',
-    title: 'Authenticator Apps',
-    desc: 'Get code from an app like Google Authenticator or Microsoft Authenticator.',
-    value: 'authApp',
+    icon: "tabler-settings",
+    title: "Authenticator Apps",
+    desc: "Get code from an app like Google Authenticator or Microsoft Authenticator.",
+    value: "authApp",
   },
   {
-    icon: 'tabler-message',
-    title: 'SMS',
-    desc: 'We will send a code via SMS if you need to use your backup login method.',
-    value: 'sms',
+    icon: "tabler-message",
+    title: "SMS",
+    desc: "We will send a code via SMS if you need to use your backup login method.",
+    value: "sms",
   },
 ]
 
-const selectedMethod = ref('authApp')
+const selectedMethod = ref("authApp")
 const isAuthAppDialogVisible = ref(false)
 const isSmsDialogVisible = ref(false)
 
 const openSelectedMethodDialog = () => {
-  if (selectedMethod.value === 'authApp') {
+  if (selectedMethod.value === "authApp") {
     isAuthAppDialogVisible.value = true
     isSmsDialogVisible.value = false
-    emit('update:isDialogVisible', false)
+    emit("update:isDialogVisible", false)
   }
-  if (selectedMethod.value === 'sms') {
+  if (selectedMethod.value === "sms") {
     isAuthAppDialogVisible.value = false
     isSmsDialogVisible.value = true
-    emit('update:isDialogVisible', false)
+    emit("update:isDialogVisible", false)
   }
 }
 </script>
@@ -53,7 +53,7 @@ const openSelectedMethodDialog = () => {
   <VDialog
     :width="$vuetify.display.smAndDown ? 'auto' : 800"
     :model-value="props.isDialogVisible"
-    @update:model-value="(val) => $emit('update:isDialogVisible', val)"
+    @update:model-value="val => $emit('update:isDialogVisible', val)"
   >
     <!-- Dialog close btn -->
     <DialogCloseBtn @click="$emit('update:isDialogVisible', false)" />
@@ -62,9 +62,7 @@ const openSelectedMethodDialog = () => {
       <VCardText>
         <!-- 👉 Title -->
         <div class="mb-6">
-          <h4 class="text-h4 text-center mb-2">
-            Select Authentication Method
-          </h4>
+          <h4 class="text-h4 text-center mb-2">Select Authentication Method</h4>
           <p class="text-body-1 text-center mb-6">
             You also need to select a method by which the proxy authenticates to the directory serve.
           </p>
@@ -76,11 +74,7 @@ const openSelectedMethodDialog = () => {
             <template #default="items">
               <div class="d-flex flex-column">
                 <div class="d-flex gap-1 mb-2">
-                  <VIcon
-                    :icon="items.item.icon"
-                    size="20"
-                    class="text-high-emphasis"
-                  />
+                  <VIcon :icon="items.item.icon" size="20" class="text-high-emphasis" />
                   <h6 class="text-h6">
                     {{ items.item.title }}
                   </h6>
@@ -94,27 +88,13 @@ const openSelectedMethodDialog = () => {
         </div>
 
         <div class="d-flex gap-4 justify-center">
-          <VBtn @click="openSelectedMethodDialog">
-            submit
-          </VBtn>
-          <VBtn
-            color="secondary"
-            variant="tonal"
-            @click="$emit('update:isDialogVisible', false)"
-          >
-            Cancel
-          </VBtn>
+          <VBtn @click="openSelectedMethodDialog"> submit </VBtn>
+          <VBtn color="secondary" variant="tonal" @click="$emit('update:isDialogVisible', false)"> Cancel </VBtn>
         </div>
       </VCardText>
     </VCard>
   </VDialog>
 
-  <AddAuthenticatorAppDialog
-    v-model:is-dialog-visible="isAuthAppDialogVisible"
-    :auth-code="props.authAppCode"
-  />
-  <EnableOneTimePasswordDialog
-    v-model:is-dialog-visible="isSmsDialogVisible"
-    :mobile-number="props.smsCode"
-  />
+  <AddAuthenticatorAppDialog v-model:is-dialog-visible="isAuthAppDialogVisible" :auth-code="props.authAppCode" />
+  <EnableOneTimePasswordDialog v-model:is-dialog-visible="isSmsDialogVisible" :mobile-number="props.smsCode" />
 </template>

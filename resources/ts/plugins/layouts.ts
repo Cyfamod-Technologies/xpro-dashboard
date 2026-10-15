@@ -1,12 +1,12 @@
-import type { App } from 'vue'
+import type { App } from "vue"
 
-import type { PartialDeep } from 'type-fest'
-import { createLayouts } from '@layouts'
+import type { PartialDeep } from "type-fest"
+import { createLayouts } from "@layouts"
 
-import { layoutConfig } from '@themeConfig'
+import { layoutConfig } from "@themeConfig"
 
 // Styles
-import '@layouts/styles/index.scss'
+import "@layouts/styles/index.scss"
 
 export default function (app: App) {
   // ℹ️ We generate layout config from our themeConfig so you don't have to write config twice

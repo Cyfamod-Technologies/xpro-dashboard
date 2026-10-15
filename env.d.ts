@@ -1,13 +1,13 @@
-import 'vue-router'
-import type { UserRole } from '@/types/domain'
+import "vue-router"
+import type { UserRole } from "@/types/domain"
 
-declare module 'vue-router' {
+declare module "vue-router" {
   interface RouteMeta {
     action?: string
     subject?: string
     layoutWrapperClasses?: string
     navActiveLink?: RouteLocationRaw
-    layout?: 'blank' | 'default'
+    layout?: "blank" | "default"
     unauthenticatedOnly?: boolean
     public?: boolean
     roles?: UserRole[]

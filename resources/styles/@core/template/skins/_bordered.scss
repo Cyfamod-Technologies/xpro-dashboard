@@ -24,7 +24,7 @@ $header: ".layout-navbar";
     }
   }
   /* stylelint-disable-next-line @stylistic/indentation */
- @else {
+  @else {
     @include mixins.bordered-skin(".layout-nav-type-vertical #{$header}", "border-bottom");
   }
 

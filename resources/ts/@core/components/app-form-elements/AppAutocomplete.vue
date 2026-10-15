@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 defineOptions({
-  name: 'AppAutocomplete',
+  name: "AppAutocomplete",
   inheritAttrs: false,
 })
 
 // const { class: _class, label, variant: _, ...restAttrs } = useAttrs()
 
-const elementId = computed (() => {
+const elementId = computed(() => {
   const attrs = useAttrs()
   const _elementIdToken = attrs.id
   const _id = useId()
@@ -18,16 +18,8 @@ const label = computed(() => useAttrs().label as string | undefined)
 </script>
 
 <template>
-  <div
-    class="app-autocomplete flex-grow-1"
-    :class="$attrs.class"
-  >
-    <VLabel
-      v-if="label"
-      :for="elementId"
-      class="mb-1 text-body-2"
-      :text="label"
-    />
+  <div class="app-autocomplete flex-grow-1" :class="$attrs.class">
+    <VLabel v-if="label" :for="elementId" class="mb-1 text-body-2" :text="label" />
     <VAutocomplete
       v-bind="{
         ...$attrs,
@@ -36,22 +28,12 @@ const label = computed(() => useAttrs().label as string | undefined)
         id: elementId,
         variant: 'outlined',
         menuProps: {
-          contentClass: [
-            'app-inner-list',
-            'app-autocomplete__content',
-            'v-autocomplete__content',
-          ],
+          contentClass: ['app-inner-list', 'app-autocomplete__content', 'v-autocomplete__content'],
         },
       }"
     >
-      <template
-        v-for="(_, name) in $slots"
-        #[name]="slotProps"
-      >
-        <slot
-          :name="name"
-          v-bind="slotProps || {}"
-        />
+      <template v-for="(_, name) in $slots" #[name]="slotProps">
+        <slot :name="name" v-bind="slotProps || {}" />
       </template>
     </VAutocomplete>
   </div>

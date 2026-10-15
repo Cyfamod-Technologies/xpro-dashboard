@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useTheme } from 'vuetify'
-import ScrollToTop from '@core/components/ScrollToTop.vue'
-import initCore from '@core/initCore'
-import { initConfigStore, useConfigStore } from '@core/stores/config'
-import { hexToRgb } from '@core/utils/colorConverter'
+import { useTheme } from "vuetify"
+import ScrollToTop from "@core/components/ScrollToTop.vue"
+import initCore from "@core/initCore"
+import { initConfigStore, useConfigStore } from "@core/stores/config"
+import { hexToRgb } from "@core/utils/colorConverter"
 
 const { global } = useTheme()
 

@@ -12,7 +12,7 @@
 }
 
 @function map-deep-set($map, $keys, $value) {
-  $maps: ($map,);
+  $maps: ($map);
   $result: null;
 
   // If the last key is a map already
@@ -24,7 +24,12 @@
   // If $keys is a single key
   // Just merge and return
   @if length($keys) == 1 {
-    @return map-merge($map, ($keys: $value));
+    @return map-merge(
+      $map,
+      (
+        $keys: $value,
+      )
+    );
   }
 
   // Loop from the first to the second to last key from $keys
@@ -48,7 +53,12 @@
     $current-map: list.nth($maps, $i);
     $current-key: list.nth($keys, $i);
     $current-val: if($i == list.length($maps), $value, $result);
-    $result: map.map-merge($current-map, ($current-key: $current-val));
+    $result: map.map-merge(
+      $current-map,
+      (
+        $current-key: $current-val,
+      )
+    );
   }
 
   // Return result

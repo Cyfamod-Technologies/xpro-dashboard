@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import { useTheme } from 'vuetify'
+import { useTheme } from "vuetify"
 
 const { global } = useTheme()
 
 const authProviders = [
   {
-    icon: 'tabler-brand-facebook-filled',
-    color: '#4267b2',
-    colorInDark: '#497CE2',
+    icon: "tabler-brand-facebook-filled",
+    color: "#4267b2",
+    colorInDark: "#497CE2",
   },
   {
-    icon: 'tabler-brand-twitter-filled',
-    color: '#1da1f2',
-    colorInDark: '#1da1f2',
+    icon: "tabler-brand-twitter-filled",
+    color: "#1da1f2",
+    colorInDark: "#1da1f2",
   },
   {
-    icon: 'tabler-brand-github-filled',
-    color: '#272727',
-    colorInDark: '#fff',
+    icon: "tabler-brand-github-filled",
+    color: "#272727",
+    colorInDark: "#fff",
   },
   {
-    icon: 'tabler-brand-google-filled',
-    color: '#dd4b39',
-    colorInDark: '#db4437',
+    icon: "tabler-brand-google-filled",
+    color: "#dd4b39",
+    colorInDark: "#db4437",
   },
 ]
 </script>
@@ -37,10 +37,7 @@ const authProviders = [
       size="small"
       :color="global.name.value === 'dark' ? link.colorInDark : link.color"
     >
-      <VIcon
-        size="20"
-        :icon="link.icon"
-      />
+      <VIcon size="20" :icon="link.icon" />
     </VBtn>
   </div>
 </template>

@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import avatar1 from '@images/avatars/avatar-1.png'
-import avatar2 from '@images/avatars/avatar-2.png'
-import avatar3 from '@images/avatars/avatar-3.png'
-import avatar4 from '@images/avatars/avatar-4.png'
-import avatar5 from '@images/avatars/avatar-5.png'
-import avatar6 from '@images/avatars/avatar-6.png'
-import avatar7 from '@images/avatars/avatar-7.png'
-import avatar8 from '@images/avatars/avatar-8.png'
+import avatar1 from "@images/avatars/avatar-1.png"
+import avatar2 from "@images/avatars/avatar-2.png"
+import avatar3 from "@images/avatars/avatar-3.png"
+import avatar4 from "@images/avatars/avatar-4.png"
+import avatar5 from "@images/avatars/avatar-5.png"
+import avatar6 from "@images/avatars/avatar-6.png"
+import avatar7 from "@images/avatars/avatar-7.png"
+import avatar8 from "@images/avatars/avatar-8.png"
 
 interface Props {
   isDialogVisible: boolean
 }
 
 interface Emit {
-  (e: 'update:isDialogVisible', val: boolean): void
+  (e: "update:isDialogVisible", val: boolean): void
 }
 
 const props = defineProps<Props>()
@@ -21,10 +21,10 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emit>()
 
 const dialogVisibleUpdate = (val: boolean) => {
-  emit('update:isDialogVisible', val)
+  emit("update:isDialogVisible", val)
 }
 
-type Permission = 'Owner' | 'Can Edit' | 'Can Comment' | 'Can View'
+type Permission = "Owner" | "Can Edit" | "Can Comment" | "Can View"
 
 interface Member {
   avatar: string
@@ -36,51 +36,51 @@ interface Member {
 const membersList: Member[] = [
   {
     avatar: avatar1,
-    name: 'Lester Palmer',
-    email: 'jerrod98@gmail.com',
-    permission: 'Can Edit',
+    name: "Lester Palmer",
+    email: "jerrod98@gmail.com",
+    permission: "Can Edit",
   },
   {
     avatar: avatar2,
-    name: 'Mattie Blair',
-    email: 'prudence.boehm@yahoo.com',
-    permission: 'Owner',
+    name: "Mattie Blair",
+    email: "prudence.boehm@yahoo.com",
+    permission: "Owner",
   },
   {
     avatar: avatar3,
-    name: 'Marvin Wheeler',
-    email: 'rumet@jujpejah.net',
-    permission: 'Can Comment',
+    name: "Marvin Wheeler",
+    email: "rumet@jujpejah.net",
+    permission: "Can Comment",
   },
   {
     avatar: avatar4,
-    name: 'Nannie Ford',
-    email: 'negza@nuv.io',
-    permission: 'Can View',
+    name: "Nannie Ford",
+    email: "negza@nuv.io",
+    permission: "Can View",
   },
   {
     avatar: avatar5,
-    name: 'Julian Murphy',
-    email: 'lunebame@umdomgu.net',
-    permission: 'Can Edit',
+    name: "Julian Murphy",
+    email: "lunebame@umdomgu.net",
+    permission: "Can Edit",
   },
   {
     avatar: avatar6,
-    name: 'Sophie Gilbert',
-    email: 'ha@sugit.gov',
-    permission: 'Can View',
+    name: "Sophie Gilbert",
+    email: "ha@sugit.gov",
+    permission: "Can View",
   },
   {
     avatar: avatar7,
-    name: 'Chris Watkins',
-    email: 'zokap@mak.org',
-    permission: 'Can Comment',
+    name: "Chris Watkins",
+    email: "zokap@mak.org",
+    permission: "Can Comment",
   },
   {
     avatar: avatar8,
-    name: 'Adelaide Nichols',
-    email: 'ujinomu@jigo.com',
-    permission: 'Can Edit',
+    name: "Adelaide Nichols",
+    email: "ujinomu@jigo.com",
+    permission: "Can Edit",
   },
 ]
 </script>
@@ -96,12 +96,8 @@ const membersList: Member[] = [
 
     <VCard class="share-project-dialog pa-2 pa-sm-10">
       <VCardText>
-        <h4 class="text-h4 text-center mb-2">
-          Share Project
-        </h4>
-        <p class="text-body-1 text-center mb-6">
-          Share project with a team members
-        </p>
+        <h4 class="text-h4 text-center mb-2">Share Project</h4>
+        <p class="text-body-1 text-center mb-6">Share project with a team members</p>
 
         <AppAutocomplete
           label="Add Members"
@@ -113,24 +109,16 @@ const membersList: Member[] = [
           <template #item="{ props: listItemProp, item }">
             <VListItem v-bind="listItemProp">
               <template #prepend>
-                <VAvatar
-                  :image="item.raw.avatar"
-                  size="30"
-                />
+                <VAvatar :image="item.raw.avatar" size="30" />
               </template>
             </VListItem>
           </template>
         </AppAutocomplete>
 
-        <h5 class="text-h5 mb-4 mt-6">
-          8 Members
-        </h5>
+        <h5 class="text-h5 mb-4 mt-6">8 Members</h5>
 
         <VList class="card-list">
-          <VListItem
-            v-for="member in membersList"
-            :key="member.name"
-          >
+          <VListItem v-for="member in membersList" :key="member.name">
             <template #prepend>
               <VAvatar :image="member.avatar" />
             </template>
@@ -143,11 +131,7 @@ const membersList: Member[] = [
             </VListItemSubtitle>
 
             <template #append>
-              <VBtn
-                variant="text"
-                color="secondary"
-                :icon="$vuetify.display.xs"
-              >
+              <VBtn variant="text" color="secondary" :icon="$vuetify.display.xs">
                 <span class="d-none d-sm-block me-1">{{ member.permission }}</span>
                 <VIcon icon="tabler-chevron-down" />
 
@@ -169,20 +153,11 @@ const membersList: Member[] = [
 
         <div class="d-flex align-center justify-center justify-sm-space-between flex-wrap gap-3 mt-6">
           <h6 class="text-h6 font-weight-medium d-flex align-start">
-            <VIcon
-              icon="tabler-users"
-              class="me-2"
-              size="20"
-            />
+            <VIcon icon="tabler-users" class="me-2" size="20" />
             <div>Public to Vuexy - Pixinvent</div>
           </h6>
 
-          <VBtn
-            class="text-capitalize"
-            prepend-icon="tabler-link"
-          >
-            Copy Project Link
-          </VBtn>
+          <VBtn class="text-capitalize" prepend-icon="tabler-link"> Copy Project Link </VBtn>
         </div>
       </VCardText>
     </VCard>

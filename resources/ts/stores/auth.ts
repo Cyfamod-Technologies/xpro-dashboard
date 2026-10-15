@@ -1,11 +1,11 @@
-import { defineStore } from 'pinia'
+import { defineStore } from "pinia"
 
-import { homePathFor, isWorkspaceRole } from '@/features/workspace/config'
-import { authApi } from '@/services/xpro-api'
-import type { LoginPayload, User, UserRole } from '@/types/domain'
+import { homePathFor, isWorkspaceRole } from "@/features/workspace/config"
+import { authApi } from "@/services/xpro-api"
+import type { LoginPayload, User, UserRole } from "@/types/domain"
 
-export const useAuthStore = defineStore('auth', () => {
-  const token = useCookie<string | null>('accessToken')
+export const useAuthStore = defineStore("auth", () => {
+  const token = useCookie<string | null>("accessToken")
   const user = ref<User | null>(null)
   const initialized = ref(false)
   const pendingMfa = ref<{ token: string; user: User } | null>(null)
@@ -15,7 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
   const homePath = computed(() => {
     const role = user.value?.role
 
-    return isAuthenticated.value && isWorkspaceRole(role) ? homePathFor(role) : '/login'
+    return isAuthenticated.value && isWorkspaceRole(role) ? homePathFor(role) : "/login"
   })
 
   async function login(payload: LoginPayload) {
@@ -36,8 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function completeMfa(code: string) {
-    if (!pendingMfa.value)
-      throw new Error('Your sign-in session has expired. Please sign in again.')
+    if (!pendingMfa.value) throw new Error("Your sign-in session has expired. Please sign in again.")
 
     await authApi.verifyMfa(code)
     token.value = pendingMfa.value.token
@@ -46,8 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function hydrate() {
-    if (initialized.value)
-      return
+    if (initialized.value) return
 
     try {
       if (token.value) {
@@ -55,12 +53,10 @@ export const useAuthStore = defineStore('auth', () => {
 
         user.value = response.data
       }
-    }
-    catch {
+    } catch {
       token.value = null
       user.value = null
-    }
-    finally {
+    } finally {
       initialized.value = true
     }
   }
