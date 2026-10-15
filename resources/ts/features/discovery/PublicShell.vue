@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { serviceLines } from '@/features/workspace/config'
-import { XPRO_PHONE } from '@/features/discovery/contact'
-import { useAuthStore } from '@/stores/auth'
-import { XPRO_BRAND } from '@/utils/branding'
+import { serviceLines } from "@/features/workspace/config"
+import { XPRO_PHONE } from "@/features/discovery/contact"
+import { useAuthStore } from "@/stores/auth"
+import { XPRO_BRAND } from "@/utils/branding"
 
 const auth = useAuthStore()
 const route = useRoute()
 const year = new Date().getFullYear()
-const topAddress = XPRO_BRAND.addresses[0].replace(/, Abuja$/, '')
+const topAddress = XPRO_BRAND.addresses[0].replace(/, Abuja$/, "")
 
 const nav = computed(() => [
-  { label: 'Home', to: '/', active: route.path === '/' && !route.hash },
-  { label: 'Services', to: '/services', active: route.path.startsWith('/services') },
-  { label: 'Providers', to: '/providers', active: route.path.startsWith('/providers') },
-  { label: 'How it works', to: '/#how-it-works', active: false },
+  { label: "Home", to: "/", active: route.path === "/" && !route.hash },
+  { label: "Services", to: "/services", active: route.path.startsWith("/services") },
+  { label: "How it works", to: "/#how-it-works", active: false },
 ])
 </script>
 
@@ -23,31 +22,17 @@ const nav = computed(() => [
       <div class="xp-container d-flex flex-wrap justify-space-between gap-2 py-2 text-body-2">
         <span>Serving Abuja · {{ topAddress }}</span>
         <span class="d-flex flex-wrap gap-x-5">
-          <RouterLink
-            v-if="!auth.isAuthenticated"
-            to="/auth/signup?role=provider"
-          >Become a provider</RouterLink>
+          <RouterLink v-if="!auth.isAuthenticated" to="/auth/signup?role=provider">Become a provider</RouterLink>
           <a :href="XPRO_PHONE.href">{{ XPRO_PHONE.label }}</a>
         </span>
       </div>
     </div>
     <header class="xp-header">
       <div class="xp-container d-flex flex-wrap align-center justify-space-between gap-3 py-3">
-        <RouterLink
-          to="/"
-          aria-label="XPro home"
-          class="d-flex"
-        >
-          <img
-            :src="XPRO_BRAND.logo"
-            alt="XPro"
-            class="xp-logo"
-          >
+        <RouterLink to="/" aria-label="XPro home" class="d-flex">
+          <img :src="XPRO_BRAND.logo" alt="XPro" class="xp-logo" />
         </RouterLink>
-        <nav
-          aria-label="Public navigation"
-          class="xp-nav d-flex align-center"
-        >
+        <nav aria-label="Public navigation" class="xp-nav d-flex align-center">
           <RouterLink
             v-for="item in nav"
             :key="item.label"
@@ -60,15 +45,10 @@ const nav = computed(() => [
           </RouterLink>
         </nav>
         <div class="d-flex gap-2">
-          <VBtn
-            :to="auth.isAuthenticated ? auth.homePath : '/login'"
-            variant="outlined"
-          >
-            {{ auth.isAuthenticated ? 'My dashboard' : 'Sign in' }}
+          <VBtn :to="auth.isAuthenticated ? auth.homePath : '/login'" variant="outlined">
+            {{ auth.isAuthenticated ? "My dashboard" : "Sign in" }}
           </VBtn>
-          <VBtn to="/request">
-            Request a service
-          </VBtn>
+          <VBtn to="/request"> Request a service </VBtn>
         </div>
       </div>
     </header>
@@ -78,19 +58,12 @@ const nav = computed(() => [
     <footer class="xp-footer">
       <div class="xp-container d-flex flex-wrap justify-space-between gap-8 pt-10 pb-6">
         <div class="xp-footer-col xp-footer-col--wide d-flex flex-column gap-3">
-          <img
-            :src="XPRO_BRAND.logo"
-            alt="XPro"
-            class="xp-logo xp-logo--small"
-          >
+          <img :src="XPRO_BRAND.logo" alt="XPro" class="xp-logo xp-logo--small" />
           <span class="text-body-2 text-medium-emphasis">
             Design, construction, hire, procurement and property services in Abuja, coordinated by one accountable team.
           </span>
         </div>
-        <nav
-          aria-label="Services"
-          class="xp-footer-col d-flex flex-column gap-2 text-body-2"
-        >
+        <nav aria-label="Services" class="xp-footer-col d-flex flex-column gap-2 text-body-2">
           <strong>Services</strong>
           <RouterLink
             v-for="item in serviceLines"
@@ -100,34 +73,17 @@ const nav = computed(() => [
             {{ item.name }}
           </RouterLink>
         </nav>
-        <nav
-          aria-label="XPro"
-          class="xp-footer-col d-flex flex-column gap-2 text-body-2"
-        >
+        <nav aria-label="XPro" class="xp-footer-col d-flex flex-column gap-2 text-body-2">
           <strong>XPro</strong>
-          <RouterLink to="/providers">
-            Find providers
-          </RouterLink>
-          <RouterLink to="/#how-it-works">
-            How it works
-          </RouterLink>
-          <RouterLink
-            v-if="!auth.isAuthenticated"
-            to="/auth/signup?role=provider"
-          >
-            Become a provider
-          </RouterLink>
+          <RouterLink to="/#how-it-works"> How it works </RouterLink>
+          <RouterLink v-if="!auth.isAuthenticated" to="/auth/signup?role=provider"> Become a provider </RouterLink>
           <RouterLink :to="auth.isAuthenticated ? auth.homePath : '/login'">
-            {{ auth.isAuthenticated ? 'My dashboard' : 'Sign in' }}
+            {{ auth.isAuthenticated ? "My dashboard" : "Sign in" }}
           </RouterLink>
         </nav>
         <div class="xp-footer-col xp-footer-col--contact d-flex flex-column gap-2 text-body-2">
           <strong>Contact</strong>
-          <span
-            v-for="address in XPRO_BRAND.addresses"
-            :key="address"
-            class="text-medium-emphasis"
-          >{{ address }}</span>
+          <span v-for="address in XPRO_BRAND.addresses" :key="address" class="text-medium-emphasis">{{ address }}</span>
           <a :href="XPRO_PHONE.href">{{ XPRO_PHONE.label }}</a>
           <a :href="`mailto:${XPRO_BRAND.email}`">{{ XPRO_BRAND.email }}</a>
         </div>
@@ -135,7 +91,7 @@ const nav = computed(() => [
       <div class="xp-footer-bottom">
         <div class="xp-container d-flex flex-wrap justify-space-between gap-2 py-4 text-body-2 text-medium-emphasis">
           <span>© {{ year }} {{ XPRO_BRAND.fullName }} (XPro). All rights reserved.</span>
-          <span>Demo data: providers, ratings and activity are samples.</span>
+          <span>Demo data: requests and activity are samples.</span>
         </div>
       </div>
     </footer>
@@ -149,8 +105,12 @@ const nav = computed(() => [
 }
 
 // Keep text links and tonal primary chips readable on light surfaces.
-.xp-site main a:not(.v-btn, .v-card, .v-tab, .text-high-emphasis) { color: rgb(var(--v-theme-primary-darken-1)); }
-.xp-site .v-chip.text-primary { color: color-mix(in srgb, rgb(var(--v-theme-primary-darken-1)), #000 25%) !important; }
+.xp-site main a:not(.v-btn, .v-card, .v-tab, .text-high-emphasis) {
+  color: rgb(var(--v-theme-primary-darken-1));
+}
+.xp-site .v-chip.text-primary {
+  color: color-mix(in srgb, rgb(var(--v-theme-primary-darken-1)), #000 25%) !important;
+}
 </style>
 
 <style lang="scss" scoped>
@@ -165,7 +125,9 @@ const nav = computed(() => [
   color: #fff;
 
   // Override Vuexy's text-body-2 emphasis colour so every child stays white on the navy bar.
-  :deep(*) { color: #fff; }
+  :deep(*) {
+    color: #fff;
+  }
 }
 
 .xp-header {
@@ -177,7 +139,10 @@ const nav = computed(() => [
   block-size: 40px;
   inline-size: auto;
 
-  &--small { align-self: flex-start; block-size: 36px; }
+  &--small {
+    align-self: flex-start;
+    block-size: 36px;
+  }
 }
 
 .xp-nav {
@@ -192,7 +157,9 @@ const nav = computed(() => [
   padding: 9px 16px;
   text-decoration: none;
 
-  &:hover { color: rgb(var(--v-theme-primary-darken-1)); }
+  &:hover {
+    color: rgb(var(--v-theme-primary-darken-1));
+  }
 
   &:focus-visible {
     border-radius: 4px;
@@ -200,7 +167,9 @@ const nav = computed(() => [
     outline-offset: 2px;
   }
 
-  &--active { border-block-end-color: rgb(var(--v-theme-primary)); }
+  &--active {
+    border-block-end-color: rgb(var(--v-theme-primary));
+  }
 }
 
 .xp-footer {
@@ -212,15 +181,22 @@ const nav = computed(() => [
     color: rgb(var(--v-theme-secondary));
     text-decoration: none;
 
-    &:hover { color: rgb(var(--v-theme-primary-darken-1)); text-decoration: underline; }
+    &:hover {
+      color: rgb(var(--v-theme-primary-darken-1));
+      text-decoration: underline;
+    }
   }
 }
 
 .xp-footer-col {
   flex: 1 1 150px;
 
-  &--wide { flex-basis: 260px; }
-  &--contact { flex-basis: 240px; }
+  &--wide {
+    flex-basis: 260px;
+  }
+  &--contact {
+    flex-basis: 240px;
+  }
 }
 
 .xp-footer-bottom {
@@ -235,6 +211,8 @@ const nav = computed(() => [
     flex-wrap: nowrap;
   }
 
-  .xp-nav-link { white-space: nowrap; }
+  .xp-nav-link {
+    white-space: nowrap;
+  }
 }
 </style>

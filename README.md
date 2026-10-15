@@ -27,15 +27,15 @@ sample geographic data are retained as examples from the source project.
 
 All prototype accounts use the password `Password123!`.
 
-| Role | Email | Additional step |
-| --- | --- | --- |
-| Customer | `customer@xpro.test` | None |
-| Provider | `provider@xpro.test` | None |
-| Staff · Super admin | `admin@xpro.test` | None |
-| Staff · Operations | `operations@xpro.test` | None |
-| Staff · Pricing | `pricing@xpro.test` | None |
-| Staff · Client relations | `relations@xpro.test` | None |
-| Staff · Finance | `finance@xpro.test` | None |
+| Role                     | Email                  | Additional step |
+| ------------------------ | ---------------------- | --------------- |
+| Customer                 | `customer@xpro.test`   | None            |
+| Provider                 | `provider@xpro.test`   | None            |
+| Staff · Super admin      | `admin@xpro.test`      | None            |
+| Staff · Operations       | `operations@xpro.test` | None            |
+| Staff · Pricing          | `pricing@xpro.test`    | None            |
+| Staff · Client relations | `relations@xpro.test`  | None            |
+| Staff · Finance          | `finance@xpro.test`    | None            |
 
 Staff accounts share the same password as the other prototype accounts.
 
@@ -67,7 +67,7 @@ account name comes from a simulated lookup (no API call; account numbers ending 
 `0000` fail it). Staff review in two separate approvals: Operations verifies
 identity (`provider.review`) and Finance verifies the bank account (`bank.review`),
 both from `/admin/approvals`. Providers can change bank details later under
-*Payout details* (`/payouts`); the old account stays in use until Finance approves
+_Payout details_ (`/payouts`); the old account stays in use until Finance approves
 the change, and account numbers are masked for staff without `bank.review`.
 Saved prototype data is reset once on first load after this update.
 

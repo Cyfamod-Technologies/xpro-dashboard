@@ -2,22 +2,22 @@
 
 ## Role summary
 
-| Capability | Super Admin | Manager | Budget Viewer |
-| --- | --- | --- | --- |
-| View global administration dashboard | Yes | No | No |
-| Manage users, roles, and system settings | Yes | No | No |
-| View Nigerian locations and programs | Yes | Assigned scope only | Approved public data for the selected state |
-| Create and edit programs | Yes | Assigned scope | No |
-| Create and edit projects | Yes | Assigned scope | No |
-| Create and edit allocations | Yes | Assigned scope | No |
-| Upload and classify evidence | Yes | Assigned scope | No |
-| Submit records for review | Yes | Yes | No |
-| Approve, reject, and publish | Yes | No | No |
-| View drafts and review comments | Yes | Assigned scope | No |
-| View approved project and allocation data | Yes | Yes | Yes |
-| Export approved budgeting data | Yes | Yes | Yes |
-| View global audit log | Yes | No | No |
-| View own/assigned record history | Yes | Yes | No |
+| Capability                                | Super Admin | Manager             | Budget Viewer                               |
+| ----------------------------------------- | ----------- | ------------------- | ------------------------------------------- |
+| View global administration dashboard      | Yes         | No                  | No                                          |
+| Manage users, roles, and system settings  | Yes         | No                  | No                                          |
+| View Nigerian locations and programs      | Yes         | Assigned scope only | Approved public data for the selected state |
+| Create and edit programs                  | Yes         | Assigned scope      | No                                          |
+| Create and edit projects                  | Yes         | Assigned scope      | No                                          |
+| Create and edit allocations               | Yes         | Assigned scope      | No                                          |
+| Upload and classify evidence              | Yes         | Assigned scope      | No                                          |
+| Submit records for review                 | Yes         | Yes                 | No                                          |
+| Approve, reject, and publish              | Yes         | No                  | No                                          |
+| View drafts and review comments           | Yes         | Assigned scope      | No                                          |
+| View approved project and allocation data | Yes         | Yes                 | Yes                                         |
+| Export approved budgeting data            | Yes         | Yes                 | Yes                                         |
+| View global audit log                     | Yes         | No                  | No                                          |
+| View own/assigned record history          | Yes         | Yes                 | No                                          |
 
 ## Super Admin
 

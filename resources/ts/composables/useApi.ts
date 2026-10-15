@@ -1,17 +1,17 @@
-import { createFetch } from '@vueuse/core'
-import { destr } from 'destr'
+import { createFetch } from "@vueuse/core"
+import { destr } from "destr"
 
 export const useApi = createFetch({
-  baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseUrl: import.meta.env.VITE_API_BASE_URL || "/api",
   fetchOptions: {
     headers: {
-      Accept: 'application/json',
+      Accept: "application/json",
     },
   },
   options: {
     refetch: true,
     async beforeFetch({ options }) {
-      const accessToken = useCookie('accessToken').value
+      const accessToken = useCookie("accessToken").value
 
       if (accessToken) {
         options.headers = {
@@ -30,8 +30,7 @@ export const useApi = createFetch({
       let parsedData = null
       try {
         parsedData = destr(data)
-      }
-      catch (error) {
+      } catch (error) {
         console.error(error)
       }
 

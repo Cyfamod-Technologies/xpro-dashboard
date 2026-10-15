@@ -1,17 +1,17 @@
-import type { PluginOptionsByType } from 'chart.js'
-import { ArcElement, CategoryScale, Chart as ChartJS, Legend, Title, Tooltip } from 'chart.js'
-import type { PropType } from 'vue'
-import { defineComponent } from 'vue'
-import { Doughnut } from 'vue-chartjs'
+import type { PluginOptionsByType } from "chart.js"
+import { ArcElement, CategoryScale, Chart as ChartJS, Legend, Title, Tooltip } from "chart.js"
+import type { PropType } from "vue"
+import { defineComponent } from "vue"
+import { Doughnut } from "vue-chartjs"
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale)
 
 export default defineComponent({
-  name: 'DoughnutChart',
+  name: "DoughnutChart",
   props: {
     chartId: {
       type: String,
-      default: 'doughnut-chart',
+      default: "doughnut-chart",
     },
     width: {
       type: Number,
@@ -22,7 +22,7 @@ export default defineComponent({
       default: 400,
     },
     cssClasses: {
-      default: '',
+      default: "",
       type: String,
     },
     styles: {
@@ -30,7 +30,7 @@ export default defineComponent({
       default: () => ({}),
     },
     plugins: {
-      type: Array as PropType<PluginOptionsByType<'doughnut'>[]>,
+      type: Array as PropType<PluginOptionsByType<"doughnut">[]>,
       default: () => [],
     },
     chartData: {

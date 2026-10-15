@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DashboardMetric } from '@/types/domain'
+import type { DashboardMetric } from "@/types/domain"
 
 defineProps<{ metric: DashboardMetric }>()
 </script>
@@ -16,16 +16,8 @@ defineProps<{ metric: DashboardMetric }>()
         </div>
         <span class="text-caption text-medium-emphasis">{{ metric.helper }}</span>
       </div>
-      <VAvatar
-        :color="metric.color"
-        rounded
-        variant="tonal"
-        size="46"
-      >
-        <VIcon
-          :icon="metric.icon"
-          size="25"
-        />
+      <VAvatar :color="metric.color" rounded variant="tonal" size="46">
+        <VIcon :icon="metric.icon" size="25" />
       </VAvatar>
     </VCardText>
   </VCard>

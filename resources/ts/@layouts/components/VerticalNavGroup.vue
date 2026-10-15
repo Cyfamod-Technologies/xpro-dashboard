@@ -1,19 +1,15 @@
 <script lang="ts" setup>
-import { TransitionGroup } from 'vue'
-import { layoutConfig } from '@layouts'
-import { TransitionExpand, VerticalNavLink } from '@layouts/components'
-import { canViewNavMenuGroup } from '@layouts/plugins/casl'
-import { useLayoutConfigStore } from '@layouts/stores/config'
-import { injectionKeyIsVerticalNavHovered } from '@layouts/symbols'
-import type { NavGroup } from '@layouts/types'
-import {
-  getDynamicI18nProps,
-  isNavGroupActive,
-  openGroups,
-} from '@layouts/utils'
+import { TransitionGroup } from "vue"
+import { layoutConfig } from "@layouts"
+import { TransitionExpand, VerticalNavLink } from "@layouts/components"
+import { canViewNavMenuGroup } from "@layouts/plugins/casl"
+import { useLayoutConfigStore } from "@layouts/stores/config"
+import { injectionKeyIsVerticalNavHovered } from "@layouts/symbols"
+import type { NavGroup } from "@layouts/types"
+import { getDynamicI18nProps, isNavGroupActive, openGroups } from "@layouts/utils"
 
 defineOptions({
-  name: 'VerticalNavGroup',
+  name: "VerticalNavGroup",
 })
 
 const props = defineProps<{
@@ -29,10 +25,7 @@ const hideTitleAndBadge = configStore.isVerticalNavMini()
   ℹ️ We provided default value `ref(false)` because inject will return `T | undefined`
   Docs: https://vuejs.org/api/composition-api-dependency-injection.html#inject
 */
-const isVerticalNavHovered = inject(
-  injectionKeyIsVerticalNavHovered,
-  ref(false),
-)
+const isVerticalNavHovered = inject(injectionKeyIsVerticalNavHovered, ref(false))
 
 const isGroupActive = ref(false)
 const isGroupOpen = ref(false)
@@ -44,25 +37,21 @@ const isGroupOpen = ref(false)
  * @param {NavGroup['children']} children  - Nav group children
  * @return {boolean} returns if any of children is open or not.
  */
-const isAnyChildOpen = (children: NavGroup['children']): boolean => {
+const isAnyChildOpen = (children: NavGroup["children"]): boolean => {
   return children.some(child => {
     let result = openGroups.value.includes(child.title)
 
-    if ('children' in child)
-      result = isAnyChildOpen(child.children) || result
+    if ("children" in child) result = isAnyChildOpen(child.children) || result
 
     return result
   })
 }
 
-const collapseChildren = (children: NavGroup['children']) => {
+const collapseChildren = (children: NavGroup["children"]) => {
   children.forEach(child => {
-    if ('children' in child)
-      collapseChildren(child.children)
+    if ("children" in child) collapseChildren(child.children)
 
-    openGroups.value = openGroups.value.filter(
-      group => group !== child.title,
-    )
+    openGroups.value = openGroups.value.filter(group => group !== child.title)
   })
 }
 
@@ -77,8 +66,7 @@ watch(
     const isActive = isNavGroupActive(props.item.children, router)
 
     // Don't open group if vertical nav is collapsed and window size is more than overlay nav breakpoint
-    isGroupOpen.value
-      = isActive && !configStore.isVerticalNavMini(isVerticalNavHovered).value
+    isGroupOpen.value = isActive && !configStore.isVerticalNavMini(isVerticalNavHovered).value
     isGroupActive.value = isActive
   },
   { immediate: true },
@@ -131,18 +119,15 @@ watch(
   val => {
     // Prevent closing recently opened inactive group.
     const lastOpenedGroup = val.at(-1)
-    if (lastOpenedGroup === props.item.title)
-      return
+    if (lastOpenedGroup === props.item.title) return
 
     const isActive = isNavGroupActive(props.item.children, router)
 
     // Goal of this watcher is to close inactive groups. So don't do anything for active groups.
-    if (isActive)
-      return
+    if (isActive) return
 
     // We won't close group if any of child group is open in current group
-    if (isAnyChildOpen(props.item.children))
-      return
+    if (isAnyChildOpen(props.item.children)) return
 
     isGroupOpen.value = isActive
     isGroupActive.value = isActive
@@ -168,10 +153,7 @@ watch(configStore.isVerticalNavMini(isVerticalNavHovered), val => {
       },
     ]"
   >
-    <div
-      class="nav-group-label"
-      @click="isGroupOpen = !isGroupOpen"
-    >
+    <div class="nav-group-label" @click="isGroupOpen = !isGroupOpen">
       <Component
         :is="layoutConfig.app.iconRenderer || 'div'"
         v-bind="
@@ -182,10 +164,7 @@ watch(configStore.isVerticalNavMini(isVerticalNavHovered), val => {
         class="nav-item-icon"
       />
 
-      <Component
-        :is="TransitionGroup"
-        name="transition-slide-x"
-      >
+      <Component :is="TransitionGroup" name="transition-slide-x">
         <!-- 👉 Title -->
         <Component
           :is="layoutConfig.app.i18n.enable ? 'i18n-t' : 'span'"
@@ -219,10 +198,7 @@ watch(configStore.isVerticalNavMini(isVerticalNavHovered), val => {
       </Component>
     </div>
     <TransitionExpand>
-      <ul
-        v-show="isGroupOpen"
-        class="nav-group-children"
-      >
+      <ul v-show="isGroupOpen" class="nav-group-children">
         <Component
           :is="'children' in child ? 'VerticalNavGroup' : VerticalNavLink"
           v-for="child in item.children"

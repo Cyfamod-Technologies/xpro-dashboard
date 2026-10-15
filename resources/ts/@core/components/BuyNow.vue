@@ -1,22 +1,15 @@
 <script lang="ts" setup>
 const vm = getCurrentInstance()
 
-const buyNowUrl = ref(vm?.appContext.config.globalProperties.buyNowUrl || 'https://1.envato.market/vuexy_admin')
+const buyNowUrl = ref(vm?.appContext.config.globalProperties.buyNowUrl || "https://1.envato.market/vuexy_admin")
 
 watch(buyNowUrl, val => {
-  if (vm)
-    vm.appContext.config.globalProperties.buyNowUrl = val
+  if (vm) vm.appContext.config.globalProperties.buyNowUrl = val
 })
 </script>
 
 <template>
-  <a
-    class="buy-now-button d-print-none"
-    role="button"
-    rel="noopener noreferrer"
-    :href="buyNowUrl"
-    target="_blank"
-  >
+  <a class="buy-now-button d-print-none" role="button" rel="noopener noreferrer" :href="buyNowUrl" target="_blank">
     Buy Now
     <span class="button-inner" />
   </a>

@@ -1,25 +1,25 @@
 <!-- Thanks: https://markus.oberlehner.net/blog/transition-to-height-auto-with-vue/ -->
 
 <script lang="ts">
-import { Transition } from 'vue'
+import { Transition } from "vue"
 
 export default defineComponent({
-  name: 'TransitionExpand',
+  name: "TransitionExpand",
   setup(_, { slots }) {
     const onEnter = (element: HTMLElement) => {
       const width = getComputedStyle(element).width
 
       element.style.width = width
-      element.style.position = 'absolute'
-      element.style.visibility = 'hidden'
-      element.style.height = 'auto'
+      element.style.position = "absolute"
+      element.style.visibility = "hidden"
+      element.style.height = "auto"
 
       const height = getComputedStyle(element).height
 
-      element.style.width = ''
-      element.style.position = ''
-      element.style.visibility = ''
-      element.style.height = '0px'
+      element.style.width = ""
+      element.style.position = ""
+      element.style.visibility = ""
+      element.style.height = "0px"
 
       // Force repaint to make sure the
       // animation is triggered correctly.
@@ -37,7 +37,7 @@ export default defineComponent({
     }
 
     const onAfterEnter = (element: HTMLElement) => {
-      element.style.height = 'auto'
+      element.style.height = "auto"
     }
 
     const onLeave = (element: HTMLElement) => {
@@ -51,20 +51,21 @@ export default defineComponent({
       getComputedStyle(element).height
 
       requestAnimationFrame(() => {
-        element.style.height = '0px'
+        element.style.height = "0px"
       })
     }
 
-    return () => h(
-      h(Transition),
-      {
-        name: 'expand',
-        onEnter,
-        onAfterEnter,
-        onLeave,
-      },
-      () => slots.default?.(),
-    )
+    return () =>
+      h(
+        h(Transition),
+        {
+          name: "expand",
+          onEnter,
+          onAfterEnter,
+          onLeave,
+        },
+        () => slots.default?.(),
+      )
   },
 })
 </script>

@@ -2,12 +2,12 @@
 
 ## Levels
 
-| Level | Audience | Typical content |
-| --- | --- | --- |
-| Public | Future anonymous audience if enabled | Explicitly approved public project information |
-| Registered Viewer | Verified Budget Viewers and staff | Approved allocation and project views |
-| Internal | Managers in scope and Super Admins | Drafts, internal notes, non-public evidence |
-| Restricted | Explicitly authorised staff | Sensitive personal, security, or investigative material |
+| Level             | Audience                             | Typical content                                         |
+| ----------------- | ------------------------------------ | ------------------------------------------------------- |
+| Public            | Future anonymous audience if enabled | Explicitly approved public project information          |
+| Registered Viewer | Verified Budget Viewers and staff    | Approved allocation and project views                   |
+| Internal          | Managers in scope and Super Admins   | Drafts, internal notes, non-public evidence             |
+| Restricted        | Explicitly authorised staff          | Sensitive personal, security, or investigative material |
 
 ## MVP viewer boundary
 

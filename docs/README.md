@@ -27,16 +27,16 @@ The platform operates in Nigeria and supports state-level budget views, with Nig
 
 ## Documentation areas
 
-| Area | Purpose |
-| --- | --- |
-| `product/` | Product purpose, scope, terminology, roles, decisions, and roadmap |
-| `architecture/` | System boundaries, frontend structure, access control, publication, audit, and security |
-| `flows/` | One document for every important user and administrative journey |
-| `design/` | Navigation, dashboards, screens, components, branding, responsiveness, and accessibility |
-| `api/` | Contracts the frontend expects the independent backend to provide |
-| `data/` | Entities, fields, relationships, statuses, and examples |
-| `quality/` | Acceptance, testing, security, performance, and release requirements |
-| `decisions/` | Architecture decision records for choices that should not be silently reversed |
+| Area            | Purpose                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `product/`      | Product purpose, scope, terminology, roles, decisions, and roadmap                       |
+| `architecture/` | System boundaries, frontend structure, access control, publication, audit, and security  |
+| `flows/`        | One document for every important user and administrative journey                         |
+| `design/`       | Navigation, dashboards, screens, components, branding, responsiveness, and accessibility |
+| `api/`          | Contracts the frontend expects the independent backend to provide                        |
+| `data/`         | Entities, fields, relationships, statuses, and examples                                  |
+| `quality/`      | Acceptance, testing, security, performance, and release requirements                     |
+| `decisions/`    | Architecture decision records for choices that should not be silently reversed           |
 
 ## Core operating model
 

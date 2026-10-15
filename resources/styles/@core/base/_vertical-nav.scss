@@ -54,13 +54,12 @@
     .vertical-nav-items-shadow {
       position: absolute;
       z-index: 1;
-      background:
-        linear-gradient(
-          rgb(#{variables.$vertical-nav-background-color-rgb}) 5%,
-          rgba(#{variables.$vertical-nav-background-color-rgb}, 75%) 45%,
-          rgba(#{variables.$vertical-nav-background-color-rgb}, 20%) 80%,
-          transparent
-        );
+      background: linear-gradient(
+        rgb(#{variables.$vertical-nav-background-color-rgb}) 5%,
+        rgba(#{variables.$vertical-nav-background-color-rgb}, 75%) 45%,
+        rgba(#{variables.$vertical-nav-background-color-rgb}, 20%) 80%,
+        transparent
+      );
       block-size: 55px;
       inline-size: 100%;
       inset-block-start: calc(#{variables.$vertical-nav-header-height} - 2px);
@@ -173,7 +172,8 @@
       .nav-group-arrow {
         flex-shrink: 0;
         transform-origin: center;
-        transition: transform variables.$vertical-nav-nav-group-arrow-transition-duration variables.$vertical-nav-nav-group-arrow-transition-timing-function;
+        transition: transform variables.$vertical-nav-nav-group-arrow-transition-duration
+          variables.$vertical-nav-nav-group-arrow-transition-timing-function;
         will-change: transform;
       }
 
@@ -190,7 +190,7 @@
         @include mixins.before-pseudo;
       }
 
-      &:not(.active,.open) > :first-child {
+      &:not(.active, .open) > :first-child {
         // Adds vuetify states
         @include vuetifyStates.states($active: false);
       }
@@ -209,7 +209,9 @@
 // SECTION: Transitions
 .vertical-nav-section-title-enter-active,
 .vertical-nav-section-title-leave-active {
-  transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
+  transition:
+    opacity 0.1s ease-in-out,
+    transform 0.1s ease-in-out;
 }
 
 .vertical-nav-section-title-enter-from,
@@ -224,7 +226,9 @@
 
 .transition-slide-x-enter-active,
 .transition-slide-x-leave-active {
-  transition: opacity 0.1s ease-in-out, transform 0.12s ease-in-out;
+  transition:
+    opacity 0.1s ease-in-out,
+    transform 0.12s ease-in-out;
 }
 
 .transition-slide-x-enter-from,
@@ -239,7 +243,9 @@
 
 .vertical-nav-app-title-enter-active,
 .vertical-nav-app-title-leave-active {
-  transition: opacity 0.1s ease-in-out, transform 0.12s ease-in-out;
+  transition:
+    opacity 0.1s ease-in-out,
+    transform 0.12s ease-in-out;
 }
 
 .vertical-nav-app-title-enter-from,

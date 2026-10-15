@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Placeholder } from '@tiptap/extension-placeholder'
-import { TextAlign } from '@tiptap/extension-text-align'
-import { Underline } from '@tiptap/extension-underline'
-import { StarterKit } from '@tiptap/starter-kit'
-import { EditorContent, useEditor } from '@tiptap/vue-3'
+import { Placeholder } from "@tiptap/extension-placeholder"
+import { TextAlign } from "@tiptap/extension-text-align"
+import { Underline } from "@tiptap/extension-underline"
+import { StarterKit } from "@tiptap/starter-kit"
+import { EditorContent, useEditor } from "@tiptap/vue-3"
 
 const props = defineProps<{
   modelValue: string
@@ -11,7 +11,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
+  (e: "update:modelValue", value: string): void
 }>()
 
 const editorRef = ref()
@@ -21,38 +21,36 @@ const editor = useEditor({
   extensions: [
     StarterKit,
     TextAlign.configure({
-      types: ['heading', 'paragraph'],
+      types: ["heading", "paragraph"],
     }),
     Placeholder.configure({
-      placeholder: props.placeholder ?? 'Write something here...',
+      placeholder: props.placeholder ?? "Write something here...",
     }),
     Underline,
   ],
   onUpdate() {
-    if (!editor.value)
-      return
+    if (!editor.value) return
 
-    emit('update:modelValue', editor.value.getHTML())
+    emit("update:modelValue", editor.value.getHTML())
   },
 })
 
-watch(() => props.modelValue, () => {
-  const isSame = editor.value?.getHTML() === props.modelValue
+watch(
+  () => props.modelValue,
+  () => {
+    const isSame = editor.value?.getHTML() === props.modelValue
 
-  if (isSame)
-    return
+    if (isSame) return
 
-  editor.value?.commands.setContent(props.modelValue)
-})
+    editor.value?.commands.setContent(props.modelValue)
+  },
+)
 </script>
 
 <template>
   <div class="pa-6 productDescriptionEditor">
     <!-- buttons -->
-    <div
-      v-if="editor"
-      class="d-flex gap-1 flex-wrap align-center"
-    >
+    <div v-if="editor" class="d-flex gap-1 flex-wrap align-center">
       <VBtn
         size="small"
         icon
@@ -61,10 +59,7 @@ watch(() => props.modelValue, () => {
         :color="editor.isActive('bold') ? 'primary' : 'default'"
         @click="editor.chain().focus().toggleBold().run()"
       >
-        <VIcon
-          icon="tabler-bold"
-          class="font-weight-medium"
-        />
+        <VIcon icon="tabler-bold" class="font-weight-medium" />
       </VBtn>
 
       <VBtn
@@ -86,10 +81,7 @@ watch(() => props.modelValue, () => {
         :color="editor.isActive('italic') ? 'primary' : 'default'"
         @click="editor.chain().focus().toggleItalic().run()"
       >
-        <VIcon
-          icon="tabler-italic"
-          class="font-weight-medium"
-        />
+        <VIcon icon="tabler-italic" class="font-weight-medium" />
       </VBtn>
 
       <VBtn
@@ -100,10 +92,7 @@ watch(() => props.modelValue, () => {
         :color="editor.isActive('strike') ? 'primary' : 'default'"
         @click="editor.chain().focus().toggleStrike().run()"
       >
-        <VIcon
-          icon="tabler-strikethrough"
-          size="20"
-        />
+        <VIcon icon="tabler-strikethrough" size="20" />
       </VBtn>
 
       <VBtn
@@ -114,10 +103,7 @@ watch(() => props.modelValue, () => {
         :color="editor.isActive({ textAlign: 'left' }) ? 'primary' : 'default'"
         @click="editor.chain().focus().setTextAlign('left').run()"
       >
-        <VIcon
-          icon="tabler-align-left"
-          size="20"
-        />
+        <VIcon icon="tabler-align-left" size="20" />
       </VBtn>
 
       <VBtn
@@ -128,10 +114,7 @@ watch(() => props.modelValue, () => {
         :variant="editor.isActive({ textAlign: 'center' }) ? 'tonal' : 'text'"
         @click="editor.chain().focus().setTextAlign('center').run()"
       >
-        <VIcon
-          icon="tabler-align-center"
-          size="20"
-        />
+        <VIcon icon="tabler-align-center" size="20" />
       </VBtn>
 
       <VBtn
@@ -142,10 +125,7 @@ watch(() => props.modelValue, () => {
         :color="editor.isActive({ textAlign: 'right' }) ? 'primary' : 'default'"
         @click="editor.chain().focus().setTextAlign('right').run()"
       >
-        <VIcon
-          icon="tabler-align-right"
-          size="20"
-        />
+        <VIcon icon="tabler-align-right" size="20" />
       </VBtn>
 
       <VBtn
@@ -156,19 +136,13 @@ watch(() => props.modelValue, () => {
         :color="editor.isActive({ textAlign: 'justify' }) ? 'primary' : 'default'"
         @click="editor.chain().focus().setTextAlign('justify').run()"
       >
-        <VIcon
-          icon="tabler-align-justified"
-          size="20"
-        />
+        <VIcon icon="tabler-align-justified" size="20" />
       </VBtn>
     </div>
 
     <VDivider class="my-4" />
 
-    <EditorContent
-      ref="editorRef"
-      :editor="editor"
-    />
+    <EditorContent ref="editorRef" :editor="editor" />
   </div>
 </template>
 

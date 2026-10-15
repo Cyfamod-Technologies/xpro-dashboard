@@ -7,16 +7,31 @@
  Above map but opacity values as key and variant as value */
 
 $btn-active-overlay-opacity: (
-  0.08: (outlined, flat, text, plain),
+  0.08: (
+    outlined,
+    flat,
+    text,
+    plain,
+  ),
   0.24: (tonal),
 );
 $btn-hover-overlay-opacity: (
   0: (elevated),
-  0.08: (outlined, flat, text, plain),
+  0.08: (
+    outlined,
+    flat,
+    text,
+    plain,
+  ),
   0.24: (tonal),
 );
 $btn-focus-overlay-opacity: (
-  0.08: (outlined, flat, text, plain),
+  0.08: (
+    outlined,
+    flat,
+    text,
+    plain,
+  ),
   0.24: (tonal),
 );
 

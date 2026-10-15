@@ -7,7 +7,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  color: 'primary',
+  color: "primary",
 })
 </script>
 
@@ -25,16 +25,8 @@ const props = withDefaults(defineProps<Props>(), {
         </div>
       </div>
 
-      <VAvatar
-        :color="props.color"
-        :size="42"
-        rounded
-        variant="tonal"
-      >
-        <VIcon
-          :icon="props.icon"
-          size="26"
-        />
+      <VAvatar :color="props.color" :size="42" rounded variant="tonal">
+        <VIcon :icon="props.icon" size="26" />
       </VAvatar>
     </VCardText>
   </VCard>

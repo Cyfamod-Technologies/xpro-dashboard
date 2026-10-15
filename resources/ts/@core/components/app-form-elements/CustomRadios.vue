@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { CustomInputContent, GridColumn } from '@core/types'
+import type { CustomInputContent, GridColumn } from "@core/types"
 
 interface Props {
   selectedRadio: string
@@ -8,15 +8,14 @@ interface Props {
 }
 
 interface Emit {
-  (e: 'update:selectedRadio', value: string): void
+  (e: "update:selectedRadio", value: string): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emit>()
 
 const updateSelectedOption = (value: string | null) => {
-  if (value !== null)
-    emit('update:selectedRadio', value)
+  if (value !== null) emit("update:selectedRadio", value)
 }
 </script>
 
@@ -28,20 +27,13 @@ const updateSelectedOption = (value: string | null) => {
     @update:model-value="updateSelectedOption"
   >
     <VRow>
-      <VCol
-        v-for="item in props.radioContent"
-        :key="item.title"
-        v-bind="gridColumn"
-      >
+      <VCol v-for="item in props.radioContent" :key="item.title" v-bind="gridColumn">
         <VLabel
           class="custom-input custom-radio rounded cursor-pointer"
           :class="props.selectedRadio === item.value ? 'active' : ''"
         >
           <div>
-            <VRadio
-              :name="item.value"
-              :value="item.value"
-            />
+            <VRadio :name="item.value" :value="item.value" />
           </div>
           <slot :item="item">
             <div class="flex-grow-1">
@@ -50,10 +42,7 @@ const updateSelectedOption = (value: string | null) => {
                   {{ item.title }}
                 </h6>
                 <VSpacer />
-                <span
-                  v-if="item.subtitle"
-                  class="text-disabled text-body-2"
-                >{{ item.subtitle }}</span>
+                <span v-if="item.subtitle" class="text-disabled text-body-2">{{ item.subtitle }}</span>
               </div>
               <p class="text-body-2 mb-0">
                 {{ item.desc }}

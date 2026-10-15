@@ -149,7 +149,6 @@ $card-spacer-content: 16px;
   }
 
   @each $color-name in variables.$theme-colors-name {
-
     &.dots-active-#{$color-name} {
       .v-carousel__controls {
         .v-btn--active {

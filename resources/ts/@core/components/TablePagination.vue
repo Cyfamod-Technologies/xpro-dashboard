@@ -6,7 +6,7 @@ interface Props {
 }
 
 interface Emit {
-  (e: 'update:page', value: number): void
+  (e: "update:page", value: number): void
 }
 
 defineProps<Props>()
@@ -14,7 +14,7 @@ defineProps<Props>()
 const emit = defineEmits<Emit>()
 
 const updatePage = (value: number) => {
-  emit('update:page', value)
+  emit("update:page", value)
 }
 </script>
 

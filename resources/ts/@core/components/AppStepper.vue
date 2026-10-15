@@ -6,7 +6,7 @@ interface Item {
   subtitle?: string
 }
 
-type Direction = 'vertical' | 'horizontal'
+type Direction = "vertical" | "horizontal"
 
 interface Props {
   items: Item[]
@@ -14,19 +14,19 @@ interface Props {
   direction?: Direction
   iconSize?: string | number
   isActiveStepValid?: boolean
-  align?: 'start' | 'center' | 'end' | 'default'
+  align?: "start" | "center" | "end" | "default"
 }
 
 interface Emit {
-  (e: 'update:currentStep', value: number): void
+  (e: "update:currentStep", value: number): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   currentStep: 0,
-  direction: 'horizontal',
+  direction: "horizontal",
   iconSize: 60,
   isActiveStepValid: undefined,
-  align: 'default',
+  align: "default",
 })
 
 const emit = defineEmits<Emit>()
@@ -34,17 +34,15 @@ const emit = defineEmits<Emit>()
 const currentStep = ref(props.currentStep || 0)
 
 // check if step is completed or active and return class name accordingly
-const activeOrCompletedStepsClasses = computed(() => (index: number) => (
-  index < currentStep.value
-    ? 'stepper-steps-completed'
-    : index === currentStep.value ? 'stepper-steps-active' : ''
-))
+const activeOrCompletedStepsClasses = computed(
+  () => (index: number) =>
+    index < currentStep.value ? "stepper-steps-completed" : index === currentStep.value ? "stepper-steps-active" : "",
+)
 
 // check if step is horizontal and not last step
-const isHorizontalAndNotLastStep = computed(() => (index: number) => (
-  props.direction === 'horizontal'
-  && props.items.length - 1 !== index
-))
+const isHorizontalAndNotLastStep = computed(
+  () => (index: number) => props.direction === "horizontal" && props.items.length - 1 !== index,
+)
 
 // check if validation is enabled
 const isValidationEnabled = computed(() => {
@@ -53,14 +51,10 @@ const isValidationEnabled = computed(() => {
 
 watchEffect(() => {
   // we need to check undefined because if we pass 0 as currentStep it will be falsy
-  if (
-    props.currentStep !== undefined
-    && props.currentStep < props.items.length
-    && props.currentStep >= 0
-  )
+  if (props.currentStep !== undefined && props.currentStep < props.items.length && props.currentStep >= 0)
     currentStep.value = props.currentStep
 
-  emit('update:currentStep', currentStep.value)
+  emit("update:currentStep", currentStep.value)
 })
 </script>
 
@@ -72,22 +66,18 @@ watchEffect(() => {
     :direction="props.direction"
     :class="`app-stepper-${props.align} ${props.items[0].icon ? 'app-stepper-icons' : ''}`"
   >
-    <VSlideGroupItem
-      v-for="(item, index) in props.items"
-      :key="item.title"
-      :value="index"
-    >
+    <VSlideGroupItem v-for="(item, index) in props.items" :key="item.title" :value="index">
       <div
         class="cursor-pointer app-stepper-step pa-1"
         :class="[
-          (!props.isActiveStepValid && (isValidationEnabled)) && 'stepper-steps-invalid',
+          !props.isActiveStepValid && isValidationEnabled && 'stepper-steps-invalid',
           activeOrCompletedStepsClasses(index),
         ]"
         @click="!isValidationEnabled && emit('update:currentStep', index)"
       >
         <!-- SECTION stepper step with icon -->
         <template v-if="item.icon">
-          <div class="stepper-icon-step text-high-emphasis d-flex align-center ">
+          <div class="stepper-icon-step text-high-emphasis d-flex align-center">
             <!-- 👉 icon and title -->
             <div
               class="d-flex align-center gap-x-3 step-wrapper"
@@ -98,21 +88,14 @@ watchEffect(() => {
                   <Component :is="item.icon" />
                 </template>
 
-                <VIcon
-                  v-else
-                  :icon="item.icon"
-                  :size="item.size || props.iconSize"
-                />
+                <VIcon v-else :icon="item.icon" :size="item.size || props.iconSize" />
               </div>
 
               <div>
                 <p class="stepper-title font-weight-medium mb-0">
                   {{ item.title }}
                 </p>
-                <p
-                  v-if="item.subtitle"
-                  class="stepper-subtitle mb-0"
-                >
+                <p v-if="item.subtitle" class="stepper-subtitle mb-0">
                   {{ item.subtitle }}
                 </p>
               </div>
@@ -136,48 +119,26 @@ watchEffect(() => {
               <!-- 👉 custom circle icon -->
               <template v-if="index >= currentStep">
                 <VAvatar
-                  v-if="(!isValidationEnabled || props.isActiveStepValid || index !== currentStep)"
+                  v-if="!isValidationEnabled || props.isActiveStepValid || index !== currentStep"
                   size="38"
                   rounded
                   :variant="index === currentStep ? 'elevated' : 'tonal'"
                   :color="index === currentStep ? 'primary' : 'default'"
                 >
-                  <h5
-                    class="text-h5"
-                    :style="index === currentStep ? { color: '#fff' } : ''"
-                  >
+                  <h5 class="text-h5" :style="index === currentStep ? { color: '#fff' } : ''">
                     {{ index + 1 }}
                   </h5>
                 </VAvatar>
 
-                <VAvatar
-                  v-else
-                  color="error"
-                  size="38"
-                  rounded
-                >
-                  <VIcon
-
-                    icon="tabler-alert-circle"
-                    size="22"
-                  />
+                <VAvatar v-else color="error" size="38" rounded>
+                  <VIcon icon="tabler-alert-circle" size="22" />
                 </VAvatar>
               </template>
 
               <!-- 👉 step completed icon -->
 
-              <VAvatar
-                v-else
-                class="stepper-icon"
-                variant="tonal"
-                color="primary"
-                size="38"
-                rounded
-              >
-                <h5
-                  class="text-h5"
-                  style="color: rgb(var(--v-theme-primary));"
-                >
+              <VAvatar v-else class="stepper-icon" variant="tonal" color="primary" size="38" rounded>
+                <h5 class="text-h5" style="color: rgb(var(--v-theme-primary))">
                   {{ index + 1 }}
                 </h5>
               </VAvatar>
@@ -189,23 +150,14 @@ watchEffect(() => {
                 {{ item.title }}
               </div>
 
-              <div
-                v-if="item.subtitle"
-                class="stepper-subtitle text-sm text-disabled"
-              >
+              <div v-if="item.subtitle" class="stepper-subtitle text-sm text-disabled">
                 {{ item.subtitle }}
               </div>
             </div>
 
             <!-- 👉 stepper step icon -->
-            <div
-              v-if="isHorizontalAndNotLastStep(index)"
-              class="stepper-step-line stepper-chevron-indicator mx-6"
-            >
-              <VIcon
-                icon="tabler-chevron-right"
-                size="20"
-              />
+            <div v-if="isHorizontalAndNotLastStep(index)" class="stepper-step-line stepper-chevron-indicator mx-6">
+              <VIcon icon="tabler-chevron-right" size="20" />
             </div>
           </div>
         </template>
@@ -343,7 +295,7 @@ watchEffect(() => {
     }
 
     .app-stepper-step {
-      &:not(.stepper-steps-active,.stepper-steps-completed) .v-avatar--variant-tonal {
+      &:not(.stepper-steps-active, .stepper-steps-completed) .v-avatar--variant-tonal {
         --v-activated-opacity: 0.06;
       }
     }

@@ -1,10 +1,10 @@
 <script setup lang="ts" generic="T extends unknown">
-import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
-import { VList, VListItem } from 'vuetify/components/VList'
+import { PerfectScrollbar } from "vue3-perfect-scrollbar"
+import { VList, VListItem } from "vuetify/components/VList"
 
 interface Emit {
-  (e: 'update:isDialogVisible', value: boolean): void
-  (e: 'search', value: string): void
+  (e: "update:isDialogVisible", value: boolean): void
+  (e: "search", value: string): void
 }
 
 interface Props {
@@ -21,51 +21,49 @@ const emit = defineEmits<Emit>()
 const { ctrl_k, meta_k } = useMagicKeys({
   passive: false,
   onEventFired(e) {
-    if (e.ctrlKey && e.key === 'k' && e.type === 'keydown')
-      e.preventDefault()
+    if (e.ctrlKey && e.key === "k" && e.type === "keydown") e.preventDefault()
   },
 })
 
 const refSearchList = ref<VList>()
 const refSearchInput = ref<HTMLInputElement>()
-const searchQueryLocal = ref('')
+const searchQueryLocal = ref("")
 
 // 👉 watching control + / to open dialog
 /* eslint-disable camelcase */
-watch([
-  ctrl_k, meta_k,
-], () => {
-  emit('update:isDialogVisible', true)
+watch([ctrl_k, meta_k], () => {
+  emit("update:isDialogVisible", true)
 })
 /* eslint-enable */
 
 // 👉 clear search result and close the dialog
 const clearSearchAndCloseDialog = () => {
-  searchQueryLocal.value = ''
-  emit('update:isDialogVisible', false)
+  searchQueryLocal.value = ""
+  emit("update:isDialogVisible", false)
 }
 
 // 👉 get fucus on search list
 const getFocusOnSearchList = (e: KeyboardEvent) => {
-  if (e.key === 'ArrowDown') {
+  if (e.key === "ArrowDown") {
     e.preventDefault()
-    refSearchList.value?.focus('next')
-  }
-  else if (e.key === 'ArrowUp') {
+    refSearchList.value?.focus("next")
+  } else if (e.key === "ArrowUp") {
     e.preventDefault()
-    refSearchList.value?.focus('prev')
+    refSearchList.value?.focus("prev")
   }
 }
 
 const dialogModelValueUpdate = (val: boolean) => {
-  searchQueryLocal.value = ''
-  emit('update:isDialogVisible', val)
+  searchQueryLocal.value = ""
+  emit("update:isDialogVisible", val)
 }
 
 // 👉 clear search query when redirect to another page
 watch(
   () => props.isDialogVisible,
-  () => { searchQueryLocal.value = '' },
+  () => {
+    searchQueryLocal.value = ""
+  },
 )
 </script>
 
@@ -79,15 +77,8 @@ watch(
     @update:model-value="dialogModelValueUpdate"
     @keyup.esc="clearSearchAndCloseDialog"
   >
-    <VCard
-      height="100%"
-      width="100%"
-      class="position-relative"
-    >
-      <VCardText
-        class="px-4"
-        style="padding-block: 1rem 1.2rem;"
-      >
+    <VCard height="100%" width="100%" class="position-relative">
+      <VCardText class="px-4" style="padding-block: 1rem 1.2rem">
         <!-- 👉 Search Input -->
         <VTextField
           ref="refSearchInput"
@@ -103,28 +94,16 @@ watch(
           <!-- 👉 Prepend Inner -->
           <template #prepend-inner>
             <div class="d-flex align-center text-high-emphasis me-1">
-              <VIcon
-                size="24"
-                icon="tabler-search"
-              />
+              <VIcon size="24" icon="tabler-search" />
             </div>
           </template>
 
           <!-- 👉 Append Inner -->
           <template #append-inner>
             <div class="d-flex align-start">
-              <div
-                class="text-base text-disabled cursor-pointer me-3"
-                @click="clearSearchAndCloseDialog"
-              >
-                [esc]
-              </div>
+              <div class="text-base text-disabled cursor-pointer me-3" @click="clearSearchAndCloseDialog">[esc]</div>
 
-              <VIcon
-                icon="tabler-x"
-                size="24"
-                @click="clearSearchAndCloseDialog"
-              />
+              <VIcon icon="tabler-x" size="24" @click="clearSearchAndCloseDialog" />
             </div>
           </template>
         </VTextField>
@@ -134,15 +113,9 @@ watch(
       <VDivider />
 
       <!-- 👉 Perfect Scrollbar -->
-      <PerfectScrollbar
-        :options="{ wheelPropagation: false, suppressScrollX: true }"
-        class="h-100"
-      >
+      <PerfectScrollbar :options="{ wheelPropagation: false, suppressScrollX: true }" class="h-100">
         <!-- 👉 Suggestions -->
-        <div
-          v-show="!!props.searchResults && !searchQueryLocal && $slots.suggestions"
-          class="h-100"
-        >
+        <div v-show="!!props.searchResults && !searchQueryLocal && $slots.suggestions" class="h-100">
           <slot name="suggestions" />
         </div>
 
@@ -155,14 +128,8 @@ watch(
             class="app-bar-search-list py-0"
           >
             <!-- 👉 list Item /List Sub header -->
-            <template
-              v-for="item in props.searchResults"
-              :key="item"
-            >
-              <slot
-                name="searchResult"
-                :item="item"
-              >
+            <template v-for="item in props.searchResults" :key="item">
+              <slot name="searchResult" :item="item">
                 <VListItem>
                   {{ item }}
                 </VListItem>
@@ -171,17 +138,13 @@ watch(
           </VList>
 
           <!-- 👉 No Data found -->
-          <div
-            v-show="!props.searchResults.length && searchQueryLocal.length"
-            class="h-100"
-          >
+          <div v-show="!props.searchResults.length && searchQueryLocal.length" class="h-100">
             <slot name="noData">
               <VCardText class="h-100">
-                <div class="app-bar-search-suggestions d-flex flex-column align-center justify-center text-high-emphasis pa-12">
-                  <VIcon
-                    size="64"
-                    icon="tabler-file-alert"
-                  />
+                <div
+                  class="app-bar-search-suggestions d-flex flex-column align-center justify-center text-high-emphasis pa-12"
+                >
+                  <VIcon size="64" icon="tabler-file-alert" />
                   <div class="d-flex align-center flex-wrap justify-center gap-2 text-h5 mt-3">
                     <span>No Result For </span>
                     <span>"{{ searchQueryLocal }}"</span>
@@ -196,11 +159,7 @@ watch(
 
         <!-- 👉 Loading -->
         <template v-if="isLoading">
-          <VSkeletonLoader
-            v-for="i in 3"
-            :key="i"
-            type="list-item-two-line"
-          />
+          <VSkeletonLoader v-for="i in 3" :key="i" type="list-item-two-line" />
         </template>
       </PerfectScrollbar>
     </VCard>

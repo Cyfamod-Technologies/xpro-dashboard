@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { I18nLanguage } from '@layouts/types'
+import type { I18nLanguage } from "@layouts/types"
 
 interface Props {
   languages: I18nLanguage[]
@@ -7,10 +7,10 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  location: 'bottom end',
+  location: "bottom end",
 })
 
-const { locale } = useI18n({ useScope: 'global' })
+const { locale } = useI18n({ useScope: "global" })
 </script>
 
 <template>
@@ -18,17 +18,9 @@ const { locale } = useI18n({ useScope: 'global' })
     <VIcon icon="tabler-language" />
 
     <!-- Menu -->
-    <VMenu
-      activator="parent"
-      :location="props.location"
-      offset="12px"
-      width="175"
-    >
+    <VMenu activator="parent" :location="props.location" offset="12px" width="175">
       <!-- List -->
-      <VList
-        :selected="[locale]"
-        color="primary"
-      >
+      <VList :selected="[locale]" color="primary">
         <!-- List item -->
         <VListItem
           v-for="lang in props.languages"

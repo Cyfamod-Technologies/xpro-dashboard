@@ -84,7 +84,7 @@ $v-input-density: (
 
   // Give hint messages color based on theme color
   @each $color-name in variables.$theme-colors-name {
-    &:has( .v-field.v-field--focused .v-field__outline.text-#{$color-name}) {
+    &:has(.v-field.v-field--focused .v-field__outline.text-#{$color-name}) {
       .v-messages {
         color: rgb(var(--v-theme-#{$color-name}));
       }

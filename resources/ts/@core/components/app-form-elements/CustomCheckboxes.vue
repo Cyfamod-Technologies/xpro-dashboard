@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { CustomInputContent, GridColumn } from '@core/types'
+import type { CustomInputContent, GridColumn } from "@core/types"
 
 interface Props {
   selectedCheckbox: string[]
@@ -8,28 +8,20 @@ interface Props {
 }
 
 interface Emit {
-  (e: 'update:selectedCheckbox', value: string[]): void
+  (e: "update:selectedCheckbox", value: string[]): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emit>()
 
 const updateSelectedOption = (value: string[] | null) => {
-  if (typeof value !== 'boolean' && value !== null)
-    emit('update:selectedCheckbox', value)
+  if (typeof value !== "boolean" && value !== null) emit("update:selectedCheckbox", value)
 }
 </script>
 
 <template>
-  <VRow
-    v-if="props.checkboxContent && props.selectedCheckbox"
-    class="custom-input-wrapper"
-  >
-    <VCol
-      v-for="item in props.checkboxContent"
-      :key="item.title"
-      v-bind="gridColumn"
-    >
+  <VRow v-if="props.checkboxContent && props.selectedCheckbox" class="custom-input-wrapper">
+    <VCol v-for="item in props.checkboxContent" :key="item.title" v-bind="gridColumn">
       <VLabel
         class="custom-input custom-checkbox rounded cursor-pointer"
         :class="props.selectedCheckbox.includes(item.value) ? 'active' : ''"
@@ -48,10 +40,7 @@ const updateSelectedOption = (value: string[] | null) => {
                 {{ item.title }}
               </h6>
               <VSpacer />
-              <span
-                v-if="item.subtitle"
-                class="text-disabled text-body-2"
-              >{{ item.subtitle }}</span>
+              <span v-if="item.subtitle" class="text-disabled text-body-2">{{ item.subtitle }}</span>
             </div>
             <p class="text-sm mb-0">
               {{ item.desc }}

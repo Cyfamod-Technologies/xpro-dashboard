@@ -10,11 +10,11 @@ interface Props {
 }
 
 interface Emit {
-  (e: 'collapsed', isContentCollapsed: boolean): void
-  (e: 'refresh', stopLoading: () => void): void
-  (e: 'trash'): void
-  (e: 'initialLoad'): void
-  (e: 'update:loading', loading: boolean): void
+  (e: "collapsed", isContentCollapsed: boolean): void
+  (e: "refresh", stopLoading: () => void): void
+  (e: "trash"): void
+  (e: "initialLoad"): void
+  (e: "update:loading", loading: boolean): void
 }
 
 defineOptions({
@@ -41,7 +41,7 @@ const $loading = computed({
   },
 
   set(value: boolean) {
-    props.loading !== undefined ? emit('update:loading', value) : _loading.value = value
+    props.loading !== undefined ? emit("update:loading", value) : (_loading.value = value)
   },
 })
 
@@ -56,19 +56,19 @@ const stopLoading = () => {
 // trigger collapse
 const triggerCollapse = () => {
   isContentCollapsed.value = !isContentCollapsed.value
-  emit('collapsed', isContentCollapsed.value)
+  emit("collapsed", isContentCollapsed.value)
 }
 
 // trigger refresh
 const triggerRefresh = () => {
   $loading.value = true
-  emit('refresh', stopLoading)
+  emit("refresh", stopLoading)
 }
 
 // trigger removal
 const triggeredRemove = () => {
   isCardRemoved.value = true
-  emit('trash')
+  emit("trash")
 }
 </script>
 
@@ -101,7 +101,7 @@ const triggeredRemove = () => {
                   size="20"
                   icon="tabler-chevron-up"
                   :style="{ transform: isContentCollapsed ? 'rotate(-180deg)' : undefined }"
-                  style="transition-duration: 0.28s;"
+                  style="transition-duration: 0.28s"
                 />
               </IconBtn>
 
@@ -110,10 +110,7 @@ const triggeredRemove = () => {
                 v-if="(!(actionRemove || actionCollapsed) || actionRefresh) && !noActions"
                 @click="triggerRefresh"
               >
-                <VIcon
-                  size="20"
-                  icon="tabler-refresh"
-                />
+                <VIcon size="20" icon="tabler-refresh" />
               </IconBtn>
 
               <!-- 👉 Close button -->
@@ -121,34 +118,22 @@ const triggeredRemove = () => {
                 v-if="(!(actionRefresh || actionCollapsed) || actionRemove) && !noActions"
                 @click="triggeredRemove"
               >
-                <VIcon
-                  size="20"
-                  icon="tabler-x"
-                />
+                <VIcon size="20" icon="tabler-x" />
               </IconBtn>
             </div>
-          <!-- !SECTION -->
+            <!-- !SECTION -->
           </template>
         </VCardItem>
 
         <!-- 👉 card content -->
         <VExpandTransition>
-          <div
-            v-show="!isContentCollapsed"
-            class="v-card-content"
-          >
+          <div v-show="!isContentCollapsed" class="v-card-content">
             <slot />
           </div>
         </VExpandTransition>
 
         <!-- 👉 Overlay -->
-        <VOverlay
-          v-model="$loading"
-          contained
-          persistent
-          scroll-strategy="none"
-          class="align-center justify-center"
-        >
+        <VOverlay v-model="$loading" contained persistent scroll-strategy="none" class="align-center justify-center">
           <VProgressCircular indeterminate />
         </VOverlay>
       </VCard>
@@ -158,7 +143,7 @@ const triggeredRemove = () => {
 
 <style lang="scss">
 .v-card-item {
-  +.v-card-content {
+  + .v-card-content {
     .v-card-text:first-child {
       padding-block-start: 0;
     }

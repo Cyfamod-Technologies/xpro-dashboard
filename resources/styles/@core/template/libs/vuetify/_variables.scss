@@ -1,184 +1,350 @@
 @use "sass:math";
 
-$font-family-custom: "Public Sans",sans-serif,-apple-system,blinkmacsystemfont,
-  "Segoe UI",roboto,"Helvetica Neue",arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+$font-family-custom:
+  "Public Sans",
+  sans-serif,
+  -apple-system,
+  blinkmacsystemfont,
+  "Segoe UI",
+  roboto,
+  "Helvetica Neue",
+  arial,
+  sans-serif,
+  "Apple Color Emoji",
+  "Segoe UI Emoji",
+  "Segoe UI Symbol";
 
 /* 👉 Typography custom variables */
 $typography-h5-font-size: 1.125rem;
 $typography-body-1-font-size: 0.9375rem;
 $typography-body-1-line-height: 1.375rem;
 
-@forward "../../../base/libs/vuetify/variables"  with (
+@forward "../../../base/libs/vuetify/variables" with (
   $body-font-family: $font-family-custom !default,
   $border-radius-root: 6px !default,
 
   // 👉 Rounded
   $rounded: (
-    "sm": 4px,
-    "lg": 8px,
-    "shaped": 30px 0,
-  ) !default,
+      "sm": 4px,
+      "lg": 8px,
+      "shaped": 30px 0,
+    )
+    !default,
 
   // 👉 Shadows
   $shadow-key-umbra: (
-    0: (0 0 0 0 rgba(var(--v-shadow-key-umbra-color), 1)),
-    1: (0 2px 4px rgba(var(--v-shadow-key-umbra-color), 0.12)),
-    2: (0 1px 6px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-xs-opacity))),
-    3: (0 3px 8px rgba(var(--v-shadow-key-umbra-color), 0.14)),
-    4: (0 2px 8px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-sm-opacity))),
-    5: (0 4px 10px rgba(var(--v-shadow-key-umbra-color), 0.15)),
-    6: (0 3px 12px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-md-opacity))),
-    7: (0 4px 18px rgba(var(--v-shadow-key-umbra-color), 0.1)),
-    8: (0 4px 18px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-lg-opacity))),
-    9: (0 5px 14px rgba(var(--v-shadow-key-umbra-color), 0.18)),
-    10: (0 5px 30px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-xl-opacity))),
-    11: (0 5px 16px rgba(var(--v-shadow-key-umbra-color), 0.2)),
-    12: (0 6px 17px rgba(var(--v-shadow-key-umbra-color), 0.22)),
-    13: (0 6px 18px rgba(var(--v-shadow-key-umbra-color), 0.22)),
-    14: (0 6px 19px rgba(var(--v-shadow-key-umbra-color), 0.24)),
-    15: (0 7px 20px rgba(var(--v-shadow-key-umbra-color), 0.24)),
-    16: (0 7px 21px rgba(var(--v-shadow-key-umbra-color), 0.26)),
-    17: (0 7px 22px rgba(var(--v-shadow-key-umbra-color), 0.26)),
-    18: (0 8px 23px rgba(var(--v-shadow-key-umbra-color), 0.28)),
-    19: (0 8px 24px 6px rgba(var(--v-shadow-key-umbra-color), 0.28)),
-    20: (0 9px 25px rgba(var(--v-shadow-key-umbra-color), 0.3)),
-    21: (0 9px 26px rgba(var(--v-shadow-key-umbra-color), 0.32)),
-    22: (0 9px 27px rgba(var(--v-shadow-key-umbra-color), 0.32)),
-    23: (0 10px 28px rgba(var(--v-shadow-key-umbra-color), 0.34)),
-    24: (0 10px 30px rgba(var(--v-shadow-key-umbra-color), 0.34))
-  ) !default,
+      0: (
+        0 0 0 0 rgba(var(--v-shadow-key-umbra-color), 1),
+      ),
+      1: (
+        0 2px 4px rgba(var(--v-shadow-key-umbra-color), 0.12),
+      ),
+      2: (
+        0 1px 6px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-xs-opacity)),
+      ),
+      3: (
+        0 3px 8px rgba(var(--v-shadow-key-umbra-color), 0.14),
+      ),
+      4: (
+        0 2px 8px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-sm-opacity)),
+      ),
+      5: (
+        0 4px 10px rgba(var(--v-shadow-key-umbra-color), 0.15),
+      ),
+      6: (
+        0 3px 12px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-md-opacity)),
+      ),
+      7: (
+        0 4px 18px rgba(var(--v-shadow-key-umbra-color), 0.1),
+      ),
+      8: (
+        0 4px 18px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-lg-opacity)),
+      ),
+      9: (
+        0 5px 14px rgba(var(--v-shadow-key-umbra-color), 0.18),
+      ),
+      10: (
+        0 5px 30px rgba(var(--v-shadow-key-umbra-color), var(--v-shadow-xl-opacity)),
+      ),
+      11: (
+        0 5px 16px rgba(var(--v-shadow-key-umbra-color), 0.2),
+      ),
+      12: (
+        0 6px 17px rgba(var(--v-shadow-key-umbra-color), 0.22),
+      ),
+      13: (
+        0 6px 18px rgba(var(--v-shadow-key-umbra-color), 0.22),
+      ),
+      14: (
+        0 6px 19px rgba(var(--v-shadow-key-umbra-color), 0.24),
+      ),
+      15: (
+        0 7px 20px rgba(var(--v-shadow-key-umbra-color), 0.24),
+      ),
+      16: (
+        0 7px 21px rgba(var(--v-shadow-key-umbra-color), 0.26),
+      ),
+      17: (
+        0 7px 22px rgba(var(--v-shadow-key-umbra-color), 0.26),
+      ),
+      18: (
+        0 8px 23px rgba(var(--v-shadow-key-umbra-color), 0.28),
+      ),
+      19: (
+        0 8px 24px 6px rgba(var(--v-shadow-key-umbra-color), 0.28),
+      ),
+      20: (
+        0 9px 25px rgba(var(--v-shadow-key-umbra-color), 0.3),
+      ),
+      21: (
+        0 9px 26px rgba(var(--v-shadow-key-umbra-color), 0.32),
+      ),
+      22: (
+        0 9px 27px rgba(var(--v-shadow-key-umbra-color), 0.32),
+      ),
+      23: (
+        0 10px 28px rgba(var(--v-shadow-key-umbra-color), 0.34),
+      ),
+      24: (
+        0 10px 30px rgba(var(--v-shadow-key-umbra-color), 0.34),
+      ),
+    )
+    !default,
 
   $shadow-key-penumbra: (
-    0: (0 0 transparent),
-    1: (0 0 transparent),
-    2: (0 0 transparent),
-    3: (0 0 transparent),
-    4: (0 0 transparent),
-    5: (0 0 transparent),
-    6: (0 0 transparent),
-    7: (0 0 transparent),
-    8: (0 0 transparent),
-    9: (0 0 transparent),
-    10: (0 0 transparent),
-    11: (0 0 transparent),
-    12: (0 0 transparent),
-    13: (0 0 transparent),
-    14: (0 0 transparent),
-    15: (0 0 transparent),
-    16: (0 0 transparent),
-    17: (0 0 transparent),
-    18: (0 0 transparent),
-    19: (0 0 transparent),
-    20: (0 0 transparent),
-    21: (0 0 transparent),
-    22: (0 0 transparent),
-    23: (0 0 transparent),
-    24: (0 0 transparent),
-  ) !default,
+    0: (
+      0 0 transparent,
+    ),
+    1: (
+      0 0 transparent,
+    ),
+    2: (
+      0 0 transparent,
+    ),
+    3: (
+      0 0 transparent,
+    ),
+    4: (
+      0 0 transparent,
+    ),
+    5: (
+      0 0 transparent,
+    ),
+    6: (
+      0 0 transparent,
+    ),
+    7: (
+      0 0 transparent,
+    ),
+    8: (
+      0 0 transparent,
+    ),
+    9: (
+      0 0 transparent,
+    ),
+    10: (
+      0 0 transparent,
+    ),
+    11: (
+      0 0 transparent,
+    ),
+    12: (
+      0 0 transparent,
+    ),
+    13: (
+      0 0 transparent,
+    ),
+    14: (
+      0 0 transparent,
+    ),
+    15: (
+      0 0 transparent,
+    ),
+    16: (
+      0 0 transparent,
+    ),
+    17: (
+      0 0 transparent,
+    ),
+    18: (
+      0 0 transparent,
+    ),
+    19: (
+      0 0 transparent,
+    ),
+    20: (
+      0 0 transparent,
+    ),
+    21: (
+      0 0 transparent,
+    ),
+    22: (
+      0 0 transparent,
+    ),
+    23: (
+      0 0 transparent,
+    ),
+    24: (
+      0 0 transparent,
+    ),
+  )
+  !default,
 
   $shadow-key-ambient: (
-    0: (0 0 transparent),
-    1: (0 0 transparent),
-    2: (0 0 transparent),
-    3: (0 0 transparent),
-    4: (0 0 transparent),
-    5: (0 0 transparent),
-    6: (0 0 transparent),
-    7: (0 0 transparent),
-    8: (0 0 transparent),
-    9: (0 0 transparent),
-    10: (0 0 transparent),
-    11: (0 0 transparent),
-    12: (0 0 transparent),
-    13: (0 0 transparent),
-    14: (0 0 transparent),
-    15: (0 0 transparent),
-    16: (0 0 transparent),
-    17: (0 0 transparent),
-    18: (0 0 transparent),
-    19: (0 0 transparent),
-    20: (0 0 transparent),
-    21: (0 0 transparent),
-    22: (0 0 transparent),
-    23: (0 0 transparent),
-    24: (0 0 transparent),
-  ) !default,
+    0: (
+      0 0 transparent,
+    ),
+    1: (
+      0 0 transparent,
+    ),
+    2: (
+      0 0 transparent,
+    ),
+    3: (
+      0 0 transparent,
+    ),
+    4: (
+      0 0 transparent,
+    ),
+    5: (
+      0 0 transparent,
+    ),
+    6: (
+      0 0 transparent,
+    ),
+    7: (
+      0 0 transparent,
+    ),
+    8: (
+      0 0 transparent,
+    ),
+    9: (
+      0 0 transparent,
+    ),
+    10: (
+      0 0 transparent,
+    ),
+    11: (
+      0 0 transparent,
+    ),
+    12: (
+      0 0 transparent,
+    ),
+    13: (
+      0 0 transparent,
+    ),
+    14: (
+      0 0 transparent,
+    ),
+    15: (
+      0 0 transparent,
+    ),
+    16: (
+      0 0 transparent,
+    ),
+    17: (
+      0 0 transparent,
+    ),
+    18: (
+      0 0 transparent,
+    ),
+    19: (
+      0 0 transparent,
+    ),
+    20: (
+      0 0 transparent,
+    ),
+    21: (
+      0 0 transparent,
+    ),
+    22: (
+      0 0 transparent,
+    ),
+    23: (
+      0 0 transparent,
+    ),
+    24: (
+      0 0 transparent,
+    ),
+  )
+  !default,
 
   // 👉 Typography
   $typography: (
-    "h1": (
-      "size": 2.875rem,
-      "weight": 500,
-      "line-height": 4.25rem,
-      "letter-spacing": normal
-    ),
-    "h2": (
-      "size": 2.375rem,
-      "weight": 500,
-      "line-height": 3.5rem,
-      "letter-spacing": normal
-    ),
-    "h3": (
-      "size": 1.75rem,
-      "weight": 500,
-      "line-height": 2.625rem
-    ),
-    "h4": (
-      "size": 1.5rem,
-      "weight": 500,
-      "line-height": 2.375rem,
-      "letter-spacing": normal
-    ),
-    "h5": (
-      "size": $typography-h5-font-size,
-      "weight": 500,
-      "line-height": 1.75rem
-    ),
-    "h6":(
-      "size": 0.9375rem,
-      "line-height": 1.375rem,
-      "letter-spacing": normal
-    ),
-    "body-1":(
-      "size": $typography-body-1-font-size,
-      "line-height": $typography-body-1-line-height,
-      "letter-spacing": normal
-    ),
-    "body-2": (
-      "size": 0.8125rem,
-      "line-height": 1.25rem,
-      "letter-spacing": normal
-    ),
-    "subtitle-1":(
-      "size": 0.9375rem,
-      "weight": 400,
-      "line-height": 1.375rem
-    ),
-    "subtitle-2": (
-      "size": 0.8125rem,
-      "weight": 400,
-      "line-height": 1.25rem,
-      "letter-spacing": normal
-    ),
-    "button": (
-      "size": 0.9375rem,
-      "weight": 500,
-      "line-height": 1.125rem,
-      "letter-spacing": 0.0269rem,
-      "text-transform": capitalize
-    ),
-    "caption":(
-      "size": 0.8125rem,
-      "line-height": 1.125rem,
-      "letter-spacing": 0.025rem
-    ),
-    "overline": (
-      "size": 0.75rem,
-      "weight": 400,
-      "line-height": 0.875rem,
-      "letter-spacing": 0.05rem,
-    ),
-  ) !default,
+      "h1": (
+        "size": 2.875rem,
+        "weight": 500,
+        "line-height": 4.25rem,
+        "letter-spacing": normal,
+      ),
+      "h2": (
+        "size": 2.375rem,
+        "weight": 500,
+        "line-height": 3.5rem,
+        "letter-spacing": normal,
+      ),
+      "h3": (
+        "size": 1.75rem,
+        "weight": 500,
+        "line-height": 2.625rem,
+      ),
+      "h4": (
+        "size": 1.5rem,
+        "weight": 500,
+        "line-height": 2.375rem,
+        "letter-spacing": normal,
+      ),
+      "h5": (
+        "size": $typography-h5-font-size,
+        "weight": 500,
+        "line-height": 1.75rem,
+      ),
+      "h6": (
+        "size": 0.9375rem,
+        "line-height": 1.375rem,
+        "letter-spacing": normal,
+      ),
+      "body-1": (
+        "size": $typography-body-1-font-size,
+        "line-height": $typography-body-1-line-height,
+        "letter-spacing": normal,
+      ),
+      "body-2": (
+        "size": 0.8125rem,
+        "line-height": 1.25rem,
+        "letter-spacing": normal,
+      ),
+      "subtitle-1": (
+        "size": 0.9375rem,
+        "weight": 400,
+        "line-height": 1.375rem,
+      ),
+      "subtitle-2": (
+        "size": 0.8125rem,
+        "weight": 400,
+        "line-height": 1.25rem,
+        "letter-spacing": normal,
+      ),
+      "button": (
+        "size": 0.9375rem,
+        "weight": 500,
+        "line-height": 1.125rem,
+        "letter-spacing": 0.0269rem,
+        "text-transform": capitalize,
+      ),
+      "caption": (
+        "size": 0.8125rem,
+        "line-height": 1.125rem,
+        "letter-spacing": 0.025rem,
+      ),
+      "overline": (
+        "size": 0.75rem,
+        "weight": 400,
+        "line-height": 0.875rem,
+        "letter-spacing": 0.05rem,
+      ),
+    )
+    !default,
 
   // 👉 Alert
   $alert-title-font-size: 1.125rem !default,
@@ -246,7 +412,12 @@ $typography-body-1-line-height: 1.375rem;
 
   // 👉 Field
   $field-font-size: 0.9375rem !default,
-  $input-density: ("default": -2, "comfortable": -4.5, "compact": -6.5) !default,
+  $input-density: (
+    "default": -2,
+    "comfortable": -4.5,
+    "compact": -6.5,
+  )
+  !default,
   $field-outline-opacity: 0.22 !default,
   $field-border-width: 1px !default,
   $field-focused-border-width: 2px !default,
@@ -257,11 +428,16 @@ $typography-body-1-line-height: 1.375rem;
   $input-details-font-size: 0.8125rem !default,
 
   // 👉 List
-  $list-density: ("default": 0, "comfortable": -1.5, "compact": -2.5) !default,
+  $list-density: (
+      "default": 0,
+      "comfortable": -1.5,
+      "compact": -2.5,
+    )
+    !default,
   $list-border-radius: 6px !default,
   $list-item-padding: 8px 20px !default,
   $list-item-icon-margin-end: 10px !default,
-  $list-item-icon-margin-start : 12px !default,
+  $list-item-icon-margin-start: 12px !default,
   $list-item-subtitle-line-height: 20px !default,
   $list-subheader-font-size: 13px !default,
   $list-subheader-line-height: 1.25rem !default,
@@ -299,7 +475,12 @@ $typography-body-1-line-height: 1.375rem;
   $slider-track-active-size: 6px !default,
 
   // 👉 select
-  $select-chips-margin-bottom: ("default": 1, "comfortable": 1, "compact": 1) !default,
+  $select-chips-margin-bottom: (
+      "default": 1,
+      "comfortable": 1,
+      "compact": 1,
+    )
+    !default,
 
   // 👉 snackbar
   $snackbar-background: rgb(var(--v-tooltip-background)) !default,
@@ -307,7 +488,7 @@ $typography-body-1-line-height: 1.375rem;
   $snackbar-content-padding: 12px 16px !default,
   $snackbar-font-size: 0.8125rem !default,
   $snackbar-elevation: 2 !default,
-  $snackbar-wrapper-min-height:44px !default,
+  $snackbar-wrapper-min-height: 44px !default,
   $snackbar-btn-padding: 0 9px !default,
   $snackbar-action-margin: 16px !default,
 
@@ -322,7 +503,6 @@ $typography-body-1-line-height: 1.375rem;
   $switch-track-opacity: 1 !default,
   $switch-track-background: rgba(var(--v-theme-on-surface), var(--v-focus-opacity)) !default,
   $switch-thumb-background: rgb(var(--v-theme-on-primary)),
-
   // 👉 table
   $table-row-height: 50px !default,
   $table-color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)) !default,
@@ -341,8 +521,8 @@ $typography-body-1-line-height: 1.375rem;
 
   // 👉 timeline
   $timeline-dot-size: 34px !default,
-  $timeline-dot-divider-background: rgba(var(--v-border-color),0.08) !default,
+  $timeline-dot-divider-background: rgba(var(--v-border-color), 0.08) !default,
   $timeline-divider-line-background: rgba(var(--v-border-color), var(--v-border-opacity)) !default,
   $timeline-divider-line-thickness: 1.5px !default,
-  $timeline-item-padding: 16px !default,
+  $timeline-item-padding: 16px !default
 );

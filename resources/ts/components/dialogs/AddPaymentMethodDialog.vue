@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import americanExDark from '@images/icons/payments/img/ae-dark.png'
-import americanExLight from '@images/icons/payments/img/american-express.png'
-import dcDark from '@images/icons/payments/img/dc-dark.png'
-import dcLight from '@images/icons/payments/img/dc-light.png'
-import jcbDark from '@images/icons/payments/img/jcb-dark.png'
-import jcbLight from '@images/icons/payments/img/jcb-light.png'
-import masterCardDark from '@images/icons/payments/img/master-dark.png'
-import masterCardLight from '@images/icons/payments/img/mastercard.png'
-import visaDark from '@images/icons/payments/img/visa-dark.png'
-import visaLight from '@images/icons/payments/img/visa-light.png'
+import americanExDark from "@images/icons/payments/img/ae-dark.png"
+import americanExLight from "@images/icons/payments/img/american-express.png"
+import dcDark from "@images/icons/payments/img/dc-dark.png"
+import dcLight from "@images/icons/payments/img/dc-light.png"
+import jcbDark from "@images/icons/payments/img/jcb-dark.png"
+import jcbLight from "@images/icons/payments/img/jcb-light.png"
+import masterCardDark from "@images/icons/payments/img/master-dark.png"
+import masterCardLight from "@images/icons/payments/img/mastercard.png"
+import visaDark from "@images/icons/payments/img/visa-dark.png"
+import visaLight from "@images/icons/payments/img/visa-light.png"
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emit>()
@@ -24,40 +24,39 @@ interface Props {
 }
 
 interface Emit {
-  (e: 'update:isDialogVisible', val: boolean): void
+  (e: "update:isDialogVisible", val: boolean): void
 }
 
 const dialogVisibleUpdate = (val: boolean) => {
-  emit('update:isDialogVisible', val)
+  emit("update:isDialogVisible", val)
 }
 
 const paymentMethodsData = [
   {
-    title: 'Visa',
-    type: 'Credit Card',
+    title: "Visa",
+    type: "Credit Card",
     img: visa,
   },
   {
-    title: 'American Express',
-    type: 'Credit Card',
+    title: "American Express",
+    type: "Credit Card",
     img: americanEx,
   },
   {
-    title: 'Mastercard',
-    type: 'Credit Card',
+    title: "Mastercard",
+    type: "Credit Card",
     img: masterCard,
   },
   {
-    title: 'JCB',
-    type: 'Credit Card',
+    title: "JCB",
+    type: "Credit Card",
     img: jcb,
   },
   {
-    title: 'Diners Club',
-    type: 'Credit Card',
+    title: "Diners Club",
+    type: "Credit Card",
     img: dc,
   },
-
 ]
 </script>
 
@@ -73,25 +72,13 @@ const paymentMethodsData = [
     <VCard class="pa-2 pa-sm-10">
       <VCardText>
         <!-- 👉 Title -->
-        <h4 class="text-h4 text-center mb-2">
-          Add payment methods
-        </h4>
-        <p class="text-body-1 text-center mb-6">
-          Supported payment methods
-        </p>
+        <h4 class="text-h4 text-center mb-2">Add payment methods</h4>
+        <p class="text-body-1 text-center mb-6">Supported payment methods</p>
 
-        <div
-          v-for="(item, index) in paymentMethodsData"
-          :key="index"
-        >
+        <div v-for="(item, index) in paymentMethodsData" :key="index">
           <div class="d-flex justify-space-between align-center py-4 gap-x-4">
             <div class="d-flex align-center">
-              <VImg
-                :src="item.img.value"
-                height="30"
-                width="50"
-                class="me-4"
-              />
+              <VImg :src="item.img.value" height="30" width="50" class="me-4" />
               <h6 class="text-h6">
                 {{ item.title }}
               </h6>

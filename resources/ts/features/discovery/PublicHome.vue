@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { serviceLines } from '@/features/workspace/config'
-import ProviderCards from '@/features/discovery/ProviderCards.vue'
-import ServiceTabs from '@/features/discovery/ServiceTabs.vue'
-import { jobCoverAlt, jobCoverImage, serviceCoverAlt, serviceCoverImage } from '@/features/discovery/images'
-import { popularJobs } from '@/features/discovery/popular-jobs'
-import type { PopularJob } from '@/features/discovery/popular-jobs'
-import type { ServiceLine } from '@/features/operations/types'
-import { useOperationsStore } from '@/stores/operations'
+import { serviceLines } from "@/features/workspace/config"
+import JobCard from "@/features/discovery/JobCard.vue"
+import ServiceTabs from "@/features/discovery/ServiceTabs.vue"
+import { serviceCoverAlt, serviceCoverImage } from "@/features/discovery/images"
+import { popularJobs } from "@/features/discovery/popular-jobs"
+import type { ServiceLine } from "@/features/operations/types"
+import { useOperationsStore } from "@/stores/operations"
 
 /**
  * Hero photo, shown behind a light-blue tonal overlay. Temporary 1024x764 image; a wider
  * ~2048x830 replacement can be dropped at the same path. Set to '' to fall back to the plain card.
  */
-const heroImage: string = '/images/generated/hero/home-hero.jpg'
+const heroImage: string = "/images/generated/hero/home-hero.jpg"
 
 const ops = useOperationsStore()
 const route = useRoute()
@@ -20,44 +19,84 @@ const router = useRouter()
 
 const activeService = ref(serviceLines[1].name)
 const activeLine = computed(() => activeService.value as ServiceLine)
-const search = reactive({ service: serviceLines[1].name, title: '', city: 'Abuja', start: '' })
+const search = reactive({ service: serviceLines[1].name, title: "", city: "Abuja", start: "" })
 const serviceNames = serviceLines.map(item => item.name)
 const jobs = computed(() => popularJobs[activeService.value as keyof typeof popularJobs] ?? [])
 
-const heroStyle = computed(() => (heroImage ? { '--hero-image': `url(${heroImage})` } : undefined))
+const heroStyle = computed(() => (heroImage ? { "--hero-image": `url(${heroImage})` } : undefined))
 
 const trust = [
   {
-    title: 'Verified providers',
-    body: 'Identity, skills and bank details are checked by XPro.',
-    icon: 'tabler-shield-check',
+    title: "Verified providers",
+    body: "Identity, skills and bank details are checked by XPro.",
+    icon: "tabler-shield-check",
   },
   {
-    title: 'Payment held by XPro',
-    body: 'Providers are paid only after you confirm the job is done.',
-    icon: 'tabler-credit-card',
+    title: "Payment held by XPro",
+    body: "Providers are paid only after you confirm the job is done.",
+    icon: "tabler-credit-card",
   },
   {
-    title: 'One accountable team',
-    body: 'XPro reviews every quote, schedule and update for you.',
-    icon: 'tabler-users-group',
+    title: "One accountable team",
+    body: "XPro reviews every quote, schedule and update for you.",
+    icon: "tabler-users-group",
   },
-  { title: 'No consultation fee', body: 'Requesting and receiving a quote is free.', icon: 'tabler-circle-check' },
+  { title: "No consultation fee", body: "Requesting and receiving a quote is free.", icon: "tabler-circle-check" },
 ]
 
 const steps = [
-  { icon: 'tabler-search', title: 'Explore', body: 'Find a service and view verified provider profiles.' },
+  { icon: "tabler-search", title: "Choose a service", body: "Pick the service you need and start from a popular job." },
   {
-    icon: 'tabler-file-description',
-    title: 'Share your brief',
-    body: 'Tell us about the job. Sign in when you are ready to submit.',
+    icon: "tabler-file-description",
+    title: "Share your brief",
+    body: "Tell us about the job. Sign in when you are ready to submit.",
   },
   {
-    icon: 'tabler-clipboard-check',
-    title: 'Follow your project',
-    body: 'Review quotes, confirm dates and track updates in your dashboard.',
+    icon: "tabler-clipboard-check",
+    title: "Follow your project",
+    body: "XPro assigns a verified provider. Review quotes, confirm dates and track updates in your dashboard.",
   },
 ]
+
+const verification = [
+  {
+    icon: "tabler-id",
+    title: "Identity and documents checked",
+    body: "Every provider submits identity and trade documents for XPro review.",
+  },
+  {
+    icon: "tabler-tools",
+    title: "Skills and service areas confirmed",
+    body: "We confirm what each provider can do and where they work.",
+  },
+  {
+    icon: "tabler-building-bank",
+    title: "Bank details verified",
+    body: "Payout details are verified so payment goes to the right account.",
+  },
+]
+
+// Anonymised view of the approved network: counts and top skills per service line, never names.
+const network = computed(() => {
+  const approved = ops.state.providers.filter(item => item.verification === "approved")
+
+  return serviceLines.map(line => {
+    const name = line.name as ServiceLine
+    const offering = approved.filter(item => item.services.includes(name))
+    const tally = new Map<string, number>()
+
+    for (const provider of offering) {
+      for (const skill of provider.skills[name] ?? []) tally.set(skill, (tally.get(skill) ?? 0) + 1)
+    }
+
+    const skills = [...tally.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 3)
+      .map(([skill]) => skill)
+
+    return { name, count: offering.length, skills }
+  })
+})
 
 watch(activeService, value => {
   search.service = value
@@ -72,18 +111,13 @@ const clean = (query: Record<string, string>) =>
 
 const submit = () =>
   router.push({
-    path: '/request',
+    path: "/request",
     query: clean({ service: search.service, title: search.title, city: search.city, start: search.start }),
   })
 
-const jobLocation = (job: PopularJob) => ({
-  path: '/request',
-  query: { service: activeService.value, title: job.name, ...job.details },
-})
-
 const scrollToHash = () => {
   if (route.hash)
-    nextTick(() => document.querySelector(route.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    nextTick(() => document.querySelector(route.hash)?.scrollIntoView({ behavior: "smooth", block: "start" }))
 }
 
 onMounted(scrollToHash)
@@ -92,33 +126,18 @@ watch(() => route.hash, scrollToHash)
 
 <template>
   <section class="xp-container pt-6">
-    <div
-      class="hero pa-6 pa-md-12"
-      :class="{ 'hero--photo': heroImage }"
-      :style="heroStyle"
-    >
-      <p class="hero__eyebrow mb-4">
-        Design · Construction · Hire · Procurement · Facility · Waste
-      </p>
-      <h1 class="hero__title mb-4">
-        Book trusted professionals for any building job.
-      </h1>
+    <div class="hero pa-6 pa-md-12" :class="{ 'hero--photo': heroImage }" :style="heroStyle">
+      <p class="hero__eyebrow mb-4">Design · Construction · Hire · Procurement · Facility · Waste</p>
+      <h1 class="hero__title mb-4">Book trusted professionals for any building job.</h1>
       <p class="hero__copy mb-0">
-        Request once. XPro matches a verified provider, sends your quote and holds your payment until the job is done.
+        Request once. XPro assigns a verified provider, sends your quote and holds your payment until the job is done.
       </p>
     </div>
   </section>
 
   <div class="xp-container search-wrap">
-    <VCard
-      class="search-card"
-      elevation="6"
-    >
-      <VForm
-        aria-label="Request a service"
-        class="search-form"
-        @submit.prevent="submit"
-      >
+    <VCard class="search-card" elevation="6">
+      <VForm aria-label="Request a service" class="search-form" @submit.prevent="submit">
         <div class="seg">
           <VSelect
             v-model="search.service"
@@ -167,14 +186,7 @@ watch(() => route.hash, scrollToHash)
             persistent-placeholder
           />
         </div>
-        <VBtn
-          type="submit"
-          size="x-large"
-          class="go"
-          prepend-icon="tabler-search"
-        >
-          Get a quote
-        </VBtn>
+        <VBtn type="submit" size="x-large" class="go" prepend-icon="tabler-search"> Get a quote </VBtn>
       </VForm>
     </VCard>
   </div>
@@ -186,80 +198,23 @@ watch(() => route.hash, scrollToHash)
   <section class="xp-container pt-8 pb-12">
     <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
       <div>
-        <h2 class="text-h4 mb-1">
-          Popular {{ activeService.toLowerCase() }} jobs
-        </h2>
-        <p class="text-medium-emphasis mb-0">
-          Tap a job to start your request with it filled in.
-        </p>
+        <h2 class="text-h4 mb-1">Popular {{ activeService.toLowerCase() }} jobs</h2>
+        <p class="text-medium-emphasis mb-0">Tap a job to start your request with it filled in.</p>
       </div>
       <RouterLink :to="{ path: '/services', query: { service: activeService } }">
         All {{ activeService.toLowerCase() }} services →
       </RouterLink>
     </div>
     <div class="job-grid">
-      <VCard
-        v-for="job in jobs"
-        :key="`${activeService}-${job.name}`"
-        :to="jobLocation(job)"
-        class="job-card"
-      >
-        <div class="job-card__media">
-          <VChip
-            class="job-card__group"
-            size="small"
-            color="surface"
-            variant="flat"
-          >
-            {{ job.group }}
-          </VChip>
-          <img
-            :src="jobCoverImage(activeLine, job.name)"
-            :alt="jobCoverAlt(activeLine, job.name)"
-            class="job-card__img"
-            loading="lazy"
-            width="400"
-            height="160"
-          >
-          <VAvatar
-            class="job-card__badge"
-            color="surface"
-            size="40"
-          >
-            <VIcon
-              :icon="job.icon"
-              color="primary-darken-1"
-            />
-          </VAvatar>
-        </div>
-        <VCardText class="d-flex flex-column gap-1">
-          <strong class="text-h6">{{ job.name }}</strong>
-          <span class="text-body-2 text-medium-emphasis">{{ job.body }}</span>
-          <span class="d-flex justify-space-between align-center pt-2 text-body-2">
-            <span class="text-medium-emphasis">Free quote</span>
-            <span class="font-weight-medium text-primary-darken-1">Request →</span>
-          </span>
-        </VCardText>
-      </VCard>
+      <JobCard v-for="job in jobs" :key="`${activeService}-${job.name}`" :service="activeLine" :job="job" />
     </div>
   </section>
 
-  <section
-    aria-label="Why XPro"
-    class="xp-container pb-12"
-  >
+  <section aria-label="Why XPro" class="xp-container pb-12">
     <VCard variant="outlined">
       <VCardText class="trust-grid pa-7">
-        <div
-          v-for="item in trust"
-          :key="item.title"
-          class="d-flex align-start gap-4"
-        >
-          <VAvatar
-            variant="outlined"
-            color="primary"
-            size="44"
-          >
+        <div v-for="item in trust" :key="item.title" class="d-flex align-start gap-4">
+          <VAvatar variant="outlined" color="primary" size="44">
             <VIcon :icon="item.icon" />
           </VAvatar>
           <div>
@@ -271,40 +226,65 @@ watch(() => route.hash, scrollToHash)
     </VCard>
   </section>
 
-  <section
-    id="providers"
-    class="xp-container pb-12"
-  >
-    <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
-      <h2 class="text-h4">
-        Verified providers
-      </h2>
-      <RouterLink to="/providers">
-        View all providers →
-      </RouterLink>
+  <section id="network" aria-labelledby="network-title" class="xp-container pb-12">
+    <div class="mb-5">
+      <h2 id="network-title" class="text-h4 mb-1">Our verified network</h2>
+      <p class="text-medium-emphasis mb-0">
+        Every provider is vetted by XPro. You don’t need to choose — we assign the right one for your job.
+      </p>
     </div>
-    <ProviderCards :providers="ops.publicProviders.slice(0, 4)" />
-  </section>
-
-  <section
-    id="how-it-works"
-    class="xp-container pb-12"
-  >
-    <h2 class="text-h4 mb-5">
-      How it works
-    </h2>
-    <div class="steps-grid">
-      <VCard
-        v-for="(step, index) in steps"
-        :key="step.title"
-        variant="outlined"
-      >
-        <VCardText class="d-flex gap-4">
-          <VAvatar
+    <div class="network-grid mb-6">
+      <VCard v-for="item in network" :key="item.name" variant="outlined" class="network-card">
+        <div class="network-card__media">
+          <img
+            :src="serviceCoverImage(item.name)"
+            :alt="serviceCoverAlt(item.name)"
+            class="network-card__img"
+            loading="lazy"
+            width="400"
+            height="120"
+          />
+        </div>
+        <VCardText class="d-flex flex-column gap-2">
+          <strong class="text-h6">{{ item.name }}</strong>
+          <VChip
             color="primary"
             variant="tonal"
-            size="44"
+            size="small"
+            prepend-icon="tabler-shield-check"
+            class="align-self-start"
           >
+            {{ item.count }} verified {{ item.count === 1 ? "provider" : "providers" }}
+          </VChip>
+          <div v-if="item.skills.length" class="d-flex flex-wrap gap-1">
+            <VChip v-for="skill in item.skills" :key="skill" size="small" variant="outlined">
+              {{ skill }}
+            </VChip>
+          </div>
+        </VCardText>
+      </VCard>
+    </div>
+    <VCard color="primary" variant="tonal">
+      <VCardText class="on-tonal verify-grid pa-6">
+        <div v-for="step in verification" :key="step.title" class="d-flex align-start gap-4">
+          <VAvatar color="primary" variant="flat" size="44">
+            <VIcon :icon="step.icon" />
+          </VAvatar>
+          <div>
+            <strong class="d-block mb-1">{{ step.title }}</strong>
+            <span class="text-body-2">{{ step.body }}</span>
+          </div>
+        </div>
+      </VCardText>
+    </VCard>
+  </section>
+
+  <section id="how-it-works" class="xp-container pb-12">
+    <h2 class="text-h4 mb-5">How it works</h2>
+    <div class="steps-grid">
+      <VCard v-for="(step, index) in steps" :key="step.title" variant="outlined">
+        <VCardText class="d-flex gap-4">
+          <VAvatar color="primary" variant="tonal" size="44">
             <VIcon :icon="step.icon" />
           </VAvatar>
           <div>
@@ -316,10 +296,7 @@ watch(() => route.hash, scrollToHash)
     </div>
   </section>
 
-  <section
-    id="join"
-    class="xp-container pb-14"
-  >
+  <section id="join" class="xp-container pb-14">
     <VCard variant="outlined">
       <div class="join">
         <div class="join__media">
@@ -330,23 +307,16 @@ watch(() => route.hash, scrollToHash)
             loading="lazy"
             width="400"
             height="300"
-          >
+          />
         </div>
         <div class="join__body">
           <div class="join__text">
-            <h2 class="text-h5 mb-2">
-              Are you a professional, artisan or supplier?
-            </h2>
+            <h2 class="text-h5 mb-2">Are you a professional, artisan or supplier?</h2>
             <p class="text-medium-emphasis mb-0">
               Join XPro free. Get verified, get matched to jobs near you and get paid through XPro.
             </p>
           </div>
-          <VBtn
-            to="/auth/signup?role=provider"
-            size="large"
-          >
-            Become a provider
-          </VBtn>
+          <VBtn to="/auth/signup?role=provider" size="large"> Become a provider </VBtn>
         </div>
       </div>
     </VCard>
@@ -386,7 +356,9 @@ watch(() => route.hash, scrollToHash)
         color-mix(in srgb, var(--hero-tint) calc(var(--hero-a2) * 100%), transparent) 100%
       ),
       var(--hero-image);
-    background-position: center, right center;
+    background-position:
+      center,
+      right center;
     background-repeat: no-repeat;
     background-size: cover;
   }
@@ -428,9 +400,15 @@ watch(() => route.hash, scrollToHash)
   flex-wrap: wrap;
 }
 
+// Each segment is a fixed-height flex row so the label + value pair sits centred
+// (the VField otherwise leaves its leftover height below the text).
 .seg {
+  --seg-min: 64px;
+  align-items: center;
   border-inline-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  display: flex;
   flex: 1 1 180px;
+  min-block-size: var(--seg-min);
   min-inline-size: 0;
   padding: 10px 12px;
 
@@ -443,12 +421,49 @@ watch(() => route.hash, scrollToHash)
   &:hover {
     background: rgba(var(--v-theme-primary), 0.05);
   }
+
+  :deep(.v-input) {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+
+  // The floating label sits above the field box; reserve room for it so the
+  // label + value pair (not just the value box) is what gets centred.
+  :deep(.v-input__control) {
+    padding-block-start: 10px;
+  }
+
+  // Icons sit on the value row (not the label row), so they centre with the text.
+  :deep(.v-field__prepend-inner),
+  :deep(.v-field__append-inner) {
+    align-items: center;
+    align-self: flex-end;
+    block-size: 26px;
+    padding-block: 0;
+  }
+
+  :deep(.v-field) {
+    block-size: 33px;
+  }
+
+  // Same value-row height for text, select and the native date input.
+  :deep(input.v-field__input) {
+    block-size: 33px;
+    line-height: 24px;
+    min-block-size: 0;
+  }
+
+  :deep(input[type="date"]::-webkit-calendar-picker-indicator) {
+    margin: 0;
+    padding: 0;
+  }
 }
 
 .go {
-  block-size: 64px !important;
+  block-size: auto !important;
   flex: 0 0 auto;
   font-size: 1rem;
+  min-block-size: 64px;
   padding-inline: 28px !important;
 }
 
@@ -458,14 +473,16 @@ watch(() => route.hash, scrollToHash)
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
 }
 
-.job-card {
-  display: flex;
-  flex-direction: column;
+.network-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+}
 
+.network-card {
   &__media {
     background: rgba(var(--v-theme-primary), 0.14);
-    block-size: 160px;
-    position: relative;
+    block-size: 120px;
   }
 
   &__img {
@@ -474,18 +491,16 @@ watch(() => route.hash, scrollToHash)
     inline-size: 100%;
     object-fit: cover;
   }
+}
 
-  &__badge {
-    inset-block-end: 12px;
-    inset-inline-start: 12px;
-    position: absolute;
-  }
+.verify-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
 
-  &__group {
-    inset-block-start: 12px;
-    inset-inline-start: 12px;
-    position: absolute;
-  }
+.on-tonal {
+  color: rgb(var(--v-theme-on-surface)) !important;
 }
 
 .trust-grid {
@@ -540,6 +555,9 @@ watch(() => route.hash, scrollToHash)
   }
 
   .seg {
+    --seg-min: 60px;
+
+    padding-block: 8px;
     border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
     border-inline-start: 0;
     flex: 1 1 100%;
@@ -552,6 +570,7 @@ watch(() => route.hash, scrollToHash)
   .go {
     flex: 1 1 100%;
     margin-block-start: 8px;
+    min-block-size: 60px;
   }
 }
 

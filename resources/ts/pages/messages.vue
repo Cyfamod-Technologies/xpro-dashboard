@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import SectionView from '@/features/workspace/SectionView.vue'
+import SectionView from "@/features/workspace/SectionView.vue"
 
-definePage({ meta: { section: 'messages' } })
+definePage({ meta: { section: "messages" } })
 </script>
 
 <template>

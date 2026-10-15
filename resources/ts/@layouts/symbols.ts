@@ -1,1 +1,1 @@
-export const injectionKeyIsVerticalNavHovered: InjectionKey<Ref<boolean>> = Symbol('isVerticalNavHovered')
+export const injectionKeyIsVerticalNavHovered: InjectionKey<Ref<boolean>> = Symbol("isVerticalNavHovered")

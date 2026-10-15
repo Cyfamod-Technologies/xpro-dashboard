@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { CustomInputContent, GridColumn } from '@core/types'
+import type { CustomInputContent, GridColumn } from "@core/types"
 
 interface Props {
   selectedRadio: string
@@ -8,7 +8,7 @@ interface Props {
 }
 
 interface Emit {
-  (e: 'update:selectedRadio', value: string): void
+  (e: "update:selectedRadio", value: string): void
 }
 
 const props = defineProps<Props>()
@@ -16,8 +16,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emit>()
 
 const updateSelectedOption = (value: string | null) => {
-  if (value !== null)
-    emit('update:selectedRadio', value)
+  if (value !== null) emit("update:selectedRadio", value)
 }
 </script>
 
@@ -29,21 +28,14 @@ const updateSelectedOption = (value: string | null) => {
     @update:model-value="updateSelectedOption"
   >
     <VRow>
-      <VCol
-        v-for="item in props.radioContent"
-        :key="item.title"
-        v-bind="gridColumn"
-      >
+      <VCol v-for="item in props.radioContent" :key="item.title" v-bind="gridColumn">
         <VLabel
           class="custom-input custom-radio-icon rounded cursor-pointer"
           :class="props.selectedRadio === item.value ? 'active' : ''"
         >
           <slot :item="item">
             <div class="d-flex flex-column align-center text-center gap-2">
-              <VIcon
-                v-bind="item.icon"
-                class="text-high-emphasis"
-              />
+              <VIcon v-bind="item.icon" class="text-high-emphasis" />
               <h6 class="text-h6">
                 {{ item.title }}
               </h6>

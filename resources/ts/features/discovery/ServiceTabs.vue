@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { serviceLines } from '@/features/workspace/config'
+import { serviceLines } from "@/features/workspace/config"
 
 const props = defineProps<{ modelValue?: string; all?: boolean; label?: string }>()
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+const emit = defineEmits<{ "update:modelValue": [value: string] }>()
 
 const model = computed({
   get: () => props.modelValue,
-  set: value => emit('update:modelValue', value ?? ''),
+  set: value => emit("update:modelValue", value ?? ""),
 })
 
-const tabs = computed(() => [...(props.all ? [{ name: '', label: 'All services', icon: 'tabler-layout-grid' }] : []), ...serviceLines.map(item => ({ name: item.name, label: item.name, icon: item.icon }))])
+const tabs = computed(() => [
+  ...(props.all ? [{ name: "", label: "All services", icon: "tabler-layout-grid" }] : []),
+  ...serviceLines.map(item => ({ name: item.name, label: item.name, icon: item.icon })),
+])
 </script>
 
 <template>
@@ -20,18 +23,9 @@ const tabs = computed(() => [...(props.all ? [{ name: '', label: 'All services',
     color="primary-darken-1"
     :mandatory="all ? false : 'force'"
   >
-    <VTab
-      v-for="item in tabs"
-      :key="item.name"
-      :value="item.name"
-      class="service-tab"
-      stacked
-    >
+    <VTab v-for="item in tabs" :key="item.name" :value="item.name" class="service-tab" stacked>
       <span class="service-tab__badge">
-        <VIcon
-          :icon="item.icon"
-          size="24"
-        />
+        <VIcon :icon="item.icon" size="24" />
       </span>
       {{ item.label }}
     </VTab>
@@ -54,9 +48,13 @@ const tabs = computed(() => [...(props.all ? [{ name: '', label: 'All services',
     text-transform: none;
   }
 
-  :deep(.v-tab .v-btn__content) { white-space: nowrap; }
+  :deep(.v-tab .v-btn__content) {
+    white-space: nowrap;
+  }
 
-  :deep(.v-tab:not(.v-tab--selected)) { color: rgb(var(--v-theme-secondary)); }
+  :deep(.v-tab:not(.v-tab--selected)) {
+    color: rgb(var(--v-theme-secondary));
+  }
 }
 
 .service-tab__badge {

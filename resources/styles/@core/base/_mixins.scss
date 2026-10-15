@@ -2,7 +2,10 @@
 @use "@styles/variables/vuetify.scss";
 
 @mixin elevation($z, $important: false) {
-  box-shadow: map.get(vuetify.$shadow-key-umbra, $z), map.get(vuetify.$shadow-key-penumbra, $z), map.get(vuetify.$shadow-key-ambient, $z) if($important, !important, null);
+  box-shadow:
+    map.get(vuetify.$shadow-key-umbra, $z),
+    map.get(vuetify.$shadow-key-penumbra, $z),
+    map.get(vuetify.$shadow-key-ambient, $z) if($important, !important, null);
 }
 
 // #region before-pseudo
@@ -41,13 +44,11 @@
     opacity: calc(var(--v-selected-opacity) * var(--v-theme-overlay-multiplier));
   }
 
-  &:hover
-  #{$selector} {
+  &:hover #{$selector} {
     opacity: calc(var(--v-selected-opacity) + var(--v-hover-opacity) * var(--v-theme-overlay-multiplier));
   }
 
-  &:focus-visible
-  #{$selector} {
+  &:focus-visible #{$selector} {
     opacity: calc(var(--v-selected-opacity) + var(--v-focus-opacity) * var(--v-theme-overlay-multiplier));
   }
 

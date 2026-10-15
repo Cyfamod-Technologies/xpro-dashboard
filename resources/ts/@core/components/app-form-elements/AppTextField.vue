@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 defineOptions({
-  name: 'AppTextField',
+  name: "AppTextField",
   inheritAttrs: false,
 })
 
-const elementId = computed (() => {
+const elementId = computed(() => {
   const attrs = useAttrs()
   const _elementIdToken = attrs.id
   const _id = useId()
@@ -16,17 +16,8 @@ const label = computed(() => useAttrs().label as string | undefined)
 </script>
 
 <template>
-  <div
-    class="app-text-field flex-grow-1"
-    :class="$attrs.class"
-  >
-    <VLabel
-      v-if="label"
-      :for="elementId"
-      class="mb-1 text-body-2 text-wrap"
-      style="line-height: 15px;"
-      :text="label"
-    />
+  <div class="app-text-field flex-grow-1" :class="$attrs.class">
+    <VLabel v-if="label" :for="elementId" class="mb-1 text-body-2 text-wrap" style="line-height: 15px" :text="label" />
     <VTextField
       v-bind="{
         ...$attrs,
@@ -36,14 +27,8 @@ const label = computed(() => useAttrs().label as string | undefined)
         id: elementId,
       }"
     >
-      <template
-        v-for="(_, name) in $slots"
-        #[name]="slotProps"
-      >
-        <slot
-          :name="name"
-          v-bind="slotProps || {}"
-        />
+      <template v-for="(_, name) in $slots" #[name]="slotProps">
+        <slot :name="name" v-bind="slotProps || {}" />
       </template>
     </VTextField>
   </div>

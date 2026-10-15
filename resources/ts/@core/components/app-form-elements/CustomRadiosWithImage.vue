@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { GridColumn } from '@core/types'
+import type { GridColumn } from "@core/types"
 
 interface Props {
   selectedRadio: string
@@ -8,15 +8,14 @@ interface Props {
 }
 
 interface Emit {
-  (e: 'update:selectedRadio', value: string): void
+  (e: "update:selectedRadio", value: string): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emit>()
 
 const updateSelectedOption = (value: string | null) => {
-  if (value !== null)
-    emit('update:selectedRadio', value)
+  if (value !== null) emit("update:selectedRadio", value)
 }
 </script>
 
@@ -28,31 +27,16 @@ const updateSelectedOption = (value: string | null) => {
     @update:model-value="updateSelectedOption"
   >
     <VRow>
-      <VCol
-        v-for="item in props.radioContent"
-        :key="item.bgImage"
-        v-bind="gridColumn"
-      >
+      <VCol v-for="item in props.radioContent" :key="item.bgImage" v-bind="gridColumn">
         <VLabel
           class="custom-input custom-radio rounded cursor-pointer w-100"
           :class="props.selectedRadio === item.value ? 'active' : ''"
         >
-          <slot
-            name="content"
-            :item="item"
-          >
+          <slot name="content" :item="item">
             <template v-if="typeof item.bgImage === 'object'">
-              <Component
-                :is="item.bgImage"
-                class="custom-radio-image"
-              />
+              <Component :is="item.bgImage" class="custom-radio-image" />
             </template>
-            <img
-              v-else
-              :src="item.bgImage"
-              alt="bg-img"
-              class="custom-radio-image"
-            >
+            <img v-else :src="item.bgImage" alt="bg-img" class="custom-radio-image" />
           </slot>
 
           <VRadio
@@ -62,15 +46,8 @@ const updateSelectedOption = (value: string | null) => {
           />
         </VLabel>
 
-        <VLabel
-          v-if="item.label || $slots.label"
-          :for="`custom-radio-with-img-${item.value}`"
-          class="cursor-pointer"
-        >
-          <slot
-            name="label"
-            :label="item.label"
-          >
+        <VLabel v-if="item.label || $slots.label" :for="`custom-radio-with-img-${item.value}`" class="cursor-pointer">
+          <slot name="label" :label="item.label">
             {{ item.label }}
           </slot>
         </VLabel>

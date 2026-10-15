@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 defineOptions({
-  name: 'AppCombobox',
+  name: "AppCombobox",
   inheritAttrs: false,
 })
 
-const elementId = computed (() => {
+const elementId = computed(() => {
   const attrs = useAttrs()
   const _elementIdToken = attrs.id
   const _id = useId()
@@ -16,16 +16,8 @@ const label = computed(() => useAttrs().label as string | undefined)
 </script>
 
 <template>
-  <div
-    class="app-combobox flex-grow-1"
-    :class="$attrs.class"
-  >
-    <VLabel
-      v-if="label"
-      :for="elementId"
-      class="mb-1 text-body-2"
-      :text="label"
-    />
+  <div class="app-combobox flex-grow-1" :class="$attrs.class">
+    <VLabel v-if="label" :for="elementId" class="mb-1 text-body-2" :text="label" />
 
     <VCombobox
       v-bind="{
@@ -44,14 +36,8 @@ const label = computed(() => useAttrs().label as string | undefined)
         },
       }"
     >
-      <template
-        v-for="(_, name) in $slots"
-        #[name]="slotProps"
-      >
-        <slot
-          :name="name"
-          v-bind="slotProps || {}"
-        />
+      <template v-for="(_, name) in $slots" #[name]="slotProps">
+        <slot :name="name" v-bind="slotProps || {}" />
       </template>
     </VCombobox>
   </div>

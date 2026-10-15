@@ -9,10 +9,7 @@ defineProps<{
 <template>
   <div class="d-flex flex-wrap align-start justify-space-between gap-4 mb-6">
     <div>
-      <div
-        v-if="eyebrow"
-        class="text-overline text-primary font-weight-bold mb-1"
-      >
+      <div v-if="eyebrow" class="text-overline text-primary font-weight-bold mb-1">
         {{ eyebrow }}
       </div>
       <h1 class="text-h3 mb-2">

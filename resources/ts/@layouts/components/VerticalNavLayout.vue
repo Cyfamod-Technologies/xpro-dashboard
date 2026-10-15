@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { VerticalNav } from '@layouts/components'
-import { useLayoutConfigStore } from '@layouts/stores/config'
-import type { VerticalNavItems } from '@layouts/types'
+import { VerticalNav } from "@layouts/components"
+import { useLayoutConfigStore } from "@layouts/stores/config"
+import type { VerticalNavItems } from "@layouts/types"
 
 interface Props {
   navItems: VerticalNavItems
@@ -38,14 +38,17 @@ syncRef(isOverlayNavActive, isLayoutOverlayVisible)
 
 // ℹ️ Hide overlay if user open overlay nav in <md and increase the window width without closing overlay nav
 watch(windowWidth, () => {
-  if (!configStore.isLessThanOverlayNavBreakpoint && isLayoutOverlayVisible.value)
-    isLayoutOverlayVisible.value = false
+  if (!configStore.isLessThanOverlayNavBreakpoint && isLayoutOverlayVisible.value) isLayoutOverlayVisible.value = false
 })
 
 const verticalNavAttrs = computed(() => {
-  const vNavAttrs = toRef(props, 'verticalNavAttrs')
+  const vNavAttrs = toRef(props, "verticalNavAttrs")
 
-  const { wrapper: verticalNavWrapper, wrapperProps: verticalNavWrapperProps, ...additionalVerticalNavAttrs } = vNavAttrs.value
+  const {
+    wrapper: verticalNavWrapper,
+    wrapperProps: verticalNavWrapperProps,
+    ...additionalVerticalNavAttrs
+  } = vNavAttrs.value
 
   return {
     verticalNavWrapper,
@@ -56,11 +59,7 @@ const verticalNavAttrs = computed(() => {
 </script>
 
 <template>
-  <div
-    class="layout-wrapper"
-    data-allow-mismatch
-    :class="configStore._layoutClasses"
-  >
+  <div class="layout-wrapper" data-allow-mismatch :class="configStore._layoutClasses">
     <component
       :is="verticalNavAttrs.verticalNavWrapper ? verticalNavAttrs.verticalNavWrapper : 'div'"
       v-bind="verticalNavAttrs.verticalNavWrapperProps"
@@ -81,15 +80,9 @@ const verticalNavAttrs = computed(() => {
       </VerticalNav>
     </component>
     <div class="layout-content-wrapper">
-      <header
-        class="layout-navbar"
-        :class="[{ 'navbar-blur': configStore.isNavbarBlurEnabled }]"
-      >
+      <header class="layout-navbar" :class="[{ 'navbar-blur': configStore.isNavbarBlurEnabled }]">
         <div class="navbar-content-container">
-          <slot
-            name="navbar"
-            :toggle-vertical-overlay-nav-active="toggleIsOverlayNavActive"
-          />
+          <slot name="navbar" :toggle-vertical-overlay-nav-active="toggleIsOverlayNavActive" />
         </div>
       </header>
       <main class="layout-page-content">
@@ -106,7 +99,11 @@ const verticalNavAttrs = computed(() => {
     <div
       class="layout-overlay"
       :class="[{ visible: isLayoutOverlayVisible }]"
-      @click="() => { isLayoutOverlayVisible = !isLayoutOverlayVisible }"
+      @click="
+        () => {
+          isLayoutOverlayVisible = !isLayoutOverlayVisible
+        }
+      "
     />
   </div>
 </template>
