@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import Discovery from '@/features/discovery/Discovery.vue'
-
-definePage({ meta: { public: true, publicSite: true } })
+definePage({ redirect: "/services", meta: { public: true, publicSite: true } })
 </script>
 
 <template>
-  <Discovery />
+  <div />
 </template>
