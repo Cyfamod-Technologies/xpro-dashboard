@@ -50,7 +50,7 @@ export const useOperationsStore = defineStore("operations", () => {
 
     return {
       id: user.id,
-      name: state.value.preferences[user.id]?.name ?? user.name,
+      name: state.value.preferences[user.id]?.name ?? `${user.firstName} ${user.lastName}`.trim(),
       email: user.email,
       role: user.role,
     }
