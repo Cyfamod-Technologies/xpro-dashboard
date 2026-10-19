@@ -1100,11 +1100,14 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
     case "staff.invite": {
       requireStaff("staff.manage")
 
-      const name = command.name.trim()
+      const firstName = command.firstName.trim()
+      const lastName = command.lastName.trim()
+      const name = `${firstName} ${lastName}`
       const email = command.email.trim()
       const roles = [...new Set(command.roles)]
 
-      need(name.length >= 2, "Enter the staff member's full name.")
+      need(firstName.length > 0, "Enter the staff member's first name.")
+      need(lastName.length > 0, "Enter the staff member's last name.")
       need(/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(email), "Enter a valid email address.")
       need(
         !state.staff.some(item => item.email.toLowerCase() === email.toLowerCase()),
