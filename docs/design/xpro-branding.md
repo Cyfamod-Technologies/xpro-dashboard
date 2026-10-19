@@ -1,6 +1,6 @@
 # Xpro Branding
 
-The dashboard keeps the source project's layout and Public Sans typography.
+The dashboard uses Public Sans typography.
 Its primary colour is the supplied Xpro blue `#4AA7DF`.
 
 ## Tokens
@@ -41,10 +41,4 @@ Source: [Xpro about page](https://xpro.ng/about.php).
 - Address: 63 Claude Ake Street, 2nd Avenue, Abuja
 - Address: No. 4 Aminu Ifesinachi Crescent, Abuja
 
-These details are centralised in `resources/ts/utils/branding.ts`. They do not
-change the inherited prototype accounts or operational geography defaults.
-
-## Reference workflows
-
-Inherited product documentation describes example operations and budget flows.
-It is reference material for the scaffold rather than an approved Xpro scope.
+These details are centralised in `resources/ts/utils/branding.ts`.
