@@ -157,16 +157,13 @@ const suspend = async () => {
           v-model="invite.lastName"
           label="Last name"
           autocomplete="family-name"
-        /><VTextField
-          v-model="invite.email"
-          label="Email address"
-          type="email"
-        /><VSelect v-model="invite.roles" :items="roleItems" label="Staff roles" multiple chips /><VAlert
-          v-if="ops.error"
-          color="error"
-          variant="tonal"
-          class="mb-4"
-        >
+        /><VTextField v-model="invite.email" label="Email address" type="email" /><VSelect
+          v-model="invite.roles"
+          :items="roleItems"
+          label="Staff roles"
+          multiple
+          chips
+        /><VAlert v-if="ops.error" color="error" variant="tonal" class="mb-4">
           {{ ops.error }}
         </VAlert>
         <div class="d-flex justify-end gap-2">
