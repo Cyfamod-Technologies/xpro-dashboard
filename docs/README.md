@@ -2,7 +2,8 @@
 
 This repository contains the Xpro customer, provider, and staff web prototype.
 The current product flows are documented in [Xpro frontend UI flows](flows/xpro-frontend-ui.md).
-Use [development](dev.md) for local setup and checks, [branding](design/xpro-branding.md)
+Use [architecture](architecture/README.md) for the implemented frontend,
+[development](dev.md) for local setup and checks, [branding](design/xpro-branding.md)
 for visual tokens, and the [web and server auth plan](api/auth-web-server-plan.md)
 for backend integration work.
 

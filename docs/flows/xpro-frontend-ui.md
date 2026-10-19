@@ -8,13 +8,11 @@ notifications and React Native implementation are outside this slice.
 
 - `/`: public homepage for everyone, signed in or not.
 - `/services`: all six service lines and service-specific discovery.
-- `/providers`: search approved profiles by service, location and availability.
-- `/providers/:id`: public services, introduction, experience, sample ratings and
-  portfolio. Verification documents, private contacts and review notes stay in
-  the provider/admin UI.
+- `/providers` and `/providers/:id`: currently redirect to `/services`. Public
+  provider search and profile routes are not exposed in the current build.
 - `/request`: create a brief in public. Visitors can prepare a validated brief,
   sign in, and resume it before submission. Submission requires a customer account.
-  A preferred provider is a dispatch preference rather than an automatic match.
+  XPro handles provider assignment; the customer does not pick a provider.
 - `/overview`: customer/provider activity overview. Private sections at top
   level (`/requests`, `/jobs`, `/quotes`, `/schedule`, `/messages`,
   `/notifications`, `/settings`, `/account`, `/verification`, `/availability`)
@@ -56,8 +54,8 @@ notifications and React Native implementation are outside this slice.
 
 ## Approval gates
 
-- New requests alert matching providers (approved, available, same city, or only the
-  preferred provider) with a generic notice. They cannot open the request.
+- New requests alert eligible providers with a generic notice. They cannot open
+  the request before XPro offers the assignment.
 - Provider acceptance becomes `pending_approval`. XPro (`dispatch.manage`) confirms or
   rejects it; only then is the request matched, pricing opened and the customer told.
 - Provider progress and completion reports are pending until a staff member with
@@ -117,8 +115,8 @@ notifications and React Native implementation are outside this slice.
 
 ## Preview data and limits
 
-Business state persists in this browser's localStorage and is shared between demo
-accounts. Actions simulate a short save delay. Admin Settings can simulate a failed
+Business state persists in this tab's sessionStorage and is shared between demo
+accounts using that tab. Actions simulate a short save delay. Admin Settings can simulate a failed
 save or restore sample records after confirmation. Failed commands leave data intact.
 Notification channel preferences are recorded; email/push are not delivered.
 
