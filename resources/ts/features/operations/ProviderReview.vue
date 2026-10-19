@@ -8,6 +8,16 @@ import { watMoment } from "@/features/operations/hours"
 import Attachments from "@/features/operations/Attachments.vue"
 
 const ops = useOperationsStore()
+const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
+
+onMounted(async () => {
+  if (usePrototype) return
+  try {
+    await ops.loadProvidersForReview()
+  } catch (cause) {
+    ops.error = cause instanceof Error ? cause.message : "Unable to load provider reviews."
+  }
+})
 const search = ref("")
 const status = ref("")
 const selectedId = ref("")
