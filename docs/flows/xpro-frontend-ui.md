@@ -38,8 +38,8 @@ notifications and React Native implementation are outside this slice.
 9. Completion: customer acknowledgement or issue report, admin resolution and
    acknowledgement-gated final closure.
 10. Staff management: admin accounts carry staff roles (super admin, operations,
-    pricing, client relations) and the reducer enforces one permission per action;
-    see "Staff management" below.
+    pricing, client relations, finance) and the reducer enforces one permission
+    per action; see "Staff management" below.
 11. Overview/utilities: derived activity counts, audit history, account/contact
     preferences, notification settings and admin prototype controls.
 12. Approval gates: anything a provider or customer does that affects the other
@@ -116,13 +116,15 @@ notifications and React Native implementation are outside this slice.
 ## Preview data and limits
 
 Business state persists in this tab's sessionStorage and is shared between demo
-accounts using that tab. Actions simulate a short save delay. Admin Settings can simulate a failed
-save or restore sample records after confirmation. Failed commands leave data intact.
+accounts using that tab. Actions simulate a short save delay. Admin Settings
+can simulate a failed save or restore sample records after confirmation. Failed
+commands leave data intact.
 Notification channel preferences are recorded; email/push are not delivered.
 
 File names/types/sizes are retained. PNG/JPEG/WebP images up to 512 KB also preview
 locally; other files are metadata only. There is no upload service or cloud storage.
-Public ratings/review counts are sample data; review submission is not implemented.
+Provider ratings/review counts are sample data; public provider profile routes
+currently redirect to `/services`, and review submission is not implemented.
 
 UI role guards and visibility are for prototype review; real authorization and
 provider verification belong to backend integration. Demo accounts use the existing

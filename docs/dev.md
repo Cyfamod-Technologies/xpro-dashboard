@@ -27,11 +27,10 @@ shared template infrastructure in `resources/ts/@core` and
 
 ## Git and CI
 
-The local repository starts on `codex/setup-dashboard`. There is no configured
-remote or deployment target. Add the intended remote and choose your default
-branch when publishing. `.github/workflows/ci.yml` runs frozen dependency
-installation, lint, type checking and build for `main` pushes and pull requests.
-The source deployment workflow and source CODEOWNERS are omitted.
+The repository has an `origin` remote. `.github/workflows/ci.yml` runs frozen
+dependency installation, lint, type checking and build for `main` pushes and
+pull requests.
+No deployment workflow or CODEOWNERS file is present.
 
 ## Backend
 
@@ -40,3 +39,6 @@ yet share a complete authentication contract; see the
 [web and server auth plan](api/auth-web-server-plan.md) before turning mocks off.
 Keep environment values in `.env`, which is ignored by Git; `.env.example`
 contains placeholders only.
+
+The [architecture index](architecture/README.md) describes the current web
+routes, authentication adapter and browser-local operations workflow.
