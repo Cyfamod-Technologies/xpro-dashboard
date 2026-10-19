@@ -3,7 +3,7 @@ import { serviceLines } from "@/features/workspace/config"
 import { useAuthStore } from "@/stores/auth"
 
 const auth = useAuthStore()
-const firstName = computed(() => auth.user?.name.split(" ")[0] ?? "there")
+const firstName = computed(() => auth.user?.firstName ?? "there")
 </script>
 
 <template>

@@ -12,7 +12,7 @@ Iconify stylesheet and MSW service worker; both are ignored by Git.
 | `pnpm build`       | Production build in `dist/`                              |
 | `pnpm preview`     | Serve the production build                               |
 | `pnpm typecheck`   | Vue and TypeScript checks                                |
-| `pnpm lint:check`  | Check the inherited ESLint rules without modifying files |
+| `pnpm lint:check`  | Check ESLint rules without modifying files           |
 | `pnpm lint`        | Apply ESLint fixes                                       |
 | `pnpm build:icons` | Generate Iconify CSS                                     |
 | `pnpm msw:init`    | Generate the local mock service worker                   |
@@ -27,15 +27,18 @@ shared template infrastructure in `resources/ts/@core` and
 
 ## Git and CI
 
-The local repository starts on `codex/setup-dashboard`. There is no configured
-remote or deployment target. Add the intended remote and choose your default
-branch when publishing. `.github/workflows/ci.yml` runs frozen dependency
-installation, lint, type checking and build for `main` pushes and pull requests.
-The source deployment workflow and source CODEOWNERS are omitted.
+The repository has an `origin` remote. `.github/workflows/ci.yml` runs frozen
+dependency installation, lint, type checking and build for `main` pushes and
+pull requests.
+No deployment workflow or CODEOWNERS file is present.
 
 ## Backend
 
-Mocks are enabled by default. Do not treat the inherited operations contracts
-as compatible with `xpro-server`; adapt authentication, role names and response
-envelopes before turning mocks off. Keep environment values in `.env`, which
-is ignored by Git; `.env.example` contains placeholders only.
+Mocks are enabled by default. The Xpro web prototype and `xpro-server` do not
+yet share a complete authentication contract; see the
+[web and server auth plan](api/auth-web-server-plan.md) before turning mocks off.
+Keep environment values in `.env`, which is ignored by Git; `.env.example`
+contains placeholders only.
+
+The [architecture index](architecture/README.md) describes the current web
+routes, authentication adapter and browser-local operations workflow.

@@ -53,7 +53,7 @@ const handleLogout = async () => {
             </template>
 
             <VListItemTitle class="font-weight-semibold">
-              {{ auth.user?.name ?? "Xpro user" }}
+              {{ auth.user ? `${auth.user.firstName} ${auth.user.lastName}`.trim() : "Xpro user" }}
             </VListItemTitle>
             <VListItemSubtitle>{{ roleLabel }}</VListItemSubtitle>
           </VListItem>

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useOperationsStore } from "@/stores/operations"
+import { useAuthStore } from "@/stores/auth"
 import { isWorkspaceRole, sectionPath } from "@/features/workspace/config"
 import { isFinished, statusLabelFor, when } from "@/features/operations/types"
 import { isUnclaimedOverdue } from "@/features/operations/staff"
 import { pendingApprovals } from "@/features/operations/workflow"
 
 const ops = useOperationsStore()
+const auth = useAuthStore()
 const role = computed(() => ops.actor?.role)
 
 const adminCounters = computed<{ label: string; value: number; to?: string }[]>(() => [
@@ -70,7 +72,7 @@ const requestPath = computed(() => pathFor(role.value === "provider" ? "jobs" : 
   <div class="d-flex justify-space-between align-start flex-wrap gap-4 mb-6">
     <div>
       <div class="text-overline text-primary">{{ role }} WORKSPACE</div>
-      <h1 class="text-h3 mb-2">Welcome, {{ ops.actor?.name.split(" ")[0] }}.</h1>
+      <h1 class="text-h3 mb-2">Welcome, {{ auth.user?.firstName ?? "there" }}.</h1>
       <p class="text-medium-emphasis mb-0">
         {{
           role === "customer"

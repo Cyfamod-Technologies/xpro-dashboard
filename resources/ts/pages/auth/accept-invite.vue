@@ -2,15 +2,23 @@
 import { VForm } from "vuetify/components/VForm"
 
 import AuthShell from "@/features/auth/AuthShell.vue"
-import { emailRules, fullName, matches, passwordRules, required } from "@/features/auth/validation"
+import { matches, passwordRules, required } from "@/features/auth/validation"
+import { authApi } from "@/services/xpro-api"
+import { getErrorMessage } from "@/utils/errors"
 
 definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } })
 
 const completed = ref(false)
+const loading = ref(false)
+const errorMessage = ref("")
+const enrollment = ref<{ token: string; secret: string; otpauthUrl: string } | null>(null)
+const mfaCode = ref("")
+const route = useRoute()
+const isPrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const formRef = ref<VForm>()
 const form = reactive({
-  name: "Amina Musa",
-  email: "manager@xpro.test",
+  firstName: "",
+  lastName: "",
   password: "",
   confirmation: "",
   accepted: false,
@@ -18,28 +26,83 @@ const form = reactive({
 
 const submit = async () => {
   const validation = await formRef.value?.validate()
-  if (validation?.valid) completed.value = true
+  if (!validation?.valid) return
+  errorMessage.value = ""
+  if (isPrototype) {
+    completed.value = true
+
+    return
+  }
+
+  const token = typeof route.query.token === "string" ? route.query.token : ""
+  if (!token) {
+    errorMessage.value = "This invitation link is invalid or has expired."
+
+    return
+  }
+
+  loading.value = true
+  try {
+    const response = await authApi.acceptInvite({
+      token,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      password: form.password,
+    })
+    enrollment.value = response.data
+  } catch (error) {
+    errorMessage.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const completeEnrollment = async () => {
+  if (!enrollment.value) return
+  loading.value = true
+  errorMessage.value = ""
+  try {
+    await authApi.enrollMfa(mfaCode.value, enrollment.value.token)
+    completed.value = true
+  } catch (error) {
+    errorMessage.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
 <template>
   <AuthShell
-    eyebrow="Manager invitation"
+    eyebrow="Staff invitation"
     title="Join the Xpro operations workspace"
     subtitle="Confirm your profile, create a password and continue to your workspace."
   >
-    <VAlert v-if="completed" color="success" variant="tonal" class="mb-6">
-      Invitation accepted. If MFA is enabled for your account, you will be asked to verify it when you sign in.
+    <VAlert v-if="errorMessage" color="error" variant="tonal" class="mb-6">
+      {{ errorMessage }}
     </VAlert>
-    <VForm v-if="!completed" ref="formRef" @submit.prevent="submit">
-      <AppTextField
-        v-model="form.name"
-        label="Full name"
-        autocomplete="name"
-        :rules="[required('Full name'), fullName]"
-        class="mb-5"
-      />
-      <AppTextField v-model="form.email" label="Invited email" disabled :rules="emailRules" class="mb-5" />
+    <VAlert v-if="completed" color="success" variant="tonal" class="mb-6">
+      Invitation accepted. Your staff account is ready to sign in.
+    </VAlert>
+    <VForm v-if="!completed && !enrollment" ref="formRef" @submit.prevent="submit">
+      <VRow>
+        <VCol cols="12" sm="6">
+          <AppTextField
+            v-model="form.firstName"
+            label="First name"
+            autocomplete="given-name"
+            :rules="[required('First name')]"
+          />
+        </VCol>
+        <VCol cols="12" sm="6">
+          <AppTextField
+            v-model="form.lastName"
+            label="Last name"
+            autocomplete="family-name"
+            :rules="[required('Last name')]"
+          />
+        </VCol>
+      </VRow>
       <VRow>
         <VCol cols="12" sm="6">
           <AppTextField
@@ -66,8 +129,14 @@ const submit = async () => {
         :rules="[required('Acceptance of the terms')]"
         class="my-4"
       />
-      <VBtn block size="large" type="submit"> Accept invitation </VBtn>
+      <VBtn block size="large" type="submit" :loading="loading"> Accept invitation </VBtn>
     </VForm>
-    <VBtn v-else block size="large" to="/login"> Continue to sign in </VBtn>
+    <div v-if="enrollment && !completed">
+      <p class="mb-4">Add this account to your authenticator app, then enter its six-digit code.</p>
+      <code class="d-block mb-5">{{ enrollment.secret }}</code>
+      <AppTextField v-model="mfaCode" label="Authenticator code" inputmode="numeric" maxlength="6" class="mb-5" />
+      <VBtn block size="large" :loading="loading" @click="completeEnrollment"> Activate staff account </VBtn>
+    </div>
+    <VBtn v-if="completed" block size="large" to="/login"> Continue to sign in </VBtn>
   </AuthShell>
 </template>

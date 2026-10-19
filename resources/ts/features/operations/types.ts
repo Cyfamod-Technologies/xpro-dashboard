@@ -407,7 +407,7 @@ export type Command =
   | { type: "message.send"; requestId: string; channel: Channel; text: string; attachments: Attachment[] }
   | { type: "notification.read"; notificationId?: string }
   | { type: "preferences.save"; input: Preferences }
-  | { type: "staff.invite"; name: string; email: string; roles: StaffRole[] }
+  | { type: "staff.invite"; firstName: string; lastName: string; email: string; roles: StaffRole[] }
   | { type: "staff.roles"; staffId: string; roles: StaffRole[] }
   | { type: "staff.status"; staffId: string; status: "active" | "suspended"; reassignTo: string }
   | { type: "settings.save"; quoteApprovalThreshold: number | null; assignment?: AssignmentSettings }

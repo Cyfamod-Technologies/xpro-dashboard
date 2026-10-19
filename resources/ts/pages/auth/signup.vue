@@ -2,7 +2,7 @@
 import { VForm } from "vuetify/components/VForm"
 
 import AuthShell from "@/features/auth/AuthShell.vue"
-import { emailRules, fullName, matches, passwordRules, required } from "@/features/auth/validation"
+import { emailRules, matches, passwordRules, required } from "@/features/auth/validation"
 import { authApi } from "@/services/xpro-api"
 import { getErrorMessage } from "@/utils/errors"
 
@@ -11,7 +11,7 @@ definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } 
 const router = useRouter()
 const route = useRoute()
 const formRef = ref<VForm>()
-const form = reactive({ name: "", email: "", password: "", confirmPassword: "", accepted: false })
+const form = reactive({ firstName: "", lastName: "", email: "", password: "", confirmPassword: "", accepted: false })
 const accountRole = ref<"customer" | "provider">(route.query.role === "provider" ? "provider" : "customer")
 const accountTypes = [
   { title: "Customer", value: "customer" },
@@ -30,7 +30,8 @@ const submit = async () => {
   loading.value = true
   try {
     await authApi.registerAccount({
-      name: form.name,
+      firstName: form.firstName,
+      lastName: form.lastName,
       email: form.email,
       password: form.password,
       role: accountRole.value,
@@ -62,13 +63,22 @@ const submit = async () => {
             XPro to review.
           </p>
         </VCol>
-        <VCol cols="12">
+        <VCol cols="12" sm="6">
           <AppTextField
-            v-model="form.name"
-            label="Full name"
-            placeholder="Enter your full name"
-            autocomplete="name"
-            :rules="[required('Full name'), fullName]"
+            v-model="form.firstName"
+            label="First name"
+            placeholder="First name"
+            autocomplete="given-name"
+            :rules="[required('First name')]"
+          />
+        </VCol>
+        <VCol cols="12" sm="6">
+          <AppTextField
+            v-model="form.lastName"
+            label="Last name"
+            placeholder="Last name"
+            autocomplete="family-name"
+            :rules="[required('Last name')]"
           />
         </VCol>
         <VCol cols="12">

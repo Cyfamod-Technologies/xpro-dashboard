@@ -383,10 +383,7 @@ declare module 'vue' {
   interface ComponentCustomProperties {
     readonly $api: UnwrapRef<typeof import('./resources/ts/utils/api')['$api']>
     readonly COOKIE_MAX_AGE_1_YEAR: UnwrapRef<typeof import('./resources/ts/utils/constants')['COOKIE_MAX_AGE_1_YEAR']>
-    readonly DEFAULT_COUNTRY: UnwrapRef<typeof import('./resources/ts/utils/constants')['DEFAULT_COUNTRY']>
-    readonly DEFAULT_STATE: UnwrapRef<typeof import('./resources/ts/utils/constants')['DEFAULT_STATE']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
-    readonly NIGERIAN_STATES: UnwrapRef<typeof import('./resources/ts/utils/constants')['NIGERIAN_STATES']>
     readonly XPRO_BRAND: UnwrapRef<typeof import('./resources/ts/utils/branding')['XPRO_BRAND']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
     readonly alphaDashValidator: UnwrapRef<typeof import('./resources/ts/@core/utils/validators')['alphaDashValidator']>
@@ -660,7 +657,6 @@ declare module 'vue' {
     readonly useProjection: UnwrapRef<typeof import('@vueuse/math')['useProjection']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
-    readonly useRemoteData: UnwrapRef<typeof import('./resources/ts/composables/useRemoteData')['useRemoteData']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
     readonly useResponsiveLeftSidebar: UnwrapRef<typeof import('./resources/ts/@core/composable/useResponsiveSidebar')['useResponsiveLeftSidebar']>
     readonly useRound: UnwrapRef<typeof import('@vueuse/math')['useRound']>

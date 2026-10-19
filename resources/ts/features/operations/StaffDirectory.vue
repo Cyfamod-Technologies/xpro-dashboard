@@ -9,7 +9,12 @@ const roleItems = (Object.keys(staffRoleLabels) as StaffRole[]).map(value => ({ 
 const statusColors = { active: "success", invited: "info", suspended: "warning" } as const
 
 const inviteDialog = ref(false)
-const invite = reactive<{ name: string; email: string; roles: StaffRole[] }>({ name: "", email: "", roles: [] })
+const invite = reactive<{ firstName: string; lastName: string; email: string; roles: StaffRole[] }>({
+  firstName: "",
+  lastName: "",
+  email: "",
+  roles: [],
+})
 const rolesTarget = ref<StaffMember>()
 const rolesDraft = ref<StaffRole[]>([])
 const suspendTarget = ref<StaffMember>()
@@ -26,12 +31,20 @@ const needsSuccessor = computed(() => (suspendTarget.value ? openRequests(suspen
 
 const openInvite = () => {
   ops.error = ""
-  Object.assign(invite, { name: "", email: "", roles: [] })
+  Object.assign(invite, { firstName: "", lastName: "", email: "", roles: [] })
   inviteDialog.value = true
 }
 
 const sendInvite = async () => {
-  if (await ops.run({ type: "staff.invite", name: invite.name, email: invite.email, roles: [...invite.roles] }))
+  if (
+    await ops.run({
+      type: "staff.invite",
+      firstName: invite.firstName,
+      lastName: invite.lastName,
+      email: invite.email,
+      roles: [...invite.roles],
+    })
+  )
     inviteDialog.value = false
 }
 
@@ -140,7 +153,11 @@ const suspend = async () => {
     <VCard>
       <VCardText>
         <h2 class="text-h5 mb-4">Invite staff</h2>
-        <VTextField v-model="invite.name" label="Full name" /><VTextField
+        <VTextField v-model="invite.firstName" label="First name" autocomplete="given-name" /><VTextField
+          v-model="invite.lastName"
+          label="Last name"
+          autocomplete="family-name"
+        /><VTextField
           v-model="invite.email"
           label="Email address"
           type="email"

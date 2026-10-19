@@ -14,6 +14,7 @@ const formRef = ref<VForm>()
 const code = ref("")
 const loading = ref(false)
 const errorMessage = ref("")
+const isPrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 
 watch(code, value => {
   const digits = value.replace(/\D/g, "").slice(0, 6)
@@ -52,7 +53,9 @@ const cancel = async () => {
     <VAlert v-if="errorMessage" color="error" variant="tonal" class="mb-5">
       {{ errorMessage }}
     </VAlert>
-    <VAlert color="info" variant="tonal" class="mb-6"> Use <strong>123456</strong> for the frontend prototype. </VAlert>
+    <VAlert v-if="isPrototype" color="info" variant="tonal" class="mb-6">
+      Use <strong>123456</strong> for the frontend prototype.
+    </VAlert>
     <VForm ref="formRef" @submit.prevent="submit">
       <AppTextField
         v-model="code"
