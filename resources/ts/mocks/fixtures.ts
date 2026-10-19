@@ -13,7 +13,8 @@ export const demoCredentials = [
 export const users: User[] = [
   {
     id: "usr-customer",
-    name: "Ada Okafor",
+    firstName: "Ada",
+    lastName: "Okafor",
     email: "customer@xpro.test",
     role: "customer",
     status: "active",
@@ -24,7 +25,8 @@ export const users: User[] = [
   },
   {
     id: "usr-provider",
-    name: "Tunde Bakare",
+    firstName: "Tunde",
+    lastName: "Bakare",
     email: "provider@xpro.test",
     role: "provider",
     status: "active",
@@ -35,7 +37,8 @@ export const users: User[] = [
   },
   {
     id: "usr-admin",
-    name: "Amara Okafor",
+    firstName: "Amara",
+    lastName: "Okafor",
     email: "admin@xpro.test",
     role: "admin",
     status: "active",
@@ -46,7 +49,8 @@ export const users: User[] = [
   },
   {
     id: "usr-operations",
-    name: "Kemi Adebayo",
+    firstName: "Kemi",
+    lastName: "Adebayo",
     email: "operations@xpro.test",
     role: "admin",
     status: "active",
@@ -57,7 +61,8 @@ export const users: User[] = [
   },
   {
     id: "usr-pricing",
-    name: "Chidi Nwosu",
+    firstName: "Chidi",
+    lastName: "Nwosu",
     email: "pricing@xpro.test",
     role: "admin",
     status: "active",
@@ -68,7 +73,8 @@ export const users: User[] = [
   },
   {
     id: "usr-relations",
-    name: "Zainab Lawal",
+    firstName: "Zainab",
+    lastName: "Lawal",
     email: "relations@xpro.test",
     role: "admin",
     status: "active",
@@ -79,7 +85,8 @@ export const users: User[] = [
   },
   {
     id: "usr-finance",
-    name: "Ngozi Eze",
+    firstName: "Ngozi",
+    lastName: "Eze",
     email: "finance@xpro.test",
     role: "admin",
     status: "active",

@@ -65,13 +65,21 @@ export const handlers = [
   http.post(`${api}/auth/register`, async ({ request }) => {
     await delay(600)
 
-    const payload = (await request.json()) as { name?: string; email?: string; password?: string; role?: string }
-    const name = String(payload.name ?? "").trim()
+    const payload = (await request.json()) as {
+      firstName?: string
+      lastName?: string
+      email?: string
+      password?: string
+      role?: string
+    }
+    const firstName = String(payload.firstName ?? "").trim()
+    const lastName = String(payload.lastName ?? "").trim()
     const email = String(payload.email ?? "")
       .trim()
       .toLowerCase()
 
-    if (name.length < 2) return validationError("Enter your full name.")
+    if (!firstName) return validationError("Enter your first name.")
+    if (!lastName) return validationError("Enter your last name.")
     if (!isEmail(email)) return validationError("Enter a valid email address.")
     if (!isStrongPassword(payload.password)) return validationError("Use a stronger password to create your account.")
     if (users.some(user => user.email === email))
@@ -82,23 +90,19 @@ export const handlers = [
 
     users.push({
       id: `usr-${crypto.randomUUID()}`,
-      name,
+      firstName,
+      lastName,
       email,
       role: payload.role,
       status: "unverified",
       title: payload.role === "customer" ? "XPro Customer" : "XPro Service Provider",
-      initials: name
-        .split(/\s+/)
-        .slice(0, 2)
-        .map(part => part[0])
-        .join("")
-        .toUpperCase(),
+      initials: `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase(),
       scopes: [],
       mfaRequired: false,
     })
     accountPasswords.set(email, String(payload.password))
 
-    return envelope({ email, name, status: "unverified" })
+    return envelope({ email, firstName, lastName, status: "unverified" })
   }),
 
   http.post(`${api}/auth/email/verify`, async ({ request }) => {

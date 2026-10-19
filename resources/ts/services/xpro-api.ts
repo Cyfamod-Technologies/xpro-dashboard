@@ -9,8 +9,14 @@ export const authApi = {
       body: { code },
       headers: { Authorization: `Bearer ${challengeToken}` },
     }),
-  registerAccount: (payload: { name: string; email: string; password: string; role: "customer" | "provider" }) =>
-    $api<ApiEnvelope<{ email: string; name: string; status: string }>>("/auth/register", {
+  registerAccount: (payload: {
+    firstName: string
+    lastName: string
+    email: string
+    password: string
+    role: "customer" | "provider"
+  }) =>
+    $api<ApiEnvelope<{ email: string; status: string }>>("/auth/register", {
       method: "POST",
       body: payload,
     }),
@@ -22,7 +28,7 @@ export const authApi = {
     $api<ApiEnvelope<{ reset: boolean }>>("/auth/password/reset", { method: "POST", body: payload }),
   resendVerification: (email: string) =>
     $api<ApiEnvelope<{ sent: boolean }>>("/auth/email/resend", { method: "POST", body: { email } }),
-  acceptInvite: (payload: { token: string; name: string; password: string }) =>
+  acceptInvite: (payload: { token: string; firstName: string; lastName: string; password: string }) =>
     $api<ApiEnvelope<{ token: string; secret: string; otpauthUrl: string; email: string }>>("/auth/invite/accept", {
       method: "POST",
       body: payload,

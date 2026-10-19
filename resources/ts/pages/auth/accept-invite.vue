@@ -2,7 +2,7 @@
 import { VForm } from "vuetify/components/VForm"
 
 import AuthShell from "@/features/auth/AuthShell.vue"
-import { fullName, matches, passwordRules, required } from "@/features/auth/validation"
+import { matches, passwordRules, required } from "@/features/auth/validation"
 import { authApi } from "@/services/xpro-api"
 import { getErrorMessage } from "@/utils/errors"
 
@@ -17,7 +17,8 @@ const route = useRoute()
 const isPrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const formRef = ref<VForm>()
 const form = reactive({
-  name: "",
+  firstName: "",
+  lastName: "",
   password: "",
   confirmation: "",
   accepted: false,
@@ -42,7 +43,12 @@ const submit = async () => {
 
   loading.value = true
   try {
-    const response = await authApi.acceptInvite({ token, name: form.name, password: form.password })
+    const response = await authApi.acceptInvite({
+      token,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      password: form.password,
+    })
     enrollment.value = response.data
   } catch (error) {
     errorMessage.value = getErrorMessage(error)
@@ -79,13 +85,24 @@ const completeEnrollment = async () => {
       Invitation accepted. Your staff account is ready to sign in.
     </VAlert>
     <VForm v-if="!completed && !enrollment" ref="formRef" @submit.prevent="submit">
-      <AppTextField
-        v-model="form.name"
-        label="Full name"
-        autocomplete="name"
-        :rules="[required('Full name'), fullName]"
-        class="mb-5"
-      />
+      <VRow>
+        <VCol cols="12" sm="6">
+          <AppTextField
+            v-model="form.firstName"
+            label="First name"
+            autocomplete="given-name"
+            :rules="[required('First name')]"
+          />
+        </VCol>
+        <VCol cols="12" sm="6">
+          <AppTextField
+            v-model="form.lastName"
+            label="Last name"
+            autocomplete="family-name"
+            :rules="[required('Last name')]"
+          />
+        </VCol>
+      </VRow>
       <VRow>
         <VCol cols="12" sm="6">
           <AppTextField

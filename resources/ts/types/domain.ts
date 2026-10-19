@@ -3,7 +3,8 @@ export type AccountStatus = "active" | "invited" | "unverified" | "suspended"
 
 export interface User {
   id: string
-  name: string
+  firstName: string
+  lastName: string
   email: string
   role: UserRole
   status: AccountStatus
