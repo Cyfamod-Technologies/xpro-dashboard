@@ -1,7 +1,8 @@
 <script setup lang="ts">
 interface UserData {
   id: number | null
-  fullName: string
+  firstName: string
+  lastName: string
   company: string
   username: string
   role: string
@@ -30,7 +31,8 @@ interface Emit {
 const props = withDefaults(defineProps<Props>(), {
   userData: () => ({
     id: 0,
-    fullName: "",
+    firstName: "",
+    lastName: "",
     company: "",
     role: "",
     username: "",
@@ -95,12 +97,12 @@ const dialogModelValueUpdate = (val: boolean) => {
           <VRow>
             <!-- 👉 First Name -->
             <VCol cols="12" md="6">
-              <AppTextField v-model="userData.fullName.split(' ')[0]" label="First Name" placeholder="John" />
+              <AppTextField v-model="userData.firstName" label="First Name" placeholder="John" />
             </VCol>
 
             <!-- 👉 Last Name -->
             <VCol cols="12" md="6">
-              <AppTextField v-model="userData.fullName.split(' ')[1]" label="Last Name" placeholder="Doe" />
+              <AppTextField v-model="userData.lastName" label="Last Name" placeholder="Doe" />
             </VCol>
 
             <!-- 👉 Username -->
