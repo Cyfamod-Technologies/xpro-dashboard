@@ -15,17 +15,17 @@ global guard decide access before a page renders.
 
 ## Source map
 
-| Location | Responsibility |
-| --- | --- |
-| `resources/ts/pages` | URL entry points and route metadata; workspace pages are thin wrappers. |
-| `resources/ts/features/discovery` | Public home, service discovery, and the customer request form. |
-| `resources/ts/features/auth` | Shared auth screen UI and validation. |
-| `resources/ts/features/workspace` | Role menus, service lines, section routing and workspace views. |
-| `resources/ts/features/operations` | Request, provider, dispatch, quote, schedule, message, staff and approval UI; typed commands and workflow rules. |
-| `resources/ts/stores/auth.ts` | Current user, token, MFA challenge and session hydration. |
-| `resources/ts/stores/operations.ts` | Demo business state, derived views and command execution. |
-| `resources/ts/services/xpro-api.ts`, `resources/ts/utils/api.ts` | Prototype auth API adapter and HTTP client. |
-| `resources/ts/mocks` | In-browser auth fixtures and MSW handlers. |
+| Location                                                         | Responsibility                                                                                                   |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `resources/ts/pages`                                             | URL entry points and route metadata; workspace pages are thin wrappers.                                          |
+| `resources/ts/features/discovery`                                | Public home, service discovery, and the customer request form.                                                   |
+| `resources/ts/features/auth`                                     | Shared auth screen UI and validation.                                                                            |
+| `resources/ts/features/workspace`                                | Role menus, service lines, section routing and workspace views.                                                  |
+| `resources/ts/features/operations`                               | Request, provider, dispatch, quote, schedule, message, staff and approval UI; typed commands and workflow rules. |
+| `resources/ts/stores/auth.ts`                                    | Current user, token, MFA challenge and session hydration.                                                        |
+| `resources/ts/stores/operations.ts`                              | Demo business state, derived views and command execution.                                                        |
+| `resources/ts/services/xpro-api.ts`, `resources/ts/utils/api.ts` | Prototype auth API adapter and HTTP client.                                                                      |
+| `resources/ts/mocks`                                             | In-browser auth fixtures and MSW handlers.                                                                       |
 
 `SectionView.vue` maps a section ID to the appropriate operations component.
 The role-specific section list in `features/workspace/config.ts` is the source
