@@ -1,7 +1,7 @@
 # Xpro Dashboard
 
-Vue 3, TypeScript, Vite and Vuetify dashboard bootstrapped from the local
-`ng-sou-frontend` project, with Xpro branding and primary colour `#4AA7DF`.
+Vue 3, TypeScript, Vite and Vuetify dashboard for Xpro customer, provider,
+and staff workflows, with primary colour `#4AA7DF`.
 
 ## Requirements
 
@@ -19,9 +19,9 @@ pnpm dev
 The development server runs at `http://localhost:5173`. A local `.env` is
 already created during the initial setup; it contains the example values only.
 
-`VITE_ENABLE_MOCKS=true` enables the inherited prototype flows, so the
-frontend works without a backend. Programs, projects, budgets, approvals and
-sample geographic data are retained as examples from the source project.
+`VITE_ENABLE_MOCKS=true` enables the Xpro prototype auth flows, so the
+frontend works without a backend. Business workflow state runs locally in
+the browser.
 
 ## Prototype accounts
 
@@ -87,7 +87,6 @@ and password changes reset when the preview reloads. No email is sent.
 
 The remaining workflow sections currently show navigation/empty-state shells;
 their forms and business interactions are implemented one flow at a time.
-The inherited budget/project routes are not part of the XPro prototype navigation.
 
 ## Theme
 
@@ -102,10 +101,10 @@ See [branding](docs/design/xpro-branding.md).
 ## API integration
 
 Set `VITE_API_BASE_URL` to your API URL and `VITE_ENABLE_MOCKS=false` when
-integrating a real backend. The copied API adapter in
-`resources/ts/services/xpro-api.ts` retains the source project's contracts.
-It must be adapted to `xpro-server` endpoints, response envelopes and roles
-before real authentication and dashboard requests will work.
+integrating a real backend. The Xpro prototype auth adapter in
+`resources/ts/services/xpro-api.ts` still needs to be aligned with
+`xpro-server` endpoints, response envelopes, roles and session handling.
+See the [web and server auth plan](docs/api/auth-web-server-plan.md).
 
 ## Verify
 
@@ -121,5 +120,5 @@ build on pull requests and pushes to `main`. Deployment is not configured;
 the source project's deployment workflow and CODEOWNERS were not copied.
 The Docker build remains available in `infra/Dockerfile`.
 
-See [development](docs/dev.md) for scripts and repository conventions. The
-[documentation index](docs/README.md) includes inherited reference workflows.
+See [development](docs/dev.md) for scripts and repository conventions and the
+[documentation index](docs/README.md) for current Xpro plans and flows.

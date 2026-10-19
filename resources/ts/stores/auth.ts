@@ -38,9 +38,9 @@ export const useAuthStore = defineStore("auth", () => {
   async function completeMfa(code: string) {
     if (!pendingMfa.value) throw new Error("Your sign-in session has expired. Please sign in again.")
 
-    await authApi.verifyMfa(code)
-    token.value = pendingMfa.value.token
-    user.value = pendingMfa.value.user
+    const response = await authApi.verifyMfa(code, pendingMfa.value.token)
+    token.value = response.data.token
+    user.value = response.data.user
     pendingMfa.value = null
   }
 

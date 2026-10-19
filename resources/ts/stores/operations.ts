@@ -13,11 +13,11 @@ import {
 import { staffCan } from "@/features/operations/staff"
 import type { Actor, Command, OperationsState, StaffPermission } from "@/features/operations/types"
 
-const storageKey = "xpro-ui-workspace-v1"
+const storageKey = "xpro-demo-workspace-v1"
 
 const readState = (): OperationsState => {
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null") as OperationsState | null
+    const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") as OperationsState | null
     if (
       saved?.schema === 6 &&
       Array.isArray(saved.staff) &&
@@ -30,7 +30,7 @@ const readState = (): OperationsState => {
     )
       return saved
   } catch {
-    /* A new local preview can recover from an old or damaged snapshot. */
+    /* A new demo session can recover from an old or damaged snapshot. */
   }
 
   return createOperationsState()
@@ -89,7 +89,7 @@ export const useOperationsStore = defineStore("operations", () => {
         throw new Error("Your account changed. Sign in and retry this action.")
       const updated = applyCommand(toRaw(state.value), initiator, payload)
 
-      localStorage.setItem(storageKey, JSON.stringify(updated))
+      sessionStorage.setItem(storageKey, JSON.stringify(updated))
       state.value = updated
       notice.value = "Changes saved in this prototype."
 
@@ -108,7 +108,7 @@ export const useOperationsStore = defineStore("operations", () => {
     try {
       const next = createOperationsState()
 
-      localStorage.setItem(storageKey, JSON.stringify(next))
+      sessionStorage.setItem(storageKey, JSON.stringify(next))
       state.value = next
       notice.value = "Sample records restored."
       error.value = ""
@@ -116,10 +116,6 @@ export const useOperationsStore = defineStore("operations", () => {
       error.value = "Browser storage is full or unavailable. Clear preview storage and retry."
     }
   }
-  window.addEventListener("storage", event => {
-    if (event.key === storageKey) state.value = readState()
-  })
-
   return {
     state,
     actor,

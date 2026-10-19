@@ -10,13 +10,15 @@ const verified = ref(false)
 const loading = ref(false)
 const errorMessage = ref("")
 const resent = ref(false)
+const isPrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const email = computed(() => (typeof route.query.email === "string" ? route.query.email : "your email address"))
+const token = computed(() => (typeof route.query.token === "string" ? route.query.token : ""))
 
 const verify = async () => {
   loading.value = true
   errorMessage.value = ""
   try {
-    await authApi.verifyEmail("prototype-verification-token", email.value)
+    await authApi.verifyEmail(token.value || "prototype-verification-token", email.value)
     verified.value = true
   } catch (error) {
     errorMessage.value = getErrorMessage(error)
@@ -24,6 +26,18 @@ const verify = async () => {
     loading.value = false
   }
 }
+
+const resend = async () => {
+  errorMessage.value = ""
+  try {
+    await authApi.resendVerification(email.value)
+    resent.value = true
+  } catch (error) {
+    errorMessage.value = getErrorMessage(error)
+  }
+}
+
+if (token.value) verify()
 </script>
 
 <template>
@@ -39,14 +53,16 @@ const verify = async () => {
     <VAlert v-if="errorMessage" color="error" variant="tonal" class="mb-5">
       {{ errorMessage }}
     </VAlert>
-    <VAlert v-if="!verified" color="info" variant="tonal" class="mb-6">
+    <VAlert v-if="!verified && isPrototype" color="info" variant="tonal" class="mb-6">
       For this frontend prototype, use the button below to simulate opening the email link.
     </VAlert>
-    <VBtn v-if="!verified" block size="large" :loading="loading" @click="verify"> Verify prototype email </VBtn>
-    <VBtn v-else block size="large" to="/login"> Continue to sign in </VBtn>
+    <VBtn v-if="!verified && isPrototype" block size="large" :loading="loading" @click="verify">
+      Verify prototype email
+    </VBtn>
+    <VBtn v-if="verified" block size="large" to="/login"> Continue to sign in </VBtn>
     <div v-if="!verified" class="text-center mt-5">
-      <VBtn variant="text" size="small" @click="resent = true">
-        {{ resent ? "Verification link ready - use the button above" : "Resend verification email" }}
+      <VBtn variant="text" size="small" @click="resend">
+        {{ resent ? "Verification email sent" : "Resend verification email" }}
       </VBtn>
     </div>
   </AuthShell>

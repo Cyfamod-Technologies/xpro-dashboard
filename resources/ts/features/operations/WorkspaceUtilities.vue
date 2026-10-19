@@ -150,7 +150,7 @@ const requestPath = computed(() => {
     ><AssignmentSettingsCard v-if="ops.can('settings.manage')" /><VCard v-if="ops.can('settings.manage')">
       <VCardText>
         <h2 class="text-h5 mb-3">Prototype controls</h2>
-        <p class="text-body-2 text-medium-emphasis">Sample activity is shared across demo accounts in this browser.</p>
+        <p class="text-body-2 text-medium-emphasis">Sample activity is shared across demo accounts in this tab until it is closed.</p>
         <VCheckbox v-model="ops.failNext" label="Simulate failure on the next save" /><VBtn
           variant="outlined"
           color="warning"
@@ -163,7 +163,7 @@ const requestPath = computed(() => {
       <VCard>
         <VCardText>
           <h2 class="text-h5 mb-3">Restore sample records?</h2>
-          <p>This replaces locally created requests and changes in this browser with the original sample data.</p>
+          <p>This replaces requests and changes in this tab with the original sample data.</p>
           <div class="d-flex justify-end gap-3">
             <VBtn variant="text" @click="resetDialog = false"> Keep changes </VBtn
             ><VBtn
