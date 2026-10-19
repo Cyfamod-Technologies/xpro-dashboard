@@ -2,7 +2,7 @@
 import { VForm } from "vuetify/components/VForm"
 
 import AuthShell from "@/features/auth/AuthShell.vue"
-import { emailRules, required } from "@/features/auth/validation"
+import { emailRules, required, sixDigitCode } from "@/features/auth/validation"
 import { demoCredentials } from "@/mocks/fixtures"
 import { useAuthStore } from "@/stores/auth"
 import { getErrorMessage } from "@/utils/errors"
@@ -13,14 +13,17 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const formRef = ref<VForm>()
-const form = reactive({ email: "", password: "", remember: false })
+const form = reactive({ email: "", password: "", remember: false, mfaCode: "" })
 const isPasswordVisible = ref(false)
 const loading = ref(false)
 const errorMessage = ref("")
+const needsMfa = ref(false)
 
 const useDemoAccount = (email: string, password: string) => {
   form.email = email
   form.password = password
+  needsMfa.value = false
+  form.mfaCode = ""
 }
 
 const submit = async () => {
@@ -31,7 +34,7 @@ const submit = async () => {
 
   loading.value = true
   try {
-    const result = await auth.login(form)
+    const result = await auth.login({ ...form, ...(needsMfa.value ? { mfaCode: form.mfaCode } : {}) })
     if (result.requiresMfa) {
       await router.push("/auth/mfa")
 
@@ -49,7 +52,13 @@ const submit = async () => {
 
     await router.push(redirect)
   } catch (error) {
-    errorMessage.value = getErrorMessage(error, "We could not sign you in. Check your details and try again.")
+    const message = getErrorMessage(error, "We could not sign you in. Check your details and try again.")
+    if (message.toLowerCase().includes("mfa code required")) {
+      needsMfa.value = true
+      errorMessage.value = "Enter the six-digit code from your authenticator app to continue."
+    } else {
+      errorMessage.value = message
+    }
   } finally {
     loading.value = false
   }
@@ -80,6 +89,16 @@ const submit = async () => {
             placeholder="you@example.com"
             autocomplete="email"
             :rules="emailRules"
+          />
+        </VCol>
+        <VCol v-if="needsMfa" cols="12">
+          <AppTextField
+            v-model="form.mfaCode"
+            label="Authenticator code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            :rules="[sixDigitCode]"
           />
         </VCol>
         <VCol cols="12">

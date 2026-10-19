@@ -48,7 +48,11 @@ export const handlers = [
     if (user.status === "unverified") return validationError("Verify your email before signing in.")
     if (user.status !== "active") return validationError("This account is not currently active.")
 
-    return envelope({ token: `${user.mfaRequired ? 'mock-challenge' : 'mock-token'}-${user.id}`, user, requiresMfa: user.mfaRequired })
+    return envelope({
+      token: `${user.mfaRequired ? "mock-challenge" : "mock-token"}-${user.id}`,
+      user,
+      requiresMfa: user.mfaRequired,
+    })
   }),
 
   http.post(`${api}/auth/mfa/challenge`, async ({ request }) => {
@@ -159,5 +163,4 @@ export const handlers = [
 
     return envelope(current)
   }),
-
 ]
