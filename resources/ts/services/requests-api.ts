@@ -1,25 +1,24 @@
-import { ApiError, $api, toApiError } from "@/utils/api"
+import { $api, ApiError, toApiError } from "@/utils/api"
 import type { ApiEnvelope } from "@/types/domain"
 import type {
   ApprovalQueueView,
-  AssignmentView,
   ContributionView,
   EarningsView,
+  LocationView,
+  NotificationInboxView,
   PaginatedResult,
-  PayoutView,
   PaymentView,
+  PayoutView,
+  ProgressUpdateView,
   QuoteItemView,
   QuoteView,
   RankingRunView,
   RefundView,
+  RequestActivityView,
+  RequestMessageView,
   RequestPaymentsView,
   RequestSummary,
   RequestView,
-  LocationView,
-  NotificationInboxView,
-  ProgressUpdateView,
-  RequestActivityView,
-  RequestMessageView,
   ServiceView,
   SettingView,
   UploadView,
@@ -54,7 +53,8 @@ const command = <T>(path: string, method: HttpMethod, body?: unknown, version?: 
   const headers = new Headers()
   if (version !== undefined) headers.set("If-Match", `W/\"${version}\"`)
   headers.set("Idempotency-Key", idempotencyKey)
-  return unwrap($api<ApiEnvelope<T>>(path, { method, body, headers }))
+
+  return unwrap($api<ApiEnvelope<T>>(path, { method, body: body as Record<string, unknown> | undefined, headers }))
 }
 
 export interface RequestListParams {

@@ -56,7 +56,7 @@ export type RequestAction =
   | "settings.save"
   | "request.escalate"
   | "request.escalation.resolve"
-  | (string & {})
+  | string
 
 export type RequestStage =
   | "intake"

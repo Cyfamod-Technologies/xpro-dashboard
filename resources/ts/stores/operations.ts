@@ -11,9 +11,8 @@ import {
   visibleRequests,
 } from "@/features/operations/workflow"
 import { staffCan } from "@/features/operations/staff"
-import type { Actor, Command, OperationsState, StaffPermission } from "@/features/operations/types"
-import { providersApi, type ProviderProfileResponse } from "@/services/providers-api"
-import type { ProviderProfile } from "@/features/operations/types"
+import type { Actor, Command, OperationsState, ProviderProfile, StaffPermission } from "@/features/operations/types"
+import { type ProviderProfileResponse, providersApi } from "@/services/providers-api"
 
 const storageKey = "xpro-demo-workspace-v1"
 const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
@@ -130,23 +129,25 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
-  const addFileLinks = async (profile: ProviderProfile, asReviewer = false) => {
+  const addFileLinks = async (providerProfile: ProviderProfile, asReviewer = false) => {
     const addLink = async (file: ProviderProfile["documents"][number]) => {
       try {
-        const response = await providersApi.fileUrl(file.id, asReviewer ? profile.serverId : undefined)
+        const response = await providersApi.fileUrl(file.id, asReviewer ? providerProfile.serverId : undefined)
+
         return { ...file, downloadUrl: response.data.url }
       } catch {
         return file
       }
     }
-    profile.documents = await Promise.all(profile.documents.map(addLink))
-    profile.portfolio = await Promise.all(profile.portfolio.map(addLink))
-    if (profile.photo) profile.photo = await addLink(profile.photo)
-    if (profile.pendingChanges) {
-      profile.pendingChanges.documents = await Promise.all(profile.pendingChanges.documents.map(addLink))
-      if (profile.pendingChanges.photo) profile.pendingChanges.photo = await addLink(profile.pendingChanges.photo)
+    providerProfile.documents = await Promise.all(providerProfile.documents.map(addLink))
+    providerProfile.portfolio = await Promise.all(providerProfile.portfolio.map(addLink))
+    if (providerProfile.photo) providerProfile.photo = await addLink(providerProfile.photo)
+    if (providerProfile.pendingChanges) {
+      providerProfile.pendingChanges.documents = await Promise.all(providerProfile.pendingChanges.documents.map(addLink))
+      if (providerProfile.pendingChanges.photo) providerProfile.pendingChanges.photo = await addLink(providerProfile.pendingChanges.photo)
     }
-    return profile
+
+    return providerProfile
   }
 
   async function refreshProviderProfile() {
@@ -155,6 +156,7 @@ export const useOperationsStore = defineStore("operations", () => {
     const profileResult = "profile" in result ? null : result
     if (!profileResult) {
       state.value.providers = state.value.providers.filter(item => item.id !== auth.user?.id)
+
       return
     }
     const mapped = await addFileLinks(mapProvider(profileResult))
@@ -174,26 +176,31 @@ export const useOperationsStore = defineStore("operations", () => {
         const { bank, ...input } = command.input
         await providersApi.submit({ ...input, photo: input.photo!, bankCode: bank.bankCode, accountNumber: bank.accountNumber })
         await refreshProviderProfile()
+
         return true
       }
       case "provider.availability":
         await providersApi.setAvailability(command.available)
         await refreshProviderProfile()
+
         return true
       case "provider.hours":
         if (!profile.value) throw new Error("Submit your provider profile before setting working hours.")
         await providersApi.setCalendar(command.workingHours, command.timeOff.map(item => ({ ...item, id: item.id ?? crypto.randomUUID() })))
         await refreshProviderProfile()
+
         return true
       case "payout.update":
         await providersApi.updateBank(command.bank.bankCode, command.bank.accountNumber)
         await refreshProviderProfile()
+
         return true
       case "provider.review": {
         const target = state.value.providers.find(item => item.id === command.providerId)
         if (!target?.serverId || target.version === undefined) throw new Error("Refresh the provider review queue and try again.")
         await providersApi.review(target.serverId, command.decision, command.note, target.version)
         await loadProvidersForReview()
+
         return true
       }
       case "payout.review": {
@@ -201,6 +208,7 @@ export const useOperationsStore = defineStore("operations", () => {
         if (!target?.serverId || target.version === undefined) throw new Error("Refresh the provider review queue and try again.")
         await providersApi.reviewBank(target.serverId, command.approve, command.note, target.version)
         await loadProvidersForReview()
+
         return true
       }
       case "provider.changes.review": {
@@ -208,6 +216,7 @@ export const useOperationsStore = defineStore("operations", () => {
         if (!target?.serverId || target.version === undefined) throw new Error("Refresh the provider review queue and try again.")
         await providersApi.reviewChanges(target.serverId, command.approve, command.note, target.version)
         await loadProvidersForReview()
+
         return true
       }
       default:
@@ -234,6 +243,7 @@ export const useOperationsStore = defineStore("operations", () => {
       const serverHandled = await runServerProviderCommand(payload)
       if (serverHandled) {
         notice.value = "Changes saved."
+
         return true
       }
       const updated = applyCommand(toRaw(state.value), initiator, payload)
@@ -265,6 +275,7 @@ export const useOperationsStore = defineStore("operations", () => {
       error.value = "Browser storage is full or unavailable. Clear preview storage and retry."
     }
   }
+
   return {
     state,
     actor,

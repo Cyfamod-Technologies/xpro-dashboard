@@ -23,6 +23,9 @@ const section = computed(() =>
     ? workspaceSections[auth.user.role].find(item => item.id === props.sectionId)
     : undefined,
 )
+const platformSection = computed(() =>
+  section.value?.id === "notifications" || section.value?.id === "approvals" ? section.value.id : null,
+)
 </script>
 
 <template>
@@ -43,7 +46,7 @@ const section = computed(() =>
       :key="section.id"
       :section="section.id"
     />
-    <PlatformWorkspace v-else-if="useLiveRequests && ['notifications', 'approvals'].includes(section.id)" :section="section.id as 'notifications' | 'approvals'" />
+    <PlatformWorkspace v-else-if="useLiveRequests && platformSection" :section="platformSection" />
     <PlatformWorkspace v-else-if="useLiveRequests && auth.user?.role === 'admin' && section.id === 'settings'" section="settings" />
     <AdminPayments v-else-if="useLiveRequests && section.id === 'finance'" />
     <ProviderEarnings v-else-if="useLiveRequests && section.id === 'payouts'" />

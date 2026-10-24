@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RequestView } from "@/features/requests/api-types"
+import type { RequestView, ScheduleView } from "@/features/requests/api-types"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { useAuthStore } from "@/stores/auth"
 
@@ -10,7 +10,7 @@ const activeTab = ref("schedule")
 const busy = ref(false)
 const error = ref("")
 const notice = ref("")
-const schedules = ref<Awaited<ReturnType<typeof requestsApi.schedules>>>([])
+const schedules = ref<ScheduleView[]>([])
 const updates = ref<Awaited<ReturnType<typeof requestsApi.updates>>>([])
 const messages = ref<Awaited<ReturnType<typeof requestsApi.messages>>>([])
 const activity = ref<Awaited<ReturnType<typeof requestsApi.activity>>>()
@@ -52,6 +52,7 @@ const messageChannels = computed(() => {
   ]
   if (role.value === "customer") return choices.filter(item => item.value === "customer")
   if (role.value === "provider") return choices.filter(item => item.value === "provider")
+
   return choices.filter(item => auth.user?.scopes.includes(item.permission))
 })
 watch(messageChannels, choices => {
@@ -101,6 +102,7 @@ async function uploadFiles(files: File[], purpose: "progress_evidence" | "messag
     await requestsApi.completeUpload(upload.id)
     ids.push({ id: upload.id })
   }
+
   return ids
 }
 
@@ -131,6 +133,7 @@ async function addProgress() {
 async function sendMessage() {
   await run(async () => {
     const attachments = await uploadFiles(messageFiles.value, "message_attachment")
+
     return requestsApi.sendMessage(props.request.id, { channel: channel.value, text: messageText.value, attachments }, props.request.version)
   }, "Message sent.")
   if (!error.value) messageText.value = ""
@@ -233,7 +236,7 @@ watch(() => props.request.version, load)
         <VTextField v-model="cancellationNote" label="Cancellation reason" />
         <VBtn v-if="can('cancellation.request') || can('request.cancel')" color="error" variant="tonal" :disabled="!cancellationNote.trim()" :loading="busy" @click="run(() => requestsApi.cancel(request.id, { note: cancellationNote, reasonCode: cancellationReasonCode }, request.version), 'Cancellation request sent.')">Request cancellation</VBtn>
         <VBtn v-if="can('cancellation.withdraw')" class="ms-2" variant="outlined" :loading="busy" @click="run(() => requestsApi.withdrawCancellation(request.id, cancellationNote || undefined, request.version), 'Cancellation request withdrawn.')">Withdraw request</VBtn>
-        <VList v-if="request.cancellations?.length" class="mt-4"><VListItem v-for="item in request.cancellations" :key="item.id" :title="`${item.status} · ${item.reasonCode || 'Reason pending'}`" :subtitle="item.note"><template #append><div v-if="can('cancellation.decide')" class="d-flex ga-2"><VBtn size="small" @click="run(() => requestsApi.decideCancellation(request.id, { approve: true, note: cancellationNote }, request.version), 'Cancellation approved.')">Approve</VBtn><VBtn size="small" color="error" variant="tonal" @click="run(() => requestsApi.decideCancellation(request.id, { approve: false, note: cancellationNote }, request.version), 'Cancellation declined.')">Decline</VBtn></div></template></VListItem></VList>
+        <VList v-if="request.cancellations?.length" class="mt-4"><VListItem v-for="item in request.cancellations" :key="item.id" :title="`${item.status} · ${item.reasonCode || 'Reason pending'}`" :subtitle="item.note ?? undefined"><template #append><div v-if="can('cancellation.decide')" class="d-flex ga-2"><VBtn size="small" @click="run(() => requestsApi.decideCancellation(request.id, { approve: true, note: cancellationNote }, request.version), 'Cancellation approved.')">Approve</VBtn><VBtn size="small" color="error" variant="tonal" @click="run(() => requestsApi.decideCancellation(request.id, { approve: false, note: cancellationNote }, request.version), 'Cancellation declined.')">Decline</VBtn></div></template></VListItem></VList>
       </section>
 
       <section v-else-if="activeTab === 'activity'">

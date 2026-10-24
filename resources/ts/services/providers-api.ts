@@ -1,6 +1,5 @@
 import { $api } from "@/utils/api"
-import type { Attachment, TimeOff, WorkingHours } from "@/features/operations/types"
-import type { ProviderProfile } from "@/features/operations/types"
+import type { Attachment, ProviderProfile, TimeOff, WorkingHours } from "@/features/operations/types"
 import type { ApiEnvelope } from "@/types/domain"
 
 export type ProviderUploadPurpose = "provider_document" | "provider_photo" | "provider_portfolio" | "payment_proof"

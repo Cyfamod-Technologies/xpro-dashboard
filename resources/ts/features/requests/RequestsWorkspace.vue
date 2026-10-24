@@ -59,6 +59,7 @@ const sectionTitle = computed(() => ({ dispatch: "Dispatch", quotes: "Quotes", p
 const selectedId = computed(() => typeof route.query.request === "string" ? route.query.request : undefined)
 const currentAssignments = computed<AssignmentView[]>(() => {
   const value = request.value?.assignment
+
   return Array.isArray(value) ? value : value ? [value] : []
 })
 const currentQuote = computed<QuoteView | undefined>(() => request.value?.quote ?? undefined)
@@ -67,11 +68,13 @@ const money = (value?: number | null) => value == null ? "—" : new Intl.Number
 const expiresIn = (value?: string) => {
   if (!value) return ""
   const minutes = Math.max(0, Math.ceil((new Date(value).getTime() - expiryTick.value) / 60_000))
+
   return minutes < 60 ? `expires in ${minutes}m` : `expires in ${Math.floor(minutes / 60)}h ${minutes % 60}m`
 }
 const fail = (value: unknown) => {
   if (value instanceof RequestsApiError && value.code === "VERSION_CONFLICT") {
     error.value = "This request has changed. Refresh and retry."
+
     return
   }
   error.value = value instanceof Error ? value.message : "The request could not be completed."
@@ -95,6 +98,7 @@ async function loadDetail(id = selectedId.value) {
   if (!id) {
     request.value = undefined
     payment.value = undefined
+
     return
   }
   loading.value = true
@@ -145,6 +149,8 @@ async function uploadPaymentProof() {
 function select(id?: string) {
   router.push({ path: route.path, query: id ? { request: id } : {} })
 }
+const backToList = () => select()
+const refreshCurrent = () => loadDetail()
 
 async function openFile(id: string) {
   try {
@@ -185,10 +191,12 @@ async function createOrUpdateQuote() {
   const items = quoteItems.value.filter(item => item.description.trim() && item.quantity > 0 && item.unitPrice > 0)
   if (!items.length) {
     error.value = "Add at least one priced quote item."
+
     return
   }
   if (currentQuote.value) {
     await perform(() => requestsApi.updateQuote(request.value!.id, currentQuote.value!.id, { revision: currentQuote.value!.revision, items, note: quoteNote.value || undefined }, request.value!.version), "Draft saved.")
+
     return
   }
   await perform(() => requestsApi.createQuote(request.value!.id, { items, note: quoteNote.value || undefined }, request.value!.version), "Draft created.")
@@ -248,7 +256,7 @@ watch([stageFilter, nextActorOnly], () => {
     </template>
 
     <template v-else>
-      <VBtn variant="text" prepend-icon="tabler-arrow-left" class="mb-4" @click="select()">Back to {{ sectionTitle }}</VBtn>
+      <VBtn variant="text" prepend-icon="tabler-arrow-left" class="mb-4" @click="backToList">Back to {{ sectionTitle }}</VBtn>
       <VAlert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</VAlert>
       <VAlert v-if="notice" type="success" variant="tonal" class="mb-4">{{ notice }}</VAlert>
       <VProgressLinear v-if="loading" indeterminate class="mb-4" />
@@ -361,7 +369,7 @@ watch([stageFilter, nextActorOnly], () => {
 
       <template v-else-if="props.section === 'payments'">
         <VCard><VCardText>
-          <div class="d-flex flex-wrap justify-space-between align-center ga-3 mb-4"><h3 class="text-h5 mb-0">Payment</h3><VBtn v-if="can('payment.initiate')" :loading="checkoutBusy" @click="beginCheckout">Pay {{ money(payment?.amountDue) }}</VBtn><VBtn variant="outlined" :loading="loading" @click="loadDetail()">Refresh status</VBtn></div>
+          <div class="d-flex flex-wrap justify-space-between align-center ga-3 mb-4"><h3 class="text-h5 mb-0">Payment</h3><VBtn v-if="can('payment.initiate')" :loading="checkoutBusy" @click="beginCheckout">Pay {{ money(payment?.amountDue) }}</VBtn><VBtn variant="outlined" :loading="loading" @click="refreshCurrent">Refresh status</VBtn></div>
           <p v-if="payment?.dueAt" class="text-medium-emphasis">Due {{ new Date(payment.dueAt).toLocaleString() }}</p>
           <VAlert v-if="payment?.offlineInstructions" color="info" variant="tonal" class="mb-4">{{ payment.offlineInstructions }}</VAlert>
           <VTable v-if="payment?.payments.length"><thead><tr><th>Reference</th><th>Method</th><th>Status</th><th>Amount</th></tr></thead><tbody><tr v-for="item in payment.payments" :key="item.id"><td>{{ item.reference || item.id }}</td><td>{{ item.method }}</td><td>{{ item.status }}</td><td>{{ money(item.amount) }}</td></tr></tbody></VTable>
@@ -399,7 +407,7 @@ watch([stageFilter, nextActorOnly], () => {
           <VBtn v-if="can('request.reject')" color="error" variant="tonal" :disabled="!rejectionReason.trim()" :loading="saving" @click="perform(() => requestsApi.rejectIntake(request!.id, rejectionReason, request!.version), 'Request rejected.')">Reject request</VBtn>
         </VCardText></VCard>
       </template>
-      <RequestLifecycle v-if="['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(props.section)" :request="request" @refresh="loadDetail()" />
+      <RequestLifecycle v-if="['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(props.section)" :request="request" @refresh="refreshCurrent" />
     </template>
   </div>
 </template>

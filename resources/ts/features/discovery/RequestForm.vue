@@ -85,10 +85,11 @@ const contactMethods = [
   { title: "Phone and email", value: "both" },
 ]
 const selectedLine = computed(() => serviceLines.find(item => item.name === form.service))
-const fields = computed(() => {
+const fields = computed<IntakeField[]>(() => {
   if (!liveMode) return intakeFields[form.service]
   const service = catalog.value.find(item => item.name === form.service)
-  return (service?.intakeFields ?? []).map(field => ({
+
+  return (service?.intakeFields ?? []).map((field): IntakeField => ({
     key: field.key,
     label: field.label,
     required: field.required,
@@ -116,17 +117,19 @@ const dateRange = (value: unknown) => {
   const watDay = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 10)
   const earliest = Date.parse(`${watDay}T00:00:00+01:00`)
   const latest = earliest + 365 * 24 * 60 * 60 * 1000
+
   return (selected >= earliest && selected <= latest) || "Choose a date from today through the next 12 months."
 }
 const validNigerianPhone = (value: unknown) => {
   const normalized = String(value ?? "").replace(/[\s()-]/g, "")
+
   return /^(?:\+234|234|0)?[789][01]\d{8}$/.test(normalized) || "Enter a valid Nigerian phone number."
 }
 const fieldRules = (field: IntakeField) => [
   ...(field.required ? [required] : []),
-  ...(field.type === "number" ? [value => !value || (Number(value) > 0 && Number.isFinite(Number(value))) || `${field.label} must be positive.`] : []),
+  ...(field.type === "number" ? [(value: unknown) => !value || (Number(value) > 0 && Number.isFinite(Number(value))) || `${field.label} must be positive.`] : []),
   ...(field.type === "date" ? [dateRange] : []),
-  ...(field.key.toLowerCase().includes("quantity") ? [value => !value || (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 10) || "Quantity must be a whole number from 1 to 10."] : []),
+  ...(field.key.toLowerCase().includes("quantity") ? [(value: unknown) => !value || (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 10) || "Quantity must be a whole number from 1 to 10."] : []),
 ]
 const saveDraft = () => { if (!liveMode) sessionStorage.setItem(draftKey, JSON.stringify(form)) }
 const label = (field: IntakeField) => (field.required ? `${field.label} *` : field.label)
@@ -232,6 +235,7 @@ async function uploadRequestFiles() {
     await requestsApi.completeUpload(upload.id)
     attachments.push({ id: upload.id })
   }
+
   return attachments
 }
 

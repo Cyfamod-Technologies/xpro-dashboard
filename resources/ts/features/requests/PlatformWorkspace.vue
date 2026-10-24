@@ -53,6 +53,7 @@ async function markRead(id?: string) {
     saving.value = ""
   }
 }
+const markAllRead = () => markRead()
 
 async function save(setting: SettingView) {
   saving.value = setting.key
@@ -78,7 +79,7 @@ watch(() => [props.section, filter.value], load, { immediate: true })
 let poll: ReturnType<typeof setInterval> | undefined
 watch(() => props.section, section => {
   if (poll) clearInterval(poll)
-  if (section === "notifications") poll = setInterval(() => void load(), 30_000)
+  if (section === "notifications") poll = setInterval(load, 30_000)
 }, { immediate: true })
 onBeforeUnmount(() => {
   if (poll) clearInterval(poll)
@@ -91,7 +92,7 @@ onBeforeUnmount(() => {
     <VProgressLinear v-if="loading" indeterminate class="mb-4" />
 
     <template v-if="section === 'notifications'">
-      <div class="d-flex justify-end mb-4"><VBtn variant="outlined" :disabled="!items.some(item => !item.readAt)" :loading="saving === 'all'" @click="markRead()">Mark all read</VBtn></div>
+      <div class="d-flex justify-end mb-4"><VBtn variant="outlined" :disabled="!items.some(item => !item.readAt)" :loading="saving === 'all'" @click="markAllRead">Mark all read</VBtn></div>
       <VList v-if="items.length" lines="two"><VListItem v-for="item in items" :key="item.id" :title="item.title" :subtitle="`${item.message} · ${new Date(item.createdAt).toLocaleString()}`" :class="{ 'font-weight-bold': !item.readAt }">
         <template #append><div class="d-flex ga-2"><VBtn v-if="item.requestId" size="small" variant="text" @click="router.push({ path: requestPath, query: { request: item.requestId } })">Open request</VBtn><VBtn v-if="!item.readAt" size="small" :loading="saving === item.id" @click="markRead(item.id)">Mark read</VBtn></div></template>
       </VListItem></VList>
