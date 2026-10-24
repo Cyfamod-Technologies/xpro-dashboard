@@ -20,7 +20,55 @@ const accountTypes = [
 const visible = ref(false)
 const loading = ref(false)
 const errorMessage = ref("")
-const legalVersions = ref<{ termsVersion: string; privacyVersion: string; providerAgreementVersion?: string } | null>(null)
+interface LegalVersions {
+  termsVersion?: string
+  privacyVersion?: string
+  providerAgreementVersion?: string
+}
+const legalVersions = ref<LegalVersions | null>(null)
+const legalLoading = ref(false)
+const hasLegalDocuments = computed(() => legalVersions.value !== null && Object.keys(legalVersions.value).length > 0)
+
+const loadLegalVersions = async (role: "customer" | "provider"): Promise<LegalVersions> => {
+  const legal = await authApi.legalDocuments(role)
+  if (!Array.isArray(legal.data)) throw new Error("Registration terms could not be loaded. Please try again later.")
+
+  const termsVersion = legal.data.find(item => item.kind === "terms")?.version
+  const privacyVersion = legal.data.find(item => item.kind === "privacy")?.version
+  const providerAgreementVersion = legal.data.find(item => item.kind === "provider_agreement")?.version
+
+  return {
+    ...(termsVersion ? { termsVersion } : {}),
+    ...(privacyVersion ? { privacyVersion } : {}),
+    ...(role === "provider" && providerAgreementVersion ? { providerAgreementVersion } : {}),
+  }
+}
+
+watch(
+  accountRole,
+  async (role, _previousRole, onCleanup) => {
+    let active = true
+    onCleanup(() => {
+      active = false
+    })
+    form.accepted = false
+    legalVersions.value = null
+    legalLoading.value = true
+
+    try {
+      const versions = await loadLegalVersions(role)
+      if (active) {
+        legalVersions.value = versions
+        errorMessage.value = ""
+      }
+    } catch (error) {
+      if (active) errorMessage.value = getErrorMessage(error)
+    } finally {
+      if (active) legalLoading.value = false
+    }
+  },
+  { immediate: true },
+)
 
 const submit = async () => {
   errorMessage.value = ""
@@ -30,24 +78,17 @@ const submit = async () => {
 
   loading.value = true
   try {
-    if (!legalVersions.value) {
-      const legal = await authApi.legalDocuments(accountRole.value)
-      const versions = Object.fromEntries(legal.data.map(item => [item.kind, item.version]))
-      if (!versions.terms || !versions.privacy || (accountRole.value === "provider" && !versions.provider_agreement))
-        throw new Error("Registration terms are not available. Please try again later.")
-      legalVersions.value = {
-        termsVersion: versions.terms,
-        privacyVersion: versions.privacy,
-        ...(accountRole.value === "provider" ? { providerAgreementVersion: versions.provider_agreement } : {}),
-      }
-    }
+    const versions = legalVersions.value ?? (await loadLegalVersions(accountRole.value))
+    legalVersions.value = versions
+    if (Object.keys(versions).length > 0 && !form.accepted)
+      throw new Error("Accept the current legal documents to continue.")
     await authApi.registerAccount({
       firstName: form.firstName,
       lastName: form.lastName,
       email: form.email,
       password: form.password,
       role: accountRole.value,
-      acceptedTerms: legalVersions.value,
+      ...(Object.keys(versions).length > 0 ? { acceptedTerms: versions } : {}),
     })
     await router.push({ path: "/auth/verify-email", query: { email: form.email } })
   } catch (error) {
@@ -124,15 +165,15 @@ const submit = async () => {
             :type="visible ? 'text' : 'password'"
           />
         </VCol>
-        <VCol cols="12">
+        <VCol v-if="hasLegalDocuments" cols="12">
           <VCheckbox
             v-model="form.accepted"
-            label="I accept the current terms and privacy notice. Provider applicants also accept the provider agreement."
+            label="I accept the current legal documents for this account type."
             :rules="[required('Acceptance of the terms')]"
           />
         </VCol>
         <VCol cols="12">
-          <VBtn block size="large" type="submit" :loading="loading"> Create account </VBtn>
+          <VBtn block size="large" type="submit" :loading="loading || legalLoading"> Create account </VBtn>
         </VCol>
       </VRow>
     </VForm>
