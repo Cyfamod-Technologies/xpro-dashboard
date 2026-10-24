@@ -19,6 +19,7 @@ const storageKey = "xpro-demo-workspace-v1"
 const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 
 const readState = (): OperationsState => {
+  if (!usePrototype) return createOperationsState()
   try {
     const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") as OperationsState | null
     if (
@@ -62,7 +63,9 @@ export const useOperationsStore = defineStore("operations", () => {
   const staffMember = computed(() =>
     actor.value?.role === "admin" ? state.value.staff.find(item => item.id === actor.value?.id) : undefined,
   )
-  const can = (permission: StaffPermission) => actor.value?.role === "admin" && staffCan(staffMember.value, permission)
+  const can = (permission: StaffPermission) =>
+    actor.value?.role === "admin" &&
+    (usePrototype ? staffCan(staffMember.value, permission) : auth.user?.scopes.includes(permission) === true)
   const staffById = (staffId: string) => state.value.staff.find(item => item.id === staffId)
   const requests = computed(() => (actor.value ? visibleRequests(state.value, actor.value) : []))
   const profile = computed(() => state.value.providers.find(item => item.id === actor.value?.id))

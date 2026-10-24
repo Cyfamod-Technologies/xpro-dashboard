@@ -40,6 +40,10 @@ export type StaffPermission =
   | "staff.manage"
   | "settings.manage"
   | "bank.review"
+  | "payment.record"
+  | "payout.approve"
+  | "refund.manage"
+  | "view.pricing"
 
 export type ReviewState = "pending" | "approved" | "rejected"
 export interface Review {

@@ -43,21 +43,53 @@ const mapUser = (source: ServerAuthUser): User => {
   }
 }
 
+const mapStaffPermissions = async (user: User, accessToken?: string): Promise<User> => {
+  if (user.role !== "admin") return user
+  try {
+    const result = await $api<ApiEnvelope<{ permissions: string[]; canOwnRequests: boolean; permVersion: number }>>(
+      "/admin/staff/permissions",
+      { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined },
+    )
+
+    return { ...user, scopes: result.data.permissions }
+  } catch {
+    // A staff permission lookup must not block authentication; server commands remain authoritative.
+    return user
+  }
+}
+
 export const authApi = {
   login: async (payload: LoginPayload): Promise<ApiEnvelope<LoginResponse>> => {
     const response = await $api<ApiEnvelope<ServerLoginResponse>>("/auth/login", {
       method: "POST",
-      body: { email: payload.email, password: payload.password, ...(payload.mfaCode ? { mfaCode: payload.mfaCode } : {}) },
+      body: {
+        email: payload.email,
+        password: payload.password,
+        ...(payload.mfaCode ? { mfaCode: payload.mfaCode } : {}),
+      },
     })
 
-    return { ...response, data: { token: response.data.accessToken, user: mapUser(response.data.user), requiresMfa: false } }
+    return {
+      ...response,
+      data: {
+        token: response.data.accessToken,
+        user: await mapStaffPermissions(mapUser(response.data.user), response.data.accessToken),
+        requiresMfa: false,
+      },
+    }
   },
-  verifyMfa: (code: string, challengeToken: string) =>
-    $api<ApiEnvelope<LoginResponse>>("/auth/mfa/challenge", {
+  verifyMfa: async (code: string, challengeToken: string): Promise<ApiEnvelope<LoginResponse>> => {
+    const response = await $api<ApiEnvelope<LoginResponse>>("/auth/mfa/challenge", {
       method: "POST",
       body: { code },
       headers: { Authorization: `Bearer ${challengeToken}` },
-    }),
+    })
+
+    return {
+      ...response,
+      data: { ...response.data, user: await mapStaffPermissions(response.data.user, response.data.token) },
+    }
+  },
   legalDocuments: (role: "customer" | "provider") =>
     $api<ApiEnvelope<{ kind: "terms" | "privacy" | "provider_agreement"; version: string; url: string }[]>>(
       "/auth/legal-documents",
@@ -76,7 +108,10 @@ export const authApi = {
       body: payload,
     }),
   verifyEmail: (token: string) =>
-    $api<ApiEnvelope<{ verified: boolean; email: string; returnTo?: string }>>("/auth/email/verify", { method: "POST", body: { token } }),
+    $api<ApiEnvelope<{ verified: boolean; email: string; returnTo?: string }>>("/auth/email/verify", {
+      method: "POST",
+      body: { token },
+    }),
   forgotPassword: (email: string) =>
     $api<ApiEnvelope<{ sent: boolean }>>("/auth/password/forgot", { method: "POST", body: { email } }),
   resetPassword: (payload: { token: string; password: string; email: string }) =>
@@ -88,15 +123,21 @@ export const authApi = {
       method: "POST",
       body: payload,
     }),
-  enrollMfa: (code: string, enrollmentToken: string) =>
-    $api<ApiEnvelope<LoginResponse>>("/auth/mfa/enroll", {
+  enrollMfa: async (code: string, enrollmentToken: string): Promise<ApiEnvelope<LoginResponse>> => {
+    const response = await $api<ApiEnvelope<LoginResponse>>("/auth/mfa/enroll", {
       method: "POST",
       body: { code },
       headers: { Authorization: `Bearer ${enrollmentToken}` },
-    }),
+    })
+
+    return {
+      ...response,
+      data: { ...response.data, user: await mapStaffPermissions(response.data.user, response.data.token) },
+    }
+  },
   me: async (): Promise<ApiEnvelope<User>> => {
     const response = await $api<ApiEnvelope<ServerAuthUser>>("/auth/me")
 
-    return { ...response, data: mapUser(response.data) }
+    return { ...response, data: await mapStaffPermissions(mapUser(response.data)) }
   },
 }
