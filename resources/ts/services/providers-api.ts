@@ -3,7 +3,7 @@ import type { Attachment, TimeOff, WorkingHours } from "@/features/operations/ty
 import type { ProviderProfile } from "@/features/operations/types"
 import type { ApiEnvelope } from "@/types/domain"
 
-export type ProviderUploadPurpose = "provider_document" | "provider_photo" | "provider_portfolio"
+export type ProviderUploadPurpose = "provider_document" | "provider_photo" | "provider_portfolio" | "payment_proof"
 
 export interface ProviderProfileResponse {
   id: string
@@ -56,7 +56,7 @@ export const providersApi = {
     }),
   upload: async (file: File, purpose: ProviderUploadPurpose): Promise<Attachment> => {
     const upload = await $api<ApiEnvelope<{ id: string; uploadUrl: string; method: "PUT"; headers: Record<string, string> }>>(
-      "/providers/me/uploads",
+      "/uploads",
       { method: "POST", body: { name: file.name, type: file.type, size: file.size, purpose } },
     )
     const response = await fetch(upload.data.uploadUrl, {
@@ -66,7 +66,7 @@ export const providersApi = {
     })
     if (!response.ok) throw new Error("The file could not be uploaded. Try again.")
     const completed = await $api<ApiEnvelope<{ id: string; name: string; size: number; type: string }>>(
-      `/providers/me/uploads/${upload.data.id}/complete`,
+      `/uploads/${upload.data.id}/complete`,
       { method: "POST" },
     )
 
