@@ -3,7 +3,7 @@ import { HttpResponse, delay, http } from "msw"
 import { demoCredentials, users } from "@/mocks/fixtures"
 import type { User } from "@/types/domain"
 
-const api = "*/api"
+const api = "*"
 const accountPasswords = new Map<string, string>(demoCredentials.map(item => [item.email, item.password]))
 
 const envelope = <T>(data: T, meta?: Record<string, unknown>) => HttpResponse.json({ data, meta })
