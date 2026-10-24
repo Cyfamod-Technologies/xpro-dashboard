@@ -66,6 +66,8 @@ export const handlers = [
     return envelope({ token: `mock-token-${user.id}`, user, requiresMfa: false })
   }),
 
+  http.get(`${api}/auth/legal-documents`, () => envelope([])),
+
   http.post(`${api}/auth/register`, async ({ request }) => {
     await delay(600)
 

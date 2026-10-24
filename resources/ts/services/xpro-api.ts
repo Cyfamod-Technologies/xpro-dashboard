@@ -101,7 +101,7 @@ export const authApi = {
     email: string
     password: string
     role: "customer" | "provider"
-    acceptedTerms: { termsVersion: string; privacyVersion: string; providerAgreementVersion?: string }
+    acceptedTerms?: { termsVersion?: string; privacyVersion?: string; providerAgreementVersion?: string }
   }) =>
     $api<ApiEnvelope<{ email: string; status: string }>>("/auth/register", {
       method: "POST",
