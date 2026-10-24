@@ -32,6 +32,8 @@ const submit = async () => {
   try {
     if (!legalVersions.value) {
       const legal = await authApi.legalDocuments(accountRole.value)
+      if (!Array.isArray(legal.data))
+        throw new Error("Registration terms could not be loaded. Please try again later.")
       const versions = Object.fromEntries(legal.data.map(item => [item.kind, item.version]))
       if (!versions.terms || !versions.privacy || (accountRole.value === "provider" && !versions.provider_agreement))
         throw new Error("Registration terms are not available. Please try again later.")
