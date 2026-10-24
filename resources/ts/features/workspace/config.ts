@@ -82,6 +82,13 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "Your service requests will appear here.",
     ),
     quotes,
+    section(
+      "payments",
+      "Payments",
+      "tabler-credit-card",
+      "Check payment status and pay an accepted quote securely.",
+      "Payment details will appear here when a quote is accepted.",
+    ),
     schedule,
     messages,
     section(
@@ -108,6 +115,13 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "tabler-briefcase",
       "Review offers and keep your assigned jobs moving.",
       "New assignments and accepted jobs will appear here.",
+    ),
+    section(
+      "quotes",
+      "Costings",
+      "tabler-file-invoice",
+      "Submit provider costings and follow quote decisions.",
+      "Costing requests will appear here when assigned work needs pricing.",
     ),
     section(
       "verification",
@@ -179,6 +193,14 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "Assignment offers and dispatch decisions will appear here.",
     ),
     quotes,
+    section(
+      "finance",
+      "Payments",
+      "tabler-credit-card",
+      "Reconcile payments and review refunds and payouts.",
+      "There are no finance items waiting for review.",
+      "payment.record",
+    ),
     schedule,
     messages,
     section(

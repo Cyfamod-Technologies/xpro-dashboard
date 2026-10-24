@@ -10,9 +10,14 @@ import WorkspaceOverview from "@/features/operations/WorkspaceOverview.vue"
 import ApprovalQueue from "@/features/operations/ApprovalQueue.vue"
 import StaffDirectory from "@/features/operations/StaffDirectory.vue"
 import Feedback from "@/features/operations/Feedback.vue"
+import RequestsWorkspace from "@/features/requests/RequestsWorkspace.vue"
+import AdminPayments from "@/features/requests/AdminPayments.vue"
+import ProviderEarnings from "@/features/requests/ProviderEarnings.vue"
+import PlatformWorkspace from "@/features/requests/PlatformWorkspace.vue"
 
 const props = defineProps<{ sectionId: string }>()
 const auth = useAuthStore()
+const useLiveRequests = import.meta.env.VITE_ENABLE_MOCKS === "false"
 const section = computed(() =>
   isWorkspaceRole(auth.user?.role)
     ? workspaceSections[auth.user.role].find(item => item.id === props.sectionId)
@@ -33,6 +38,15 @@ const section = computed(() =>
     </div>
     <Feedback />
     <WorkspaceOverview v-if="section.id === 'overview'" />
+    <RequestsWorkspace
+      v-else-if="useLiveRequests && ['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(section.id)"
+      :key="section.id"
+      :section="section.id"
+    />
+    <PlatformWorkspace v-else-if="useLiveRequests && ['notifications', 'approvals'].includes(section.id)" :section="section.id as 'notifications' | 'approvals'" />
+    <PlatformWorkspace v-else-if="useLiveRequests && auth.user?.role === 'admin' && section.id === 'settings'" section="settings" />
+    <AdminPayments v-else-if="useLiveRequests && section.id === 'finance'" />
+    <ProviderEarnings v-else-if="useLiveRequests && section.id === 'payouts'" />
     <RequestBoard
       v-else-if="['requests', 'jobs', 'dispatch', 'quotes', 'schedule', 'messages'].includes(section.id)"
       :key="section.id"
