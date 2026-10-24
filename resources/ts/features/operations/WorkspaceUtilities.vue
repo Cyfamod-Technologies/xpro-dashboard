@@ -150,7 +150,9 @@ const requestPath = computed(() => {
     ><AssignmentSettingsCard v-if="ops.can('settings.manage')" /><VCard v-if="ops.can('settings.manage')">
       <VCardText>
         <h2 class="text-h5 mb-3">Prototype controls</h2>
-        <p class="text-body-2 text-medium-emphasis">Sample activity is shared across demo accounts in this tab until it is closed.</p>
+        <p class="text-body-2 text-medium-emphasis">
+          Sample activity is shared across demo accounts in this tab until it is closed.
+        </p>
         <VCheckbox v-model="ops.failNext" label="Simulate failure on the next save" /><VBtn
           variant="outlined"
           color="warning"

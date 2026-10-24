@@ -23,6 +23,7 @@ export interface LoginPayload {
   email: string
   password: string
   remember: boolean
+  mfaCode?: string
 }
 
 export interface LoginResponse {

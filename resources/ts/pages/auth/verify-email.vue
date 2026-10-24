@@ -18,7 +18,9 @@ const verify = async () => {
   loading.value = true
   errorMessage.value = ""
   try {
-    await authApi.verifyEmail(token.value || "prototype-verification-token", email.value)
+    if (isPrototype) await authApi.verifyEmail(token.value || "prototype-verification-token")
+    else if (!token.value) throw new Error("Open the verification link from your email to verify this account.")
+    else await authApi.verifyEmail(token.value)
     verified.value = true
   } catch (error) {
     errorMessage.value = getErrorMessage(error)

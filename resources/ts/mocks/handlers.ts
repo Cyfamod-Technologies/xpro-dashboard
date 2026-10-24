@@ -3,7 +3,7 @@ import { HttpResponse, delay, http } from "msw"
 import { demoCredentials, users } from "@/mocks/fixtures"
 import type { User } from "@/types/domain"
 
-const api = "*/api"
+const api = "*"
 const accountPasswords = new Map<string, string>(demoCredentials.map(item => [item.email, item.password]))
 
 const envelope = <T>(data: T, meta?: Record<string, unknown>) => HttpResponse.json({ data, meta })
@@ -48,7 +48,11 @@ export const handlers = [
     if (user.status === "unverified") return validationError("Verify your email before signing in.")
     if (user.status !== "active") return validationError("This account is not currently active.")
 
-    return envelope({ token: `${user.mfaRequired ? 'mock-challenge' : 'mock-token'}-${user.id}`, user, requiresMfa: user.mfaRequired })
+    return envelope({
+      token: `${user.mfaRequired ? "mock-challenge" : "mock-token"}-${user.id}`,
+      user,
+      requiresMfa: user.mfaRequired,
+    })
   }),
 
   http.post(`${api}/auth/mfa/challenge`, async ({ request }) => {
@@ -159,5 +163,4 @@ export const handlers = [
 
     return envelope(current)
   }),
-
 ]

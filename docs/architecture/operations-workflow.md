@@ -1,8 +1,20 @@
 # Operations state and workflows
 
-## State and persistence
+## Live and demo sources
 
-`features/operations/types.ts` defines one `OperationsState` snapshot (schema
+Request pages switch on `VITE_ENABLE_MOCKS`. With mocks disabled, the request form and request,
+job, dispatch, quote, payment, finance and payout workspaces use the server through
+`services/requests-api.ts`; lifecycle controls render `RequestView.allowedActions`. Notifications,
+approvals and admin settings use the same live API. These paths do not use the request demo's
+`sessionStorage` snapshot. The dashboard implementation is still partial and requires the
+approval-gated Phase 12 verification before it can be treated as production-ready.
+
+With mocks enabled, request screens continue to use the frozen local reducer described below.
+The reducer is prototype behavior, not the current 15-status server contract in Spec 04 §5.
+
+## Demo state and persistence
+
+`features/operations/types.ts` defines one demo `OperationsState` snapshot (schema
 `6`) containing requests, providers, notifications, audit entries, user
 preferences, staff members and operations settings. The sample snapshot comes
 from `features/operations/fixtures.ts`. `stores/operations.ts` loads a valid
@@ -18,7 +30,7 @@ feedback. Failed commands leave the prior snapshot intact. Staff with
 `settings.manage` can restore fixtures and trigger a simulated failure from
 the prototype controls.
 
-## Workflow engine
+## Demo workflow engine
 
 `features/operations/workflow.ts` is the central transition function. It
 clones the prior snapshot, validates the actor and command, applies the domain

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { isNuban, nigerianBanks, resolveAccountDemo } from "@/features/operations/banks"
 import type { BankInput } from "@/features/operations/types"
+import { providersApi } from "@/services/providers-api"
 
 const props = defineProps<{ holderName: string }>()
 const bank = defineModel<BankInput>({ required: true })
 const checking = ref(false)
 const error = ref("")
+const banks = ref(nigerianBanks)
+const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const verified = computed(() => bank.value.accountName.trim().length >= 3)
 const canVerify = computed(() => Boolean(bank.value.bankCode) && isNuban(bank.value.accountNumber) && !verified.value)
 
@@ -21,7 +24,9 @@ const verify = async () => {
   checking.value = true
   error.value = ""
   try {
-    const accountName = await resolveAccountDemo(bankCode, accountNumber, props.holderName)
+    const accountName = usePrototype
+      ? await resolveAccountDemo(bankCode, accountNumber, props.holderName)
+      : (await providersApi.resolveBank(bankCode, accountNumber)).data.accountName
 
     if (bank.value.bankCode === bankCode && bank.value.accountNumber === accountNumber)
       bank.value = { ...bank.value, accountName }
@@ -31,6 +36,15 @@ const verify = async () => {
     checking.value = false
   }
 }
+
+onMounted(async () => {
+  if (usePrototype) return
+  try {
+    banks.value = (await providersApi.banks()).data
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : "Unable to load the bank list."
+  }
+})
 </script>
 
 <template>
@@ -38,7 +52,7 @@ const verify = async () => {
     <VCol cols="12" sm="6">
       <VSelect
         :model-value="bank.bankCode"
-        :items="nigerianBanks"
+        :items="banks"
         item-title="name"
         item-value="code"
         label="Bank"
@@ -64,7 +78,7 @@ const verify = async () => {
         {{ verified ? "Account verified" : "Verify account" }}
       </VBtn>
       <p class="text-caption text-medium-emphasis mt-2 mb-0">
-        Demo: account numbers ending in 0000 fail verification.
+        {{ usePrototype ? "Demo account verification is simulated." : "Account name is verified by the server." }}
       </p> </VCol
     ><VCol cols="12" sm="6">
       <VTextField

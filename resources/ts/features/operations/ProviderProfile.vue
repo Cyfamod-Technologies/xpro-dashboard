@@ -12,9 +12,11 @@ import AvailabilityPanel from "@/features/operations/AvailabilityPanel.vue"
 import WorkingHoursEditor from "@/features/operations/WorkingHoursEditor.vue"
 import Attachments from "@/features/operations/Attachments.vue"
 import BankForm from "@/features/operations/BankForm.vue"
+import { providersApi } from "@/services/providers-api"
 
 const props = defineProps<{ availability?: boolean }>()
 const ops = useOperationsStore()
+const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const files = ref<File[]>([])
 const portfolioFiles = ref<File[]>([])
 const photoFile = ref<File[]>([])
@@ -83,6 +85,35 @@ const coverageReady = computed(
 )
 const hasSkill = (service: ServiceLine, skill: string) => form.skills[service]?.includes(skill) ?? false
 
+onMounted(async () => {
+  if (usePrototype) return
+  try {
+    await ops.refreshProviderProfile()
+    const saved = ops.profile
+    if (!saved) return
+    Object.assign(form, {
+      phone: saved.phone,
+      trade: saved.trade,
+      city: saved.city,
+      services: [...saved.services],
+      serviceAreas: [...saved.serviceAreas],
+      skills: structuredClone(toRaw(saved.skills)),
+      capacity: saved.capacity,
+      workingHours: structuredClone(toRaw(saved.workingHours)),
+      experience: saved.experience,
+      bio: saved.bio,
+      documents: [...saved.documents],
+      portfolio: [...saved.portfolio],
+      photo: saved.photo,
+    })
+    const payout = saved.payout.pending ?? saved.payout.current
+    if (payout)
+      form.bank = { bankCode: payout.bankCode, accountNumber: payout.accountNumber, accountName: payout.accountName }
+  } catch (cause) {
+    ops.error = cause instanceof Error ? cause.message : "Unable to load your provider profile."
+  }
+})
+
 const setSkill = (service: ServiceLine, skill: string, on: boolean | null) => {
   const rest = (form.skills[service] ?? []).filter(item => item !== skill)
 
@@ -127,7 +158,11 @@ const choosePhoto = async (value: File | File[] | null) => {
   if (!file) return
   try {
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("Use a PNG, JPG or WebP photo.")
-    form.photo = (await prepareFiles([file]))[0]
+    if (usePrototype) form.photo = (await prepareFiles([file]))[0]
+    else {
+      photoFile.value = [file]
+      form.photo = { id: "pending-upload", name: file.name, size: file.size, type: file.type }
+    }
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to read this photo."
   }
@@ -150,10 +185,21 @@ const keepAccount = () => {
 
 const submit = async () => {
   try {
-    form.documents.push(...(await prepareFiles(files.value)))
-    form.portfolio.push(...(await prepareFiles(portfolioFiles.value)))
+    if (usePrototype) {
+      form.documents.push(...(await prepareFiles(files.value)))
+      form.portfolio.push(...(await prepareFiles(portfolioFiles.value)))
+    } else {
+      form.documents.push(...(await Promise.all(files.value.map(file => providersApi.upload(file, "provider_document")))))
+      form.portfolio.push(...(await Promise.all(portfolioFiles.value.map(file => providersApi.upload(file, "provider_portfolio")))))
+    }
     files.value = []
     portfolioFiles.value = []
+    if (photoFile.value[0]) {
+      form.photo = usePrototype
+        ? (await prepareFiles([photoFile.value[0]]))[0]
+        : await providersApi.upload(photoFile.value[0], "provider_photo")
+      photoFile.value = []
+    }
     await ops.run({
       type: "provider.submit",
       input: {
@@ -162,6 +208,7 @@ const submit = async () => {
         serviceAreas: form.serviceAreas.map(area => area.trim()).filter(Boolean),
       },
     })
+    if (!usePrototype) await ops.refreshProviderProfile()
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to read your documents."
   }

@@ -2,14 +2,14 @@
 
 ## Page groups
 
-| URLs | Current behavior |
-| --- | --- |
-| `/`, `/services`, `/request` | Public site. Visitors can browse and prepare a request; submitting requires a customer session. |
-| `/providers`, `/providers/:id` | Redirect to `/services`; standalone provider discovery pages are not currently exposed. |
-| `/login`, `/auth/signup`, `/auth/verify-email`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/mfa`, `/auth/accept-invite` | Auth screens using the blank layout. Signup is for customer or provider accounts. |
-| `/overview` and top-level sections such as `/requests`, `/jobs`, `/verification`, `/payouts`, `/quotes`, `/schedule`, `/messages`, `/notifications`, `/settings`, `/account` | Customer or provider workspace, subject to that role's section list. |
-| `/admin`, `/admin/:section` | Staff workspace. The `admin` account role opens sections allowed by its staff permissions. |
-| `/access-denied` | Route guard destination for unsupported access. |
+| URLs                                                                                                                                                                         | Current behavior                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `/`, `/services`, `/request`                                                                                                                                                 | Public site. Visitors can browse and prepare a request; submitting requires a customer session. |
+| `/providers`, `/providers/:id`                                                                                                                                               | Redirect to `/services`; standalone provider discovery pages are not currently exposed.         |
+| `/login`, `/auth/signup`, `/auth/verify-email`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/mfa`, `/auth/accept-invite`                                          | Auth screens using the blank layout. Signup is for customer or provider accounts.               |
+| `/overview` and top-level sections such as `/requests`, `/jobs`, `/verification`, `/payouts`, `/quotes`, `/schedule`, `/messages`, `/notifications`, `/settings`, `/account` | Customer or provider workspace, subject to that role's section list.                            |
+| `/admin`, `/admin/:section`                                                                                                                                                  | Staff workspace. The `admin` account role opens sections allowed by its staff permissions.      |
+| `/access-denied`                                                                                                                                                             | Route guard destination for unsupported access.                                                 |
 
 `resources/ts/plugins/1.router/index.ts` hydrates auth before navigation. It
 redirects guests from private routes to `/login` with a `redirect` query, sends

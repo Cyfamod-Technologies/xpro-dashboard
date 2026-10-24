@@ -40,6 +40,10 @@ export type StaffPermission =
   | "staff.manage"
   | "settings.manage"
   | "bank.review"
+  | "payment.record"
+  | "payout.approve"
+  | "refund.manage"
+  | "view.pricing"
 
 export type ReviewState = "pending" | "approved" | "rejected"
 export interface Review {
@@ -77,6 +81,7 @@ export interface Attachment {
   size: number
   type: string
   dataUrl?: string
+  downloadUrl?: string
 }
 
 /** `rate` is the unit price in kobo (a positive safe integer). */
@@ -222,6 +227,8 @@ export interface PendingProfileChanges {
 }
 export interface ProviderProfile {
   id: string
+  serverId?: string
+  version?: number
   name: string
   email: string
   phone: string

@@ -20,6 +20,7 @@ const accountTypes = [
 const visible = ref(false)
 const loading = ref(false)
 const errorMessage = ref("")
+const legalVersions = ref<{ termsVersion: string; privacyVersion: string; providerAgreementVersion?: string } | null>(null)
 
 const submit = async () => {
   errorMessage.value = ""
@@ -29,12 +30,24 @@ const submit = async () => {
 
   loading.value = true
   try {
+    if (!legalVersions.value) {
+      const legal = await authApi.legalDocuments(accountRole.value)
+      const versions = Object.fromEntries(legal.data.map(item => [item.kind, item.version]))
+      if (!versions.terms || !versions.privacy || (accountRole.value === "provider" && !versions.provider_agreement))
+        throw new Error("Registration terms are not available. Please try again later.")
+      legalVersions.value = {
+        termsVersion: versions.terms,
+        privacyVersion: versions.privacy,
+        ...(accountRole.value === "provider" ? { providerAgreementVersion: versions.provider_agreement } : {}),
+      }
+    }
     await authApi.registerAccount({
       firstName: form.firstName,
       lastName: form.lastName,
       email: form.email,
       password: form.password,
       role: accountRole.value,
+      acceptedTerms: legalVersions.value,
     })
     await router.push({ path: "/auth/verify-email", query: { email: form.email } })
   } catch (error) {
@@ -114,7 +127,7 @@ const submit = async () => {
         <VCol cols="12">
           <VCheckbox
             v-model="form.accepted"
-            label="I accept the privacy and acceptable-use terms."
+            label="I accept the current terms and privacy notice. Provider applicants also accept the provider agreement."
             :rules="[required('Acceptance of the terms')]"
           />
         </VCol>
