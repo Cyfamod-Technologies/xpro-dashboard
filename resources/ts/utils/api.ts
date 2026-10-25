@@ -19,15 +19,34 @@ export class ApiError extends Error {
 
 export function toApiError(value: unknown): ApiError {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
-  const response = source.response && typeof source.response === "object" ? (source.response as Record<string, unknown>) : {}
-  const payload = source.data && typeof source.data === "object" ? (source.data as Record<string, unknown>) : response._data && typeof response._data === "object" ? (response._data as Record<string, unknown>) : {}
-  const error = payload.error && typeof payload.error === "object" ? (payload.error as Record<string, unknown>) : payload
+  const response =
+    source.response && typeof source.response === "object" ? (source.response as Record<string, unknown>) : {}
+  const payload =
+    source.data && typeof source.data === "object"
+      ? (source.data as Record<string, unknown>)
+      : response._data && typeof response._data === "object"
+        ? (response._data as Record<string, unknown>)
+        : {}
+  const error =
+    payload.error && typeof payload.error === "object" ? (payload.error as Record<string, unknown>) : payload
 
-  return new ApiError(typeof error.message === "string" ? error.message : typeof source.message === "string" ? source.message : "The request could not be completed.", {
-    code: typeof error.code === "string" ? error.code : undefined,
-    details: error.details,
-    status: typeof response.status === "number" ? response.status : typeof source.status === "number" ? source.status : undefined,
-  })
+  return new ApiError(
+    typeof error.message === "string"
+      ? error.message
+      : typeof source.message === "string"
+        ? source.message
+        : "The request could not be completed.",
+    {
+      code: typeof error.code === "string" ? error.code : undefined,
+      details: error.details,
+      status:
+        typeof response.status === "number"
+          ? response.status
+          : typeof source.status === "number"
+            ? source.status
+            : undefined,
+    },
+  )
 }
 
 export const $api = ofetch.create({

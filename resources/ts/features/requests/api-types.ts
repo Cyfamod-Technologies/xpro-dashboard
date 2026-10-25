@@ -314,7 +314,15 @@ export interface LocationView {
 export interface ServiceView {
   id: string
   name: string
-  intakeFields: Array<{ key: string; label: string; type: string; options?: string[]; required: boolean; sensitive?: boolean; isSkill?: boolean }>
+  intakeFields: Array<{
+    key: string
+    label: string
+    type: string
+    options?: string[]
+    required: boolean
+    sensitive?: boolean
+    isSkill?: boolean
+  }>
 }
 
 export interface SettingView {
@@ -497,7 +505,12 @@ export type PayoutStatus =
   | "reversed"
 
 /** Statuses a payout can be put on hold from. */
-export const HOLDABLE_PAYOUT_STATUSES: readonly string[] = ["pending_approval", "awaiting_second_approval", "approved", "failed"]
+export const HOLDABLE_PAYOUT_STATUSES: readonly string[] = [
+  "pending_approval",
+  "awaiting_second_approval",
+  "approved",
+  "failed",
+]
 
 /** Finance payout queue row (`GET /admin/payouts`) and the result of each payout command. */
 export interface PayoutView {
@@ -567,7 +580,16 @@ export interface PaginatedResult<T> extends PaginationFields {
 /** The server error envelope. A 409 `VERSION_CONFLICT` carries the fresh request view in `details.current`. */
 export interface ApiErrorBody {
   error: {
-    code: "VALIDATION_ERROR" | "NOT_FOUND" | "FORBIDDEN" | "STATE_CONFLICT" | "VERSION_CONFLICT" | "IDEMPOTENCY_KEY_REUSED" | "RATE_LIMITED" | "PAYMENT_IN_PROGRESS" | string
+    code:
+      | "VALIDATION_ERROR"
+      | "NOT_FOUND"
+      | "FORBIDDEN"
+      | "STATE_CONFLICT"
+      | "VERSION_CONFLICT"
+      | "IDEMPOTENCY_KEY_REUSED"
+      | "RATE_LIMITED"
+      | "PAYMENT_IN_PROGRESS"
+      | string
     message: string
     details?: { current?: RequestView } & Record<string, unknown>
   }

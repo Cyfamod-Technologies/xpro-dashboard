@@ -37,7 +37,15 @@ export const staffRolePermissions: Record<StaffRole, StaffPermission[] | "*"> = 
     "message.provider",
     "message.internal",
   ],
-  finance: ["bank.review", "payment.record", "payout.approve", "refund.manage", "view.pricing", "message.provider", "message.internal"],
+  finance: [
+    "bank.review",
+    "payment.record",
+    "payout.approve",
+    "refund.manage",
+    "view.pricing",
+    "message.provider",
+    "message.internal",
+  ],
 }
 
 export const staffRoleLabels: Record<StaffRole, string> = {
