@@ -15,10 +15,11 @@ const updates = ref<Awaited<ReturnType<typeof requestsApi.updates>>>([])
 const messages = ref<Awaited<ReturnType<typeof requestsApi.messages>>>([])
 const activity = ref<Awaited<ReturnType<typeof requestsApi.activity>>>()
 const escalations = ref<Awaited<ReturnType<typeof requestsApi.requestEscalations>>>([])
+const loadWarning = ref("")
 const startAt = ref("")
 const endAt = ref("")
 const scheduleNote = ref("")
-const progressStatus = ref("in_progress")
+const progressStatus = ref<"in_progress" | "blocked" | "completion_pending">("in_progress")
 const progressNote = ref("")
 const progressFiles = ref<File[]>([])
 const progressKey = ref(globalThis.crypto.randomUUID())
@@ -32,7 +33,7 @@ const issueNote = ref("")
 const cancellationNote = ref("")
 const ownershipNote = ref("")
 const handoffStaffId = ref("")
-const escalationTarget = ref("operations")
+const escalationTarget = ref<"operations" | "super_admin">("operations")
 const escalationNote = ref("")
 const editTitle = ref(props.request.title ?? "")
 const editDescription = ref(props.request.description ?? "")
@@ -58,18 +59,44 @@ const messageChannels = computed(() => {
 watch(messageChannels, choices => {
   if (!choices.some(item => item.value === channel.value) && choices[0]) channel.value = choices[0].value
 }, { immediate: true })
+const pendingCancellation = computed(() => props.request.cancellations?.find(item => item.status === "pending"))
+// `/cancel` is the free cancellation (`request.cancel`); a paid or active request goes through `/cancellations`.
+const submitCancellation = () => can("request.cancel")
+  ? requestsApi.cancel(props.request.id, cancellationNote.value, props.request.version)
+  : requestsApi.requestCancellation(props.request.id, { reasonCode: cancellationReasonCode.value, note: cancellationNote.value }, props.request.version)
 const formatWAT = (value: string) => new Intl.DateTimeFormat("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }).format(new Date(value))
 const currentSchedule = computed(() => schedules.value.find(item => item.status === "confirmed") ?? schedules.value.at(-1))
 const asWAT = (value: string) => new Date(`${value}:00+01:00`).toISOString()
 
 async function load() {
   const id = props.request.id
+  const staff = role.value === "admin"
   schedules.value = props.request.schedules ?? (props.request.schedule ? [props.request.schedule] : [])
-  const results = await Promise.allSettled([requestsApi.updates(id), requestsApi.messages(id), requestsApi.activity(id), requestsApi.requestEscalations(id)])
+  // Activity and escalations are staff-only routes; skip them for customers and providers instead of swallowing a 403.
+  const results = await Promise.allSettled([
+    requestsApi.updates(id),
+    requestsApi.messages(id, { channel: channel.value }),
+    staff ? requestsApi.activity(id) : Promise.resolve(undefined),
+    staff && can("request.escalate") ? requestsApi.requestEscalations(id) : Promise.resolve([]),
+  ])
+  const failed: string[] = []
   if (results[0].status === "fulfilled") updates.value = results[0].value
+  else if (can("progress.add") || can("progress.review")) failed.push("progress updates")
   if (results[1].status === "fulfilled") messages.value = results[1].value
+  else failed.push("messages")
   if (results[2].status === "fulfilled") activity.value = results[2].value
+  else failed.push("activity")
   if (results[3].status === "fulfilled") escalations.value = results[3].value
+  else failed.push("escalations")
+  loadWarning.value = failed.length ? `Could not load ${failed.join(", ")}. Refresh to try again.` : ""
+}
+
+async function loadMessages() {
+  try {
+    messages.value = await requestsApi.messages(props.request.id, { channel: channel.value })
+  } catch {
+    messages.value = []
+  }
 }
 
 async function run(action: () => Promise<unknown>, success: string) {
@@ -149,6 +176,7 @@ async function openFile(id: string) {
   }
 }
 
+watch(channel, loadMessages)
 watch(() => props.request.id, load, { immediate: true })
 watch(() => props.request.version, load)
 </script>
@@ -159,6 +187,7 @@ watch(() => props.request.version, load)
       <h2 class="text-h5 mb-4">Request lifecycle</h2>
       <VAlert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</VAlert>
       <VAlert v-if="notice" type="success" variant="tonal" class="mb-4">{{ notice }}</VAlert>
+      <VAlert v-if="loadWarning" type="warning" variant="tonal" class="mb-4">{{ loadWarning }}</VAlert>
       <VCard v-if="can('request.update')" variant="tonal" class="mb-5"><VCardText>
         <h3 class="text-subtitle-1 mb-3">Edit request brief</h3>
         <VTextField v-model="editTitle" label="Request title" />
@@ -171,8 +200,8 @@ watch(() => props.request.version, load)
         <VTextField v-model="ownershipNote" label="Ownership or escalation note" />
         <div class="d-flex flex-wrap ga-2 mb-3"><VBtn v-if="can('request.claim')" :loading="busy" @click="run(() => requestsApi.claim(request.id, request.version), 'Request claimed.')">Claim</VBtn><VBtn v-if="can('request.release') && request.staffOwnerId" :disabled="!ownershipNote.trim()" :loading="busy" @click="run(() => requestsApi.releaseOwnership(request.id, { note: ownershipNote, expectedOwnerId: request.staffOwnerId! }, request.version), 'Ownership released.')">Release</VBtn></div>
         <div v-if="can('request.handoff') || can('request.reassign')" class="d-flex flex-wrap ga-2"><VTextField v-model="handoffStaffId" label="Staff user ID" /><VBtn v-if="can('request.handoff')" :disabled="!handoffStaffId.trim() || !ownershipNote.trim()" :loading="busy" @click="run(() => requestsApi.handoff(request.id, { toStaffId: handoffStaffId, note: ownershipNote }, request.version), 'Request handed off.')">Hand off</VBtn><VBtn v-if="can('request.reassign') && request.staffOwnerId" :disabled="!handoffStaffId.trim() || !ownershipNote.trim()" :loading="busy" @click="run(() => requestsApi.reassign(request.id, { staffId: handoffStaffId, note: ownershipNote, expectedOwnerId: request.staffOwnerId! }, request.version), 'Request reassigned.')">Reassign</VBtn></div>
-        <div v-if="can('request.escalate')" class="d-flex flex-wrap ga-2 mt-3"><VSelect v-model="escalationTarget" :items="['operations', 'pricing', 'finance', 'super_admin']" label="Escalate to" /><VTextField v-model="escalationNote" label="Escalation note" /><VBtn :disabled="!escalationNote.trim()" :loading="busy" @click="run(() => requestsApi.escalateRequest(request.id, { to: escalationTarget, note: escalationNote }, request.version), 'Request escalated.')">Escalate</VBtn></div>
-        <VList v-if="escalations.length"><VListItem v-for="item in escalations" :key="item.id" :title="`Escalation ${item.status}`" :subtitle="item.note" /></VList>
+        <div v-if="can('request.escalate')" class="d-flex flex-wrap ga-2 mt-3"><VSelect v-model="escalationTarget" :items="[{ title: 'Operations', value: 'operations' }, { title: 'Super admin', value: 'super_admin' }]" label="Escalate to" /><VTextField v-model="escalationNote" label="Escalation note" /><VBtn :disabled="!escalationNote.trim()" :loading="busy" @click="run(() => requestsApi.escalateRequest(request.id, { target: escalationTarget, note: escalationNote }, request.version), 'Request escalated.')">Escalate</VBtn></div>
+        <VList v-if="escalations.length"><VListItem v-for="item in escalations" :key="item.id" :title="`Escalation to ${item.target.replaceAll('_', ' ')} · ${item.resolvedAt ? 'resolved' : 'open'}`" :subtitle="item.note" /></VList>
       </VCardText></VCard>
       <VTabs v-model="activeTab" class="mb-5" show-arrows>
         <VTab value="schedule">Schedule</VTab><VTab value="progress">Progress</VTab><VTab value="completion">Completion & issues</VTab><VTab value="cancellation">Cancellation</VTab><VTab value="messages">Messages</VTab><VTab v-if="role === 'admin'" value="activity">Activity</VTab>
@@ -213,10 +242,10 @@ watch(() => props.request.version, load)
           <VBtn :disabled="!noShowNote.trim() || !currentSchedule?.id" :loading="busy" @click="run(() => requestsApi.recordNoShow(request.id, { scheduleId: currentSchedule!.id!, note: noShowNote }, request.version), 'No-show recorded for review.')">Record allegation</VBtn>
         </VCardText></VCard>
         <VList v-if="request.noShows?.length" class="mb-4"><VListItem v-for="item in request.noShows" :key="item.id" :title="`No-show ${item.status}`" :subtitle="item.note">
-          <template #append><div class="d-flex ga-2"><VBtn v-if="item.status === 'open' && can('noshow.confirm')" size="small" :loading="busy" @click="run(() => requestsApi.decideNoShow(request.id, item.id, { outcome: 'confirm', note: reviewNote || 'Confirmed after review.', version: request.version }, request.version), 'No-show confirmed.')">Confirm</VBtn><VBtn v-if="item.status === 'open' && can('noshow.dismiss')" size="small" variant="tonal" @click="run(() => requestsApi.decideNoShow(request.id, item.id, { outcome: 'dismiss', note: reviewNote || 'Not confirmed after review.', version: request.version }, request.version), 'No-show dismissed.')">Dismiss</VBtn><VBtn v-if="item.status === 'confirmed' && can('noshow.correct')" size="small" color="warning" variant="tonal" @click="run(() => requestsApi.correctNoShow(request.id, item.id, { note: reviewNote || 'Correction recorded by staff.', version: request.version }, request.version), 'No-show correction recorded.')">Correct</VBtn></div></template>
+          <template #append><div class="d-flex ga-2"><VBtn v-if="item.status === 'open' && can('noshow.confirm')" size="small" :loading="busy" @click="run(() => requestsApi.decideNoShow(request.id, item.id, { outcome: 'confirm', note: reviewNote || 'Confirmed after review.', version: item.version ?? request.version }, request.version), 'No-show confirmed.')">Confirm</VBtn><VBtn v-if="item.status === 'open' && can('noshow.dismiss')" size="small" variant="tonal" @click="run(() => requestsApi.decideNoShow(request.id, item.id, { outcome: 'dismiss', note: reviewNote || 'Not confirmed after review.', version: item.version ?? request.version }, request.version), 'No-show dismissed.')">Dismiss</VBtn><VBtn v-if="item.status === 'confirmed' && can('noshow.correct')" size="small" color="warning" variant="tonal" @click="run(() => requestsApi.correctNoShow(request.id, item.id, { note: reviewNote || 'Correction recorded by staff.', version: item.version ?? request.version }, request.version), 'No-show correction recorded.')">Correct</VBtn></div></template>
         </VListItem></VList>
-        <VList v-if="updates.length"><VListItem v-for="item in updates" :key="item.id" :title="`${item.status.replaceAll('_', ' ')} · ${item.review.state}`" :subtitle="`${item.note} · ${new Date(item.createdAt).toLocaleString()}`">
-          <template #append><div class="d-flex flex-wrap ga-2"><VBtn v-for="file in item.attachments" :key="file.id" size="small" variant="text" @click="openFile(file.id)">{{ file.name }}</VBtn><VBtn v-if="item.review.state === 'pending' && can('progress.review')" size="small" :loading="busy" @click="run(() => requestsApi.reviewProgress(request.id, item.id, { approve: true }, request.version), 'Update approved.')">Approve</VBtn><VBtn v-if="item.review.state === 'pending' && can('progress.review')" size="small" color="error" variant="tonal" @click="run(() => requestsApi.reviewProgress(request.id, item.id, { approve: false, note: reviewNote || 'Does not meet review requirements.' }, request.version), 'Update returned.')">Return</VBtn></div></template>
+        <VList v-if="updates.length"><VListItem v-for="item in updates" :key="item.id" :title="`${item.target.replaceAll('_', ' ')} · ${item.state}`" :subtitle="`${item.note}${item.reviewNote ? ` · Review: ${item.reviewNote}` : ''} · ${new Date(item.createdAt).toLocaleString()}`">
+          <template #append><div class="d-flex flex-wrap ga-2"><VBtn v-for="file in item.attachments" :key="file.id" size="small" variant="text" @click="openFile(file.id)">{{ file.name }}</VBtn><VBtn v-if="item.state === 'pending' && can('progress.review')" size="small" :loading="busy" @click="run(() => requestsApi.reviewProgress(request.id, item.id, { approve: true }, request.version), 'Update approved.')">Approve</VBtn><VBtn v-if="item.state === 'pending' && can('progress.review')" size="small" color="error" variant="tonal" @click="run(() => requestsApi.reviewProgress(request.id, item.id, { approve: false, note: reviewNote || 'Does not meet review requirements.' }, request.version), 'Update returned.')">Return</VBtn></div></template>
         </VListItem></VList>
       </section>
 
@@ -232,21 +261,21 @@ watch(() => props.request.version, load)
 
       <section v-else-if="activeTab === 'cancellation'">
         <VAlert v-if="request.overlays?.cancellation" type="warning" variant="tonal" class="mb-4">Cancellation status: {{ request.overlays.cancellation }}. Work is paused while staff review the request.</VAlert>
-        <VSelect v-if="can('request.cancel') && !can('cancellation.request')" v-model="cancellationReasonCode" :items="['customer_changed_mind', 'quote_declined', 'no_response', 'payment_lapsed', 'no_provider', 'provider_no_show', 'provider_suspended', 'customer_suspended', 'scope_dispute', 'duplicate', 'other']" label="Cancellation reason code" />
+        <VSelect v-if="can('cancellation.request') && !can('request.cancel')" v-model="cancellationReasonCode" :items="['customer_changed_mind', 'quote_declined', 'no_response', 'payment_lapsed', 'no_provider', 'provider_no_show', 'provider_suspended', 'customer_suspended', 'scope_dispute', 'duplicate', 'other']" label="Cancellation reason code" />
         <VTextField v-model="cancellationNote" label="Cancellation reason" />
-        <VBtn v-if="can('cancellation.request') || can('request.cancel')" color="error" variant="tonal" :disabled="!cancellationNote.trim()" :loading="busy" @click="run(() => requestsApi.cancel(request.id, { note: cancellationNote, reasonCode: cancellationReasonCode }, request.version), 'Cancellation request sent.')">Request cancellation</VBtn>
-        <VBtn v-if="can('cancellation.withdraw')" class="ms-2" variant="outlined" :loading="busy" @click="run(() => requestsApi.withdrawCancellation(request.id, cancellationNote || undefined, request.version), 'Cancellation request withdrawn.')">Withdraw request</VBtn>
-        <VList v-if="request.cancellations?.length" class="mt-4"><VListItem v-for="item in request.cancellations" :key="item.id" :title="`${item.status} · ${item.reasonCode || 'Reason pending'}`" :subtitle="item.note ?? undefined"><template #append><div v-if="can('cancellation.decide')" class="d-flex ga-2"><VBtn size="small" @click="run(() => requestsApi.decideCancellation(request.id, { approve: true, note: cancellationNote }, request.version), 'Cancellation approved.')">Approve</VBtn><VBtn size="small" color="error" variant="tonal" @click="run(() => requestsApi.decideCancellation(request.id, { approve: false, note: cancellationNote }, request.version), 'Cancellation declined.')">Decline</VBtn></div></template></VListItem></VList>
+        <VBtn v-if="can('cancellation.request') || can('request.cancel')" color="error" variant="tonal" :disabled="!cancellationNote.trim()" :loading="busy" @click="run(() => submitCancellation(), can('request.cancel') ? 'Request cancelled.' : 'Cancellation request sent.')">{{ can('request.cancel') ? 'Cancel request' : 'Request cancellation' }}</VBtn>
+        <VBtn v-if="can('cancellation.withdraw') && pendingCancellation" class="ms-2" variant="outlined" :loading="busy" @click="run(() => requestsApi.withdrawCancellation(request.id, pendingCancellation!.id, cancellationNote || undefined, request.version), 'Cancellation request withdrawn.')">Withdraw request</VBtn>
+        <VList v-if="request.cancellations?.length" class="mt-4"><VListItem v-for="item in request.cancellations" :key="item.id" :title="`${item.status} · ${item.reasonCode || 'Reason pending'}`" :subtitle="item.note ?? undefined"><template #append><div v-if="can('cancellation.decide') && item.status === 'pending'" class="d-flex ga-2"><VBtn size="small" @click="run(() => requestsApi.decideCancellation(request.id, { approve: true, note: cancellationNote || undefined }, request.version), 'Cancellation approved.')">Approve</VBtn><VBtn size="small" color="error" variant="tonal" :disabled="!cancellationNote.trim()" @click="run(() => requestsApi.decideCancellation(request.id, { approve: false, note: cancellationNote }, request.version), 'Cancellation declined.')">Decline</VBtn></div></template></VListItem></VList>
       </section>
 
       <section v-else-if="activeTab === 'activity'">
-        <VList v-if="activity?.items.length"><VListItem v-for="item in activity.items" :key="item.id" :title="item.action" :subtitle="`${item.actorLabel || 'XPro'} · ${new Date(item.createdAt).toLocaleString()}`" /></VList>
+        <VList v-if="activity?.items.length"><VListItem v-for="item in activity.items" :key="item.id" :title="item.action" :subtitle="`${item.actorType.replaceAll('_', ' ')} · ${new Date(item.at).toLocaleString()}`" /></VList>
         <p v-else class="text-medium-emphasis">No activity is available to display.</p>
       </section>
 
       <section v-else>
         <VSelect v-if="role === 'admin'" v-model="channel" :items="messageChannels.map(({ title, value }) => ({ title, value }))" label="Conversation" />
-        <VList v-if="messages.length" class="mb-4"><VListItem v-for="message in messages" :key="message.id" :title="message.author || message.channel" :subtitle="`${message.text} · ${new Date(message.createdAt).toLocaleString()}`"><template #append><VBtn v-for="file in message.attachments" :key="file.id" size="small" variant="text" @click="openFile(file.id)">{{ file.name }}</VBtn></template></VListItem></VList>
+        <VList v-if="messages.length" class="mb-4"><VListItem v-for="message in messages" :key="message.id" :title="message.author.label" :subtitle="`${message.text} · ${new Date(message.createdAt).toLocaleString()}`"><template #append><VBtn v-for="file in message.attachments" :key="file.id" size="small" variant="text" @click="openFile(file.id)">{{ file.name }}</VBtn></template></VListItem></VList>
         <VTextarea v-if="can('message.send')" v-model="messageText" label="Message" rows="3" />
         <VFileInput v-if="can('message.send')" v-model="messageFiles" label="Attach files" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.mp4" />
         <VBtn v-if="can('message.send')" :disabled="!messageText.trim()" :loading="busy" @click="sendMessage">Send message</VBtn>

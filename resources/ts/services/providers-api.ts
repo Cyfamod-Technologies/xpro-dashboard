@@ -53,9 +53,12 @@ export const providersApi = {
       method: "POST",
       body: { bankCode, accountNumber },
     }),
+  // Provider onboarding files use the provider upload routes (their purposes are not in the `/uploads` enum);
+  // `payment_proof` is a request-flow purpose and stays on `/uploads`.
   upload: async (file: File, purpose: ProviderUploadPurpose): Promise<Attachment> => {
+    const base = purpose === "payment_proof" ? "/uploads" : "/providers/me/uploads"
     const upload = await $api<ApiEnvelope<{ id: string; uploadUrl: string; method: "PUT"; headers: Record<string, string> }>>(
-      "/uploads",
+      base,
       { method: "POST", body: { name: file.name, type: file.type, size: file.size, purpose } },
     )
     const response = await fetch(upload.data.uploadUrl, {
@@ -65,7 +68,7 @@ export const providersApi = {
     })
     if (!response.ok) throw new Error("The file could not be uploaded. Try again.")
     const completed = await $api<ApiEnvelope<{ id: string; name: string; size: number; type: string }>>(
-      `/uploads/${upload.data.id}/complete`,
+      `${base}/${upload.data.id}/complete`,
       { method: "POST" },
     )
 

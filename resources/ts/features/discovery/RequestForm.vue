@@ -263,8 +263,8 @@ const submit = async () => {
         phone: form.phone,
         contactMethod: form.contactMethod,
         description: form.description,
-        budget: form.budget ? Math.round(form.budget * 100) : null,
-        startDate: form.startDate || null,
+        budget: form.budget ? Math.round(form.budget * 100) : 0,
+        startDate: form.startDate || undefined,
         details: form.details,
         attachments,
       }, submitKey.value)

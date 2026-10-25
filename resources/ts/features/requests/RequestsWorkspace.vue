@@ -2,11 +2,14 @@
 import type {
   AssignmentView,
   QuoteItemView,
+  QuoteLineView,
   QuoteView,
   RankingRunView,
   RequestSummary,
   RequestView,
 } from "@/features/requests/api-types"
+import { REQUEST_STAGES } from "@/features/requests/api-types"
+import { nextActorLabel } from "@/features/requests/next-actor"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { providersApi } from "@/services/providers-api"
 import RequestLifecycle from "@/features/requests/RequestLifecycle.vue"
@@ -50,8 +53,6 @@ const intakeQuestion = ref("")
 const offerBrief = ref("")
 const rejectionReason = ref("")
 const contactCheck = ref(false)
-const overrideRules = ref<string[]>([])
-const overrideChoices = ["area", "day", "skill", "capacity", "previous", "bank"]
 const paymentPoll = ref<ReturnType<typeof setInterval>>()
 const expiryTick = ref(Date.now())
 const expiryTimer = ref<ReturnType<typeof setInterval>>()
@@ -63,6 +64,20 @@ const currentAssignments = computed<AssignmentView[]>(() => {
   return Array.isArray(value) ? value : value ? [value] : []
 })
 const currentQuote = computed<QuoteView | undefined>(() => request.value?.quote ?? undefined)
+// Staff and customers get `items`; the assigned provider gets `scope` (no prices); amounts can be hidden for staff.
+const quoteLines = computed<QuoteLineView[]>(() => currentQuote.value?.items ?? currentQuote.value?.scope ?? [])
+const stageItems = REQUEST_STAGES.map(value => ({ title: value.replaceAll("_", " "), value }))
+// The server needs an override reason for an excluded provider or anyone other than the top suggestion.
+const needsOverride = computed(() => {
+  if (!run.value || !providerId.value) return false
+
+  return run.value.excluded.some(item => item.providerId === providerId.value) || run.value.eligible[0]?.providerId !== providerId.value
+})
+const quoteRevision = (quote: QuoteView) => {
+  if (quote.revision === undefined) throw new Error("This quote cannot be changed from your account.")
+
+  return quote.revision
+}
 const can = (action: string) => request.value?.allowedActions.includes(action) ?? false
 const money = (value?: number | null) => value == null ? "—" : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 2 }).format(value / 100)
 const expiresIn = (value?: string) => {
@@ -107,9 +122,11 @@ async function loadDetail(id = selectedId.value) {
     request.value = await requestsApi.get(id)
     dispatchMode.value = request.value.dispatch?.mode ?? "auto"
     if (request.value.quote) {
-      quoteItems.value = request.value.quote.items?.length ? request.value.quote.items.map(item => ({ ...item })) : [{ description: "", quantity: 1, unitPrice: 0 }]
+      const lines = request.value.quote.items ?? []
+
+      quoteItems.value = lines.length ? lines.map(item => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice ?? 0 })) : [{ description: "", quantity: 1, unitPrice: 0 }]
       quoteNote.value = request.value.quote.note ?? ""
-      payoutAmount.value = request.value.quote.payoutAmount ?? null
+      payoutAmount.value = request.value.quote.payoutAmount ?? request.value.quote.payoutSuggestion ?? null
     }
     if (props.section === "payments") {
       payment.value = await requestsApi.payments(id)
@@ -195,7 +212,7 @@ async function createOrUpdateQuote() {
     return
   }
   if (currentQuote.value) {
-    await perform(() => requestsApi.updateQuote(request.value!.id, currentQuote.value!.id, { revision: currentQuote.value!.revision, items, note: quoteNote.value || undefined }, request.value!.version), "Draft saved.")
+    await perform(() => requestsApi.updateQuote(request.value!.id, currentQuote.value!.id, { revision: quoteRevision(currentQuote.value!), items, note: quoteNote.value || undefined }, request.value!.version), "Draft saved.")
 
     return
   }
@@ -237,7 +254,7 @@ watch([stageFilter, nextActorOnly], () => {
     <template v-if="!request">
       <VCard class="mb-5"><VCardText class="d-flex flex-wrap align-center justify-space-between ga-4">
         <div><h2 class="text-h5">{{ sectionTitle }}</h2><p class="text-medium-emphasis mb-0">Live requests from the XPro API.</p></div>
-        <div class="d-flex flex-wrap align-center ga-3"><VTextField v-model="query" label="Search requests" prepend-inner-icon="tabler-search" hide-details clearable class="search-field" /><VSelect v-model="stageFilter" :items="['intake', 'dispatch', 'pricing', 'payment', 'scheduling', 'execution', 'completion', 'cancellation', 'closed']" label="Stage" clearable hide-details class="stage-filter" /><VCheckbox v-model="nextActorOnly" label="Waiting on me" hide-details /></div>
+        <div class="d-flex flex-wrap align-center ga-3"><VTextField v-model="query" label="Search requests" prepend-inner-icon="tabler-search" hide-details clearable class="search-field" /><VSelect v-model="stageFilter" :items="stageItems" label="Stage" clearable hide-details class="stage-filter" /><VCheckbox v-model="nextActorOnly" label="Waiting on me" hide-details /></div>
       </VCardText></VCard>
       <VAlert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</VAlert>
       <VProgressLinear v-if="loading" indeterminate class="mb-4" />
@@ -247,7 +264,7 @@ watch([stageFilter, nextActorOnly], () => {
             <div class="d-flex justify-space-between ga-3 mb-3"><span class="text-medium-emphasis">{{ item.id }}</span><VChip color="primary" variant="tonal">{{ item.statusLabel ?? item.stage }}</VChip></div>
             <h3 class="text-h5 mb-2">{{ item.title || "Service request" }}</h3>
             <p class="text-medium-emphasis mb-4">{{ [item.service, item.cityName, item.districtName].filter(Boolean).join(" · ") }}</p>
-            <p class="text-body-2">Next: {{ item.nextActor }}</p>
+            <p class="text-body-2">Next: {{ nextActorLabel(item.nextActor) }}</p>
             <VBtn variant="outlined" @click="select(item.id)">{{ props.section === "quotes" ? "View quote" : props.section === "dispatch" ? "Dispatch" : "View request" }}</VBtn>
           </VCardText></VCard>
         </VCol>
@@ -275,7 +292,7 @@ watch([stageFilter, nextActorOnly], () => {
             <VSelect v-model="dispatchMode" :items="[{ title: 'Automatic', value: 'auto' }, { title: 'Manual', value: 'manual' }]" label="Dispatch mode" hide-details class="mode-field" />
             <VTextField v-model="modeNote" label="Reason for mode change" hide-details class="mode-field" />
             <VBtn v-if="can('dispatch.setMode')" :disabled="!modeNote.trim()" :loading="saving" @click="perform(() => requestsApi.setDispatchMode(request!.id, dispatchMode, modeNote, request!.version), 'Dispatch mode updated.')">Save mode</VBtn>
-            <VBtn v-if="can('dispatch.manage') || can('assignment.offer')" variant="outlined" :loading="saving" @click="refreshRun">Refresh ranked list</VBtn>
+            <VBtn v-if="can('dispatch.runs')" variant="outlined" :loading="saving" @click="refreshRun">Refresh ranked list</VBtn>
             <VBtn v-if="can('assignment.auto')" color="primary" :loading="saving" @click="perform(() => requestsApi.autoAssign(request!.id, { note: actionNote }, request!.version), 'Automatic dispatch started.')">Auto assign</VBtn>
           </div>
           <VTextField v-model="actionNote" label="Dispatch note" class="mb-4" />
@@ -289,19 +306,18 @@ watch([stageFilter, nextActorOnly], () => {
             <VAlert v-else type="info" variant="tonal" class="mb-4">No eligible providers in this ranking run.</VAlert>
             <div v-if="can('assignment.offer')" class="d-flex flex-wrap ga-3 mb-4">
               <VTextField v-model="offerNote" label="Offer note" hide-details />
-              <VSelect v-model="overrideRules" :items="overrideChoices" label="Eligibility rules to override" multiple chips hide-details />
-              <VTextField v-model="overrideNote" label="Override reason (required when overriding)" hide-details />
-              <VBtn :disabled="!providerId || (overrideRules.length > 0 && !overrideNote.trim())" :loading="saving" @click="perform(() => requestsApi.offer(request!.id, { providerId, rankingRunId: run!.runId, note: offerNote || undefined, overrideRules, overrideNote: overrideNote || undefined }, request!.version), 'Provider offer sent.')">Offer selected provider</VBtn>
+              <VTextField v-model="overrideNote" :label="needsOverride ? 'Override reason (required for this provider)' : 'Override reason'" hide-details />
+              <VBtn :disabled="!providerId || (needsOverride && !overrideNote.trim())" :loading="saving" @click="perform(() => requestsApi.offer(request!.id, { providerId, rankingRunId: run!.runId, note: offerNote || undefined, overrideNote: overrideNote.trim() || undefined }, request!.version), 'Provider offer sent.')">Offer selected provider</VBtn>
             </div>
             <h4 v-if="run.excluded.length" class="text-subtitle-1 mt-4">Excluded providers</h4>
             <VList v-if="run.excluded.length"><VListItem v-for="provider in run.excluded" :key="provider.providerId" :title="provider.providerName" :subtitle="`${provider.rule}: ${provider.reason}`" @click="providerId = provider.providerId">
-              <template #append><VBtn v-if="can('assignment.offer') && overrideChoices.includes(provider.rule)" size="small" variant="tonal" @click.stop="providerId = provider.providerId; overrideRules = [provider.rule]">Select override</VBtn></template>
+              <template #append><VBtn v-if="can('assignment.offer')" size="small" variant="tonal" @click.stop="providerId = provider.providerId">Select override</VBtn></template>
             </VListItem></VList>
           </template>
         </VCardText></VCard>
         <VCard v-if="currentAssignments.length"><VCardText><h3 class="text-h5 mb-3">Assignments</h3>
           <VList><VListItem v-for="item in currentAssignments" :key="item.id || item.providerId || item.status" :title="item.businessName || item.providerName || item.providerId || 'Assignment'" :subtitle="`${item.status}${item.expiresAt ? ` · ${expiresIn(item.expiresAt)} (${new Date(item.expiresAt).toLocaleString()})` : ''}${item.response ? ` · ${item.response}` : ''}${item.score ? ` · score ${item.score.total}` : ''}`">
-            <template #append><div class="d-flex ga-2"><VBtn v-if="item.id && can('assignment.respond') && item.status === 'offered'" size="small" color="success" @click="perform(() => requestsApi.respondAssignment(request!.id, item.id!, { accept: true, crewSize: crewSize || undefined }, request!.version), 'Offer accepted.')">Accept</VBtn><VBtn v-if="item.id && can('assignment.review') && item.status === 'pending_approval'" size="small" color="success" @click="perform(() => requestsApi.reviewAssignment(request!.id, item.id!, { approve: true, note: actionNote || undefined, overrideNote: overrideNote || undefined, share: { description: shareDescription ? (request!.description || '') : '', attachmentIds: shareDescription ? (request!.attachments ?? []).map(file => file.id) : [] } }, request!.version), 'Assignment confirmed.')">Confirm</VBtn><VBtn v-if="item.id && can('assignment.review') && item.status === 'pending_approval'" size="small" color="error" variant="tonal" @click="perform(() => requestsApi.reviewAssignment(request!.id, item.id!, { approve: false, note: actionNote }, request!.version), 'Acceptance rejected.')">Reject</VBtn><VBtn v-if="item.id && can('assignment.withdraw') && ['offered', 'pending_approval'].includes(item.status)" size="small" color="error" variant="tonal" @click="perform(() => requestsApi.withdrawAssignment(request!.id, item.id!, actionNote, request!.version), 'Offer withdrawn.')">Withdraw</VBtn><VBtn v-if="item.id && can('assignment.replace') && item.status === 'accepted'" size="small" color="warning" variant="tonal" @click="perform(() => requestsApi.replaceAssignment(request!.id, item.id!, { note: actionNote, workStarted: request!.status === 'in_progress' }, request!.version), 'Provider replacement started.')">Replace</VBtn></div></template>
+            <template #append><div class="d-flex ga-2"><VBtn v-if="item.id && can('assignment.respond') && item.status === 'offered'" size="small" color="success" @click="perform(() => requestsApi.respondAssignment(request!.id, item.id!, { accept: true, crewSize: crewSize || undefined }, request!.version), 'Offer accepted.')">Accept</VBtn><VBtn v-if="item.id && can('assignment.review') && item.status === 'pending_approval'" size="small" color="success" @click="perform(() => requestsApi.reviewAssignment(request!.id, item.id!, { approve: true, note: actionNote || undefined, overrideNote: overrideNote || undefined, share: { description: shareDescription, attachmentIds: shareDescription ? (request!.attachments ?? []).map(file => file.id) : [] } }, request!.version), 'Assignment confirmed.')">Confirm</VBtn><VBtn v-if="item.id && can('assignment.review') && item.status === 'pending_approval'" size="small" color="error" variant="tonal" @click="perform(() => requestsApi.reviewAssignment(request!.id, item.id!, { approve: false, note: actionNote }, request!.version), 'Acceptance rejected.')">Reject</VBtn><VBtn v-if="item.id && can('assignment.withdraw') && ['offered', 'pending_approval'].includes(item.status)" size="small" color="error" variant="tonal" @click="perform(() => requestsApi.withdrawAssignment(request!.id, item.id!, actionNote, request!.version), 'Offer withdrawn.')">Withdraw</VBtn><VBtn v-if="item.id && can('assignment.replace') && item.status === 'accepted'" size="small" color="warning" variant="tonal" @click="perform(() => requestsApi.replaceAssignment(request!.id, item.id!, { note: actionNote, workStarted: request!.status === 'in_progress' }, request!.version), 'Provider replacement started.')">Replace</VBtn></div></template>
           </VListItem></VList>
           <div class="d-flex flex-wrap ga-3 mt-4"><VTextField v-model.number="crewSize" type="number" min="1" label="Hire crew size" /><VTextarea v-model="actionNote" label="Review or withdrawal note" rows="2" /><VCheckbox v-model="shareDescription" label="Share description and request attachments on confirmation" /><VTextField v-model="overrideNote" label="Eligibility override reason" /></div>
           <div v-if="currentAssignments.some(item => item.status === 'accepted') && can('request.shareDetails')" class="mt-3"><h4 class="text-subtitle-1">Share additional details</h4><VCheckbox v-model="shareAddress" label="Share address and access details" /><VTextarea v-model="shareNote" label="Reason for sharing details" rows="2" /><VBtn :disabled="shareAddress && !shareNote.trim()" @click="perform(() => requestsApi.shareDetails(request!.id, { fields: shareAddress ? ['address', 'access'] : [], attachmentIds: [], note: shareNote || undefined }, request!.version), 'Details shared with provider.')">Share details</VBtn></div>
@@ -325,7 +341,8 @@ watch([stageFilter, nextActorOnly], () => {
       <template v-else-if="props.section === 'quotes'">
         <VCard class="mb-5"><VCardText>
           <h3 class="text-h5 mb-4">Quote</h3>
-          <VAlert v-if="currentQuote" variant="tonal" color="info" class="mb-4">{{ currentQuote.status }} · version {{ currentQuote.version }} · {{ money(currentQuote.total) }}</VAlert>
+          <VAlert v-if="currentQuote" variant="tonal" color="info" class="mb-4">{{ currentQuote.status }} · version {{ currentQuote.version }} · {{ currentQuote.amountsHidden ? "amounts hidden" : money(currentQuote.total) }}</VAlert>
+          <VAlert v-if="currentQuote?.blockedReason" variant="tonal" color="warning" class="mb-4">{{ currentQuote.blockedReason }}</VAlert>
           <div v-if="can('quote.contribute')" class="mb-5">
             <h4 class="text-subtitle-1">Provider costing</h4>
             <div v-for="(item, index) in quoteItems" :key="`cost-${index}`" class="d-flex flex-wrap ga-3 mb-3">
@@ -350,9 +367,9 @@ watch([stageFilter, nextActorOnly], () => {
           </div>
           <div v-if="currentQuote" class="d-flex flex-wrap ga-2">
             <VTextField v-if="can('quote.publish')" v-model="customerQuoteNote" label="Note for customer" />
-            <VBtn v-if="can('quote.publish')" :loading="saving" @click="perform(() => requestsApi.publishQuote(request!.id, currentQuote!.id, { revision: currentQuote!.revision, customerNote: customerQuoteNote || undefined }, request!.version), 'Quote published or sent for sign-off.')">Publish quote</VBtn>
-            <VBtn v-if="can('quote.approve')" color="success" :loading="saving" @click="perform(() => requestsApi.approveQuote(request!.id, currentQuote!.id, { revision: currentQuote!.revision }, request!.version), 'Quote approved.')">Approve</VBtn>
-            <VBtn v-if="can('quote.return')" color="warning" :loading="saving" @click="perform(() => requestsApi.returnQuote(request!.id, currentQuote!.id, { revision: currentQuote!.revision, note: quoteNote }, request!.version), 'Quote returned for changes.')">Return for changes</VBtn>
+            <VBtn v-if="can('quote.publish')" :loading="saving" @click="perform(() => requestsApi.publishQuote(request!.id, currentQuote!.id, { revision: quoteRevision(currentQuote!), customerNote: customerQuoteNote || undefined }, request!.version), 'Quote published or sent for sign-off.')">Publish quote</VBtn>
+            <VBtn v-if="can('quote.approve')" color="success" :loading="saving" @click="perform(() => requestsApi.approveQuote(request!.id, currentQuote!.id, { revision: quoteRevision(currentQuote!) }, request!.version), 'Quote approved.')">Approve</VBtn>
+            <VBtn v-if="can('quote.return')" color="warning" :loading="saving" @click="perform(() => requestsApi.returnQuote(request!.id, currentQuote!.id, { revision: quoteRevision(currentQuote!), note: quoteNote }, request!.version), 'Quote returned for changes.')">Return for changes</VBtn>
             <VBtn v-if="can('quote.respond')" color="success" :loading="saving" @click="perform(() => requestsApi.respondQuote(request!.id, currentQuote!.id, { decision: 'accepted' }, request!.version), 'Quote accepted.')">Accept quote</VBtn>
             <VBtn v-if="can('quote.respond')" variant="outlined" :loading="saving" @click="perform(() => requestsApi.respondQuote(request!.id, currentQuote!.id, { decision: 'revision_requested', note: quoteNote || undefined }, request!.version), 'Changes requested.')">Ask for changes</VBtn>
             <VBtn v-if="can('quote.respond')" color="error" variant="tonal" :loading="saving" @click="perform(() => requestsApi.respondQuote(request!.id, currentQuote!.id, { decision: 'declined', note: quoteNote || undefined }, request!.version), 'Quote declined.')">Decline</VBtn>
@@ -361,8 +378,8 @@ watch([stageFilter, nextActorOnly], () => {
             <VTextField v-model.number="payoutAmount" label="Provider payout (kobo)" type="number" hide-details />
             <VBtn :disabled="!payoutAmount" :loading="saving" @click="perform(() => requestsApi.setQuotePayout(request!.id, currentQuote!.id, payoutAmount!, request!.version), 'Payout amount saved.')">Save payout</VBtn>
           </div>
-          <div v-if="currentQuote?.items?.length" class="mt-5">
-            <div v-for="(item, index) in currentQuote.items" :key="index" class="d-flex justify-space-between border-b py-2"><span>{{ item.description }} · {{ item.quantity }} × {{ money(item.unitPrice) }}</span><strong>{{ money(item.quantity * item.unitPrice) }}</strong></div>
+          <div v-if="quoteLines.length" class="mt-5">
+            <div v-for="(item, index) in quoteLines" :key="index" class="d-flex justify-space-between border-b py-2"><span>{{ item.description }} · {{ item.quantity }}<template v-if="item.unitPrice != null"> × {{ money(item.unitPrice) }}</template></span><strong v-if="item.unitPrice != null">{{ money(item.quantity * item.unitPrice) }}</strong></div>
           </div>
         </VCardText></VCard>
       </template>
@@ -388,8 +405,8 @@ watch([stageFilter, nextActorOnly], () => {
           </div>
           <VTextField v-model="paymentNote" label="Reconciliation note" class="mt-4" />
           <div v-for="item in payment?.payments ?? []" :key="`payment-actions-${item.id}`" class="d-flex ga-2 mb-2">
-            <VBtn v-if="can('payment.reconcile') && item.method === 'offline' && item.status === 'pending_reconciliation'" size="small" :loading="saving" @click="perform(() => requestsApi.reconcilePayment(item.id, paymentNote), 'Payment reconciled.', true)">Reconcile {{ item.reference || item.id }}</VBtn>
-            <VBtn v-if="can('payment.rejectOffline') && item.method === 'offline' && item.status === 'pending_reconciliation'" size="small" color="error" variant="tonal" :loading="saving" @click="perform(() => requestsApi.rejectPayment(item.id, paymentNote), 'Payment rejected.', true)">Reject</VBtn>
+            <VBtn v-if="can('payment.reconcile') && item.method === 'offline' && item.status === 'recorded'" size="small" :loading="saving" @click="perform(() => requestsApi.reconcilePayment(item.id, paymentNote), 'Payment reconciled.', true)">Reconcile {{ item.reference || item.id }}</VBtn>
+            <VBtn v-if="can('payment.rejectOffline') && item.method === 'offline' && item.status === 'recorded'" size="small" color="error" variant="tonal" :loading="saving" @click="perform(() => requestsApi.rejectPayment(item.id, paymentNote), 'Payment rejected.', true)">Reject</VBtn>
           </div>
           <p class="text-caption text-medium-emphasis mt-4 mb-0">Payment status comes from the server. Returning from checkout does not mark a payment as paid.</p>
         </VCardText></VCard>
