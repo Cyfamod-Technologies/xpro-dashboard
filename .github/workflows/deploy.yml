@@ -151,12 +151,17 @@ jobs:
 
       - name: Build Docker image
         shell: bash
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_ENABLE_MOCKS: ${{ vars.VITE_ENABLE_MOCKS || 'false' }}
         run: |
           set -euo pipefail
 
           docker build \
             --platform linux/amd64 \
             --file "$DOCKERFILE_PATH" \
+            --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+            --build-arg VITE_ENABLE_MOCKS="$VITE_ENABLE_MOCKS" \
             --tag "$FULL_IMAGE" \
             --tag "$LATEST_IMAGE" \
             "$BUILD_CONTEXT"
