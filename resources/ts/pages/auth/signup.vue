@@ -30,17 +30,22 @@ const legalLoading = ref(false)
 const hasLegalDocuments = computed(() => legalVersions.value !== null && Object.keys(legalVersions.value).length > 0)
 
 const loadLegalVersions = async (role: "customer" | "provider"): Promise<LegalVersions> => {
-  const legal = await authApi.legalDocuments(role)
-  if (!Array.isArray(legal.data)) throw new Error("Registration terms could not be loaded. Please try again later.")
+  try {
+    const legal = await authApi.legalDocuments(role)
+    if (!Array.isArray(legal.data)) return {}
 
-  const termsVersion = legal.data.find(item => item.kind === "terms")?.version
-  const privacyVersion = legal.data.find(item => item.kind === "privacy")?.version
-  const providerAgreementVersion = legal.data.find(item => item.kind === "provider_agreement")?.version
+    const termsVersion = legal.data.find(item => item.kind === "terms")?.version
+    const privacyVersion = legal.data.find(item => item.kind === "privacy")?.version
+    const providerAgreementVersion = legal.data.find(item => item.kind === "provider_agreement")?.version
 
-  return {
-    ...(termsVersion ? { termsVersion } : {}),
-    ...(privacyVersion ? { privacyVersion } : {}),
-    ...(role === "provider" && providerAgreementVersion ? { providerAgreementVersion } : {}),
+    return {
+      ...(termsVersion ? { termsVersion } : {}),
+      ...(privacyVersion ? { privacyVersion } : {}),
+      ...(role === "provider" && providerAgreementVersion ? { providerAgreementVersion } : {}),
+    }
+  } catch {
+    // Registration checks published document versions on the server.
+    return {}
   }
 }
 
@@ -52,19 +57,14 @@ watch(
       active = false
     })
     form.accepted = false
+    errorMessage.value = ""
     legalVersions.value = null
     legalLoading.value = true
 
-    try {
-      const versions = await loadLegalVersions(role)
-      if (active) {
-        legalVersions.value = versions
-        errorMessage.value = ""
-      }
-    } catch (error) {
-      if (active) errorMessage.value = getErrorMessage(error)
-    } finally {
-      if (active) legalLoading.value = false
+    const versions = await loadLegalVersions(role)
+    if (active) {
+      legalVersions.value = versions
+      legalLoading.value = false
     }
   },
   { immediate: true },

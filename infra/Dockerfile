@@ -9,6 +9,10 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY . .
 RUN pnpm build:icons && pnpm msw:init
+
+ARG VITE_API_BASE_URL
+ARG VITE_ENABLE_MOCKS=false
+RUN if [ -z "$VITE_API_BASE_URL" ]; then echo "Missing VITE_API_BASE_URL build argument" >&2; exit 1; fi
 RUN pnpm build
 
 FROM nginx:1.27-alpine

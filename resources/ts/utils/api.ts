@@ -1,6 +1,7 @@
 import { ofetch } from "ofetch"
+import { isDemoMode } from "@/utils/demo-mode"
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || ""
+const baseURL = import.meta.env.VITE_API_BASE_URL?.trim()
 
 export class ApiError extends Error {
   readonly code?: string
@@ -32,6 +33,8 @@ export function toApiError(value: unknown): ApiError {
 export const $api = ofetch.create({
   baseURL,
   async onRequest({ options }) {
+    if (!baseURL && !isDemoMode)
+      throw new Error("The API URL is missing from this dashboard build. Set VITE_API_BASE_URL during the build.")
     const accessToken = useCookie("accessToken").value
     options.headers.set("X-XPro-Client", "web")
     if (accessToken && !options.headers.has("Authorization"))
