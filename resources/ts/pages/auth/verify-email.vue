@@ -7,6 +7,7 @@ import { isDemoMode } from "@/utils/demo-mode"
 definePage({ meta: { layout: "blank", public: true } })
 
 const route = useRoute()
+const router = useRouter()
 const verified = ref(false)
 const loading = ref(false)
 const errorMessage = ref("")
@@ -39,6 +40,11 @@ const resend = async () => {
   }
 }
 
+const goBack = () => {
+  if (window.history.state?.back) router.back()
+  else router.push("/auth/signup")
+}
+
 if (token.value) verify()
 </script>
 
@@ -66,6 +72,9 @@ if (token.value) verify()
       <VBtn variant="text" size="small" @click="resend">
         {{ resent ? "Verification email sent" : "Resend verification email" }}
       </VBtn>
+    </div>
+    <div class="text-center mt-3">
+      <VBtn variant="text" size="small" prepend-icon="tabler-arrow-left" @click="goBack"> Go back </VBtn>
     </div>
   </AuthShell>
 </template>

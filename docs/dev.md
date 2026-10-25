@@ -45,5 +45,18 @@ yet share a complete authentication contract; see the
 Keep environment values in `.env`, which is ignored by Git; `.env.example`
 contains placeholders only.
 
+For a Docker deployment, pass the API URL as a build argument. The Docker
+context excludes `.env`, and the build fails if the URL is missing:
+
+```bash
+docker build -f infra/Dockerfile \
+  --build-arg VITE_API_BASE_URL=https://your-api-host \
+  --build-arg VITE_ENABLE_MOCKS=false \
+  -t xpro-dashboard .
+```
+
+Setting these variables only on the running Nginx container does not change
+the already-built JavaScript. Rebuild and redeploy after changing either value.
+
 The [architecture index](architecture/README.md) describes the current web
 routes, authentication adapter and browser-local operations workflow.
