@@ -7,6 +7,7 @@
 export {}
 declare global {
   const $api: typeof import('./resources/ts/utils/api')['$api']
+  const ApiError: typeof import('./resources/ts/utils/api')['ApiError']
   const COOKIE_MAX_AGE_1_YEAR: typeof import('./resources/ts/utils/constants')['COOKIE_MAX_AGE_1_YEAR']
   const CreateUrl: (typeof import("./src/@core/composable/CreateUrl"))["CreateUrl"]
   const DEFAULT_COUNTRY: (typeof import("./resources/ts/utils/constants"))["DEFAULT_COUNTRY"]
@@ -68,6 +69,7 @@ declare global {
   const integerValidator: typeof import('./resources/ts/@core/utils/validators')['integerValidator']
   const isDarkPreferred: (typeof import("./src/@core/composable/useThemeConfig"))["isDarkPreferred"]
   const isDefined: typeof import('@vueuse/core')['isDefined']
+  const isDemoMode: typeof import('./resources/ts/utils/demo-mode')['isDemoMode']
   const isEmpty: typeof import('./resources/ts/@core/utils/helpers')['isEmpty']
   const isEmptyArray: typeof import('./resources/ts/@core/utils/helpers')['isEmptyArray']
   const isNullOrUndefined: typeof import('./resources/ts/@core/utils/helpers')['isNullOrUndefined']
@@ -149,6 +151,7 @@ declare global {
   const templateRef: typeof import('@vueuse/core')['templateRef']
   const throttledRef: typeof import('@vueuse/core')['throttledRef']
   const throttledWatch: typeof import('@vueuse/core')['throttledWatch']
+  const toApiError: typeof import('./resources/ts/utils/api')['toApiError']
   const toRaw: typeof import('vue')['toRaw']
   const toReactive: typeof import('@vueuse/core')['toReactive']
   const toRef: typeof import('vue')['toRef']
@@ -374,6 +377,9 @@ declare global {
   // @ts-ignore
   export type { Component, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
+  // @ts-ignore
+  export type { ApiError } from './resources/ts/utils/api'
+  import('./resources/ts/utils/api')
 }
 
 // for vue template auto import
@@ -382,6 +388,7 @@ declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
     readonly $api: UnwrapRef<typeof import('./resources/ts/utils/api')['$api']>
+    readonly ApiError: UnwrapRef<typeof import('./resources/ts/utils/api')['ApiError']>
     readonly COOKIE_MAX_AGE_1_YEAR: UnwrapRef<typeof import('./resources/ts/utils/constants')['COOKIE_MAX_AGE_1_YEAR']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly XPRO_BRAND: UnwrapRef<typeof import('./resources/ts/utils/branding')['XPRO_BRAND']>
@@ -437,6 +444,7 @@ declare module 'vue' {
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly integerValidator: UnwrapRef<typeof import('./resources/ts/@core/utils/validators')['integerValidator']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
+    readonly isDemoMode: UnwrapRef<typeof import('./resources/ts/utils/demo-mode')['isDemoMode']>
     readonly isEmpty: UnwrapRef<typeof import('./resources/ts/@core/utils/helpers')['isEmpty']>
     readonly isEmptyArray: UnwrapRef<typeof import('./resources/ts/@core/utils/helpers')['isEmptyArray']>
     readonly isNullOrUndefined: UnwrapRef<typeof import('./resources/ts/@core/utils/helpers')['isNullOrUndefined']>
@@ -517,6 +525,7 @@ declare module 'vue' {
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
     readonly throttledWatch: UnwrapRef<typeof import('@vueuse/core')['throttledWatch']>
+    readonly toApiError: UnwrapRef<typeof import('./resources/ts/utils/api')['toApiError']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toReactive: UnwrapRef<typeof import('@vueuse/core')['toReactive']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
