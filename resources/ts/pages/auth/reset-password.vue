@@ -5,6 +5,7 @@ import AuthShell from "@/features/auth/AuthShell.vue"
 import { matches, passwordRules, required } from "@/features/auth/validation"
 import { authApi } from "@/services/xpro-api"
 import { getErrorMessage } from "@/utils/errors"
+import { isDemoMode } from "@/utils/demo-mode"
 
 definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } })
 
@@ -48,8 +49,11 @@ const submit = async () => {
       {{ errorMessage }}
     </VAlert>
     <VAlert v-if="reset" color="success" variant="tonal" class="mb-6">
-      Your password has been updated for this preview. You can sign in with the new password until the preview is
-      reloaded.
+      {{
+        isDemoMode
+          ? "Your password has been updated for this preview. You can sign in with the new password until the preview is reloaded."
+          : "Your password has been updated. You can sign in with your new password."
+      }}
     </VAlert>
     <VForm v-if="!reset" ref="formRef" @submit.prevent="submit">
       <AppTextField

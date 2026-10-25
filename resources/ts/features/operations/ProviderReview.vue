@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useOperationsStore } from "@/stores/operations"
+import { isDemoMode } from "@/utils/demo-mode"
 import type { BankAccount } from "@/features/operations/types"
 import { weekdayLabels, weekdays, when } from "@/features/operations/types"
 import { accountNameMatches, maskAccount } from "@/features/operations/banks"
@@ -8,10 +9,9 @@ import { watMoment } from "@/features/operations/hours"
 import Attachments from "@/features/operations/Attachments.vue"
 
 const ops = useOperationsStore()
-const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 
 onMounted(async () => {
-  if (usePrototype) return
+  if (isDemoMode) return
   try {
     await ops.loadProvidersForReview()
   } catch (cause) {

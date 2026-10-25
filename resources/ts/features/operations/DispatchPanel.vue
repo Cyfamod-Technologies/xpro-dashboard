@@ -16,6 +16,7 @@ import {
   scoreText,
   unofferableRules,
 } from "@/features/operations/dispatch"
+import { isDemoMode } from "@/utils/demo-mode"
 
 const props = defineProps<{ request: ServiceRequest }>()
 const ops = useOperationsStore()
@@ -203,7 +204,7 @@ const offerExcluded = (item: ExcludedProvider) => {
         </p>
         <div v-if="canManage" class="d-flex flex-wrap gap-2">
           <VBtn
-            v-if="assignment.status === 'offered'"
+            v-if="isDemoMode && assignment.status === 'offered'"
             size="small"
             variant="outlined"
             color="warning"

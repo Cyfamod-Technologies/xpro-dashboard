@@ -8,6 +8,7 @@ import { store } from "@/plugins/2.pinia"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
 import { isWorkspaceRole, sectionPath, workspaceSections } from "@/features/workspace/config"
+import { isDemoMode } from "@/utils/demo-mode"
 
 function recursiveLayouts(route: RouteRecordRaw): RouteRecordRaw {
   if (route.children) {
@@ -34,7 +35,7 @@ router.beforeEach(async to => {
 
   await auth.hydrate()
 
-  // The MFA page is only valid after the mock API has accepted staff credentials.
+  // The MFA page is only valid after a sign-in challenge.
   // Guard it before rendering so a direct visit never flashes the challenge UI.
   if (to.path === "/auth/mfa" && !auth.pendingMfa) return "/login"
 
@@ -45,7 +46,7 @@ router.beforeEach(async to => {
   }
 
   // Suspended or unknown staff accounts cannot keep a session.
-  if (auth.user?.role === "admin" && to.path !== "/login") {
+  if (isDemoMode && auth.user?.role === "admin" && to.path !== "/login") {
     const ops = useOperationsStore(store)
 
     if (ops.staffMember?.status !== "active") {

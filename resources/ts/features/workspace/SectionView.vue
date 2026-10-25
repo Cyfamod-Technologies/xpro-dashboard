@@ -14,10 +14,10 @@ import RequestsWorkspace from "@/features/requests/RequestsWorkspace.vue"
 import AdminPayments from "@/features/requests/AdminPayments.vue"
 import ProviderEarnings from "@/features/requests/ProviderEarnings.vue"
 import PlatformWorkspace from "@/features/requests/PlatformWorkspace.vue"
+import { isDemoMode } from "@/utils/demo-mode"
 
 const props = defineProps<{ sectionId: string }>()
 const auth = useAuthStore()
-const useLiveRequests = import.meta.env.VITE_ENABLE_MOCKS === "false"
 const section = computed(() =>
   isWorkspaceRole(auth.user?.role)
     ? workspaceSections[auth.user.role].find(item => item.id === props.sectionId)
@@ -42,14 +42,24 @@ const platformSection = computed(() =>
     <Feedback />
     <WorkspaceOverview v-if="section.id === 'overview'" />
     <RequestsWorkspace
-      v-else-if="useLiveRequests && ['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(section.id)"
+      v-else-if="!isDemoMode && ['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(section.id)"
       :key="section.id"
       :section="section.id"
     />
-    <PlatformWorkspace v-else-if="useLiveRequests && platformSection" :section="platformSection" />
-    <PlatformWorkspace v-else-if="useLiveRequests && auth.user?.role === 'admin' && section.id === 'settings'" section="settings" />
-    <AdminPayments v-else-if="useLiveRequests && section.id === 'finance'" />
-    <ProviderEarnings v-else-if="useLiveRequests && section.id === 'payouts'" />
+    <PlatformWorkspace v-else-if="!isDemoMode && platformSection" :section="platformSection" />
+    <PlatformWorkspace
+      v-else-if="!isDemoMode && auth.user?.role === 'admin' && section.id === 'settings'"
+      section="settings"
+    />
+    <AdminPayments v-else-if="!isDemoMode && section.id === 'finance'" />
+    <ProviderEarnings v-else-if="!isDemoMode && section.id === 'payouts'" />
+    <VAlert
+      v-else-if="!isDemoMode && !['verification', 'availability', 'providers', 'payouts'].includes(section.id)"
+      color="info"
+      variant="tonal"
+    >
+      {{ section.emptyMessage }}
+    </VAlert>
     <RequestBoard
       v-else-if="['requests', 'jobs', 'dispatch', 'quotes', 'schedule', 'messages'].includes(section.id)"
       :key="section.id"

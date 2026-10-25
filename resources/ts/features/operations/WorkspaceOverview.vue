@@ -5,10 +5,20 @@ import { isWorkspaceRole, sectionPath } from "@/features/workspace/config"
 import { isFinished, statusLabelFor, when } from "@/features/operations/types"
 import { isUnclaimedOverdue } from "@/features/operations/staff"
 import { pendingApprovals } from "@/features/operations/workflow"
+import { isDemoMode } from "@/utils/demo-mode"
 
 const ops = useOperationsStore()
 const auth = useAuthStore()
 const role = computed(() => ops.actor?.role)
+
+onMounted(async () => {
+  if (isDemoMode || role.value !== "provider") return
+  try {
+    await ops.refreshProviderProfile()
+  } catch (cause) {
+    ops.error = cause instanceof Error ? cause.message : "Unable to load your provider profile."
+  }
+})
 
 const adminCounters = computed<{ label: string; value: number; to?: string }[]>(() => [
   { label: "Awaiting approval", value: pendingApprovals(ops.state).length, to: "/admin/approvals" },

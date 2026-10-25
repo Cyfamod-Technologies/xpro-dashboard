@@ -34,7 +34,12 @@ No deployment workflow or CODEOWNERS file is present.
 
 ## Backend
 
-Mocks are enabled by default. The Xpro web prototype and `xpro-server` do not
+Set `VITE_ENABLE_MOCKS=true` to opt into the demo. With `false` or an unset
+value, the dashboard skips the mock worker, sample records and prototype-only
+controls. Unsupported operations show a message instead of saving browser-local
+changes. Vite embeds this value during `pnpm build`, so rebuild and redeploy
+after changing it; changing the server's runtime environment alone does not
+update a previously built client. The Xpro web prototype and `xpro-server` do not
 yet share a complete authentication contract; see the
 [web and server auth plan](api/auth-web-server-plan.md) before turning mocks off.
 Keep environment values in `.env`, which is ignored by Git; `.env.example`

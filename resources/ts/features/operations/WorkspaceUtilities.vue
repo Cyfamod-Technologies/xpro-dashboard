@@ -3,6 +3,7 @@ import { useOperationsStore } from "@/stores/operations"
 import { isWorkspaceRole, sectionPath } from "@/features/workspace/config"
 import { when } from "@/features/operations/types"
 import AssignmentSettingsCard from "@/features/operations/AssignmentSettingsCard.vue"
+import { isDemoMode } from "@/utils/demo-mode"
 
 const props = defineProps<{ section: string }>()
 const ops = useOperationsStore()
@@ -124,7 +125,7 @@ const requestPath = computed(() => {
           label="Email updates"
           hide-details
         /><VCheckbox v-model="prefs.push" label="Push updates" hide-details />
-        <p class="text-body-2 text-medium-emphasis my-4">
+        <p v-if="isDemoMode" class="text-body-2 text-medium-emphasis my-4">
           Preferences are saved locally. Email and push delivery are simulated in this frontend preview.
         </p>
         <VBtn :loading="ops.busy" @click="ops.run({ type: 'preferences.save', input: prefs })"> Save preferences </VBtn>
@@ -147,7 +148,7 @@ const requestPath = computed(() => {
           Save quote approval
         </VBtn>
       </VCardText> </VCard
-    ><AssignmentSettingsCard v-if="ops.can('settings.manage')" /><VCard v-if="ops.can('settings.manage')">
+    ><AssignmentSettingsCard v-if="ops.can('settings.manage')" /><VCard v-if="isDemoMode && ops.can('settings.manage')">
       <VCardText>
         <h2 class="text-h5 mb-3">Prototype controls</h2>
         <p class="text-body-2 text-medium-emphasis">

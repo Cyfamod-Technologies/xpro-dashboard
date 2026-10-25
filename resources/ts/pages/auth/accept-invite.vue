@@ -5,6 +5,7 @@ import AuthShell from "@/features/auth/AuthShell.vue"
 import { matches, passwordRules, required } from "@/features/auth/validation"
 import { authApi } from "@/services/xpro-api"
 import { getErrorMessage } from "@/utils/errors"
+import { isDemoMode } from "@/utils/demo-mode"
 
 definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } })
 
@@ -14,7 +15,6 @@ const errorMessage = ref("")
 const enrollment = ref<{ token: string; secret: string; otpauthUrl: string } | null>(null)
 const mfaCode = ref("")
 const route = useRoute()
-const isPrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const formRef = ref<VForm>()
 const form = reactive({
   firstName: "",
@@ -28,7 +28,7 @@ const submit = async () => {
   const validation = await formRef.value?.validate()
   if (!validation?.valid) return
   errorMessage.value = ""
-  if (isPrototype) {
+  if (isDemoMode) {
     completed.value = true
 
     return

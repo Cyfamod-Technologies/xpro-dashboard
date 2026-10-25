@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useOperationsStore } from "@/stores/operations"
+import { isDemoMode } from "@/utils/demo-mode"
 import type { BankInput, ProviderInput, ServiceLine } from "@/features/operations/types"
 import { serviceLines } from "@/features/workspace/config"
 import { serviceSkills, when } from "@/features/operations/types"
@@ -16,7 +17,6 @@ import { providersApi } from "@/services/providers-api"
 
 const props = defineProps<{ availability?: boolean }>()
 const ops = useOperationsStore()
-const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const files = ref<File[]>([])
 const portfolioFiles = ref<File[]>([])
 const photoFile = ref<File[]>([])
@@ -86,7 +86,7 @@ const coverageReady = computed(
 const hasSkill = (service: ServiceLine, skill: string) => form.skills[service]?.includes(skill) ?? false
 
 onMounted(async () => {
-  if (usePrototype) return
+  if (isDemoMode) return
   try {
     await ops.refreshProviderProfile()
     const saved = ops.profile
@@ -158,7 +158,7 @@ const choosePhoto = async (value: File | File[] | null) => {
   if (!file) return
   try {
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("Use a PNG, JPG or WebP photo.")
-    if (usePrototype) form.photo = (await prepareFiles([file]))[0]
+    if (isDemoMode) form.photo = (await prepareFiles([file]))[0]
     else {
       photoFile.value = [file]
       form.photo = { id: "pending-upload", name: file.name, size: file.size, type: file.type }
@@ -185,17 +185,21 @@ const keepAccount = () => {
 
 const submit = async () => {
   try {
-    if (usePrototype) {
+    if (isDemoMode) {
       form.documents.push(...(await prepareFiles(files.value)))
       form.portfolio.push(...(await prepareFiles(portfolioFiles.value)))
     } else {
-      form.documents.push(...(await Promise.all(files.value.map(file => providersApi.upload(file, "provider_document")))))
-      form.portfolio.push(...(await Promise.all(portfolioFiles.value.map(file => providersApi.upload(file, "provider_portfolio")))))
+      form.documents.push(
+        ...(await Promise.all(files.value.map(file => providersApi.upload(file, "provider_document")))),
+      )
+      form.portfolio.push(
+        ...(await Promise.all(portfolioFiles.value.map(file => providersApi.upload(file, "provider_portfolio")))),
+      )
     }
     files.value = []
     portfolioFiles.value = []
     if (photoFile.value[0]) {
-      form.photo = usePrototype
+      form.photo = isDemoMode
         ? (await prepareFiles([photoFile.value[0]]))[0]
         : await providersApi.upload(photoFile.value[0], "provider_photo")
       photoFile.value = []
@@ -208,7 +212,7 @@ const submit = async () => {
         serviceAreas: form.serviceAreas.map(area => area.trim()).filter(Boolean),
       },
     })
-    if (!usePrototype) await ops.refreshProviderProfile()
+    if (!isDemoMode) await ops.refreshProviderProfile()
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to read your documents."
   }
