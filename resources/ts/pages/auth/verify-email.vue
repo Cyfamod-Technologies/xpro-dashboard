@@ -2,6 +2,7 @@
 import AuthShell from "@/features/auth/AuthShell.vue"
 import { authApi } from "@/services/xpro-api"
 import { getErrorMessage } from "@/utils/errors"
+import { isDemoMode } from "@/utils/demo-mode"
 
 definePage({ meta: { layout: "blank", public: true } })
 
@@ -10,7 +11,6 @@ const verified = ref(false)
 const loading = ref(false)
 const errorMessage = ref("")
 const resent = ref(false)
-const isPrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
 const email = computed(() => (typeof route.query.email === "string" ? route.query.email : "your email address"))
 const token = computed(() => (typeof route.query.token === "string" ? route.query.token : ""))
 
@@ -18,7 +18,7 @@ const verify = async () => {
   loading.value = true
   errorMessage.value = ""
   try {
-    if (isPrototype) await authApi.verifyEmail(token.value || "prototype-verification-token")
+    if (isDemoMode) await authApi.verifyEmail(token.value || "prototype-verification-token")
     else if (!token.value) throw new Error("Open the verification link from your email to verify this account.")
     else await authApi.verifyEmail(token.value)
     verified.value = true
@@ -55,10 +55,10 @@ if (token.value) verify()
     <VAlert v-if="errorMessage" color="error" variant="tonal" class="mb-5">
       {{ errorMessage }}
     </VAlert>
-    <VAlert v-if="!verified && isPrototype" color="info" variant="tonal" class="mb-6">
+    <VAlert v-if="!verified && isDemoMode" color="info" variant="tonal" class="mb-6">
       For this frontend prototype, use the button below to simulate opening the email link.
     </VAlert>
-    <VBtn v-if="!verified && isPrototype" block size="large" :loading="loading" @click="verify">
+    <VBtn v-if="!verified && isDemoMode" block size="large" :loading="loading" @click="verify">
       Verify prototype email
     </VBtn>
     <VBtn v-if="verified" block size="large" to="/login"> Continue to sign in </VBtn>

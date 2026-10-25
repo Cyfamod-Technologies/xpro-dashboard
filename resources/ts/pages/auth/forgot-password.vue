@@ -5,6 +5,7 @@ import AuthShell from "@/features/auth/AuthShell.vue"
 import { emailRules } from "@/features/auth/validation"
 import { authApi } from "@/services/xpro-api"
 import { getErrorMessage } from "@/utils/errors"
+import { isDemoMode } from "@/utils/demo-mode"
 
 definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } })
 
@@ -38,7 +39,8 @@ const submit = async () => {
     subtitle="Enter your account email. If it is eligible, we will send a time-limited reset link."
   >
     <VAlert v-if="sent" color="success" variant="tonal" class="mb-6">
-      If an eligible account exists, a reset link has been sent. In this prototype, continue to the reset screen.
+      If an eligible account exists, a reset link has been sent.
+      <span v-if="isDemoMode"> In this prototype, continue to the reset screen.</span>
     </VAlert>
     <VAlert v-if="errorMessage" color="error" variant="tonal" class="mb-5">
       {{ errorMessage }}
@@ -55,7 +57,12 @@ const submit = async () => {
       />
       <VBtn block size="large" type="submit" :loading="loading"> Send reset link </VBtn>
     </VForm>
-    <VBtn v-else block size="large" :to="{ path: '/auth/reset-password', query: { token: 'prototype-token', email } }">
+    <VBtn
+      v-else-if="isDemoMode"
+      block
+      size="large"
+      :to="{ path: '/auth/reset-password', query: { token: 'prototype-token', email } }"
+    >
       Open prototype reset link
     </VBtn>
     <div class="text-center mt-6">

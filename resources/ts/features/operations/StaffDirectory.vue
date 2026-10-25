@@ -3,6 +3,7 @@ import { useOperationsStore } from "@/stores/operations"
 import type { StaffMember, StaffRole } from "@/features/operations/types"
 import { isFinished, when } from "@/features/operations/types"
 import { activeStaffWith, staffRoleLabels } from "@/features/operations/staff"
+import { isDemoMode } from "@/utils/demo-mode"
 
 const ops = useOperationsStore()
 const roleItems = (Object.keys(staffRoleLabels) as StaffRole[]).map(value => ({ title: staffRoleLabels[value], value }))
@@ -84,7 +85,7 @@ const suspend = async () => {
 
 <template>
   <div class="d-flex justify-space-between align-start flex-wrap gap-4 mb-5">
-    <p class="text-body-2 text-medium-emphasis mb-0">
+    <p v-if="isDemoMode" class="text-body-2 text-medium-emphasis mb-0">
       Demo mode: invited staff appear here but only seeded demo accounts can sign in.
     </p>
     <VBtn prepend-icon="tabler-user-plus" @click="openInvite"> Invite staff </VBtn>
@@ -140,7 +141,7 @@ const suspend = async () => {
                 :disabled="ops.busy"
                 @click="ops.run({ type: 'staff.status', staffId: member.id, status: 'active', reassignTo: '' })"
               >
-                {{ member.status === "invited" ? "Activate (demo)" : "Reactivate" }}
+                {{ member.status === "invited" && isDemoMode ? "Activate (demo)" : "Reactivate" }}
               </VBtn>
             </div>
           </td>
