@@ -7,6 +7,7 @@ import { prepareFiles } from "@/features/operations/files"
 import Attachments from "@/features/operations/Attachments.vue"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
+import { isDemoMode } from "@/utils/demo-mode"
 import { requestsApi } from "@/services/requests-api"
 import type { LocationView, ServiceView } from "@/features/requests/api-types"
 
@@ -15,7 +16,6 @@ const ops = useOperationsStore()
 const route = useRoute()
 const router = useRouter()
 const draftKey = "xpro-public-request-draft"
-const liveMode = import.meta.env.VITE_ENABLE_MOCKS === "false"
 const formRef = ref<VForm>()
 const error = ref("")
 const files = ref<File[]>([])
@@ -45,7 +45,7 @@ const blank: RequestInput = {
 }
 let initial = blank
 try {
-  const saved = JSON.parse(liveMode ? "null" : sessionStorage.getItem(draftKey) ?? "null") as RequestInput | null
+  const saved = JSON.parse(isDemoMode ? sessionStorage.getItem(draftKey) ?? "null" : "null") as RequestInput | null
   if (saved && saved.service in intakeFields) initial = saved
 } catch {
   /* Start a new brief if a saved draft cannot be read. */
@@ -78,7 +78,7 @@ for (const field of intakeFields[form.service]) {
 
   if (value && (!field.options || field.options.includes(value))) form.details[field.key] = value
 }
-const serviceNames = computed(() => liveMode && catalog.value.length ? catalog.value.map(item => item.name) : serviceLines.map(item => item.name))
+const serviceNames = computed(() => !isDemoMode && catalog.value.length ? catalog.value.map(item => item.name) : serviceLines.map(item => item.name))
 const contactMethods = [
   { title: "Phone", value: "phone" },
   { title: "Email", value: "email" },
@@ -86,7 +86,7 @@ const contactMethods = [
 ]
 const selectedLine = computed(() => serviceLines.find(item => item.name === form.service))
 const fields = computed<IntakeField[]>(() => {
-  if (!liveMode) return intakeFields[form.service]
+  if (isDemoMode) return intakeFields[form.service]
   const service = catalog.value.find(item => item.name === form.service)
 
   return (service?.intakeFields ?? []).map((field): IntakeField => ({
@@ -131,7 +131,7 @@ const fieldRules = (field: IntakeField) => [
   ...(field.type === "date" ? [dateRange] : []),
   ...(field.key.toLowerCase().includes("quantity") ? [(value: unknown) => !value || (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 10) || "Quantity must be a whole number from 1 to 10."] : []),
 ]
-const saveDraft = () => { if (!liveMode) sessionStorage.setItem(draftKey, JSON.stringify(form)) }
+const saveDraft = () => { if (isDemoMode) sessionStorage.setItem(draftKey, JSON.stringify(form)) }
 const label = (field: IntakeField) => (field.required ? `${field.label} *` : field.label)
 const filled = (field: IntakeField) => Boolean(String(form.details[field.key] ?? "").trim())
 
@@ -212,7 +212,7 @@ watch(cityId, async value => {
 })
 
 onMounted(async () => {
-  if (!liveMode) return
+  if (isDemoMode) return
   loadingCatalog.value = true
   try {
     const [services, locations] = await Promise.all([requestsApi.services(), requestsApi.locations()])
@@ -251,7 +251,7 @@ const submit = async () => {
 
       return
     }
-    if (liveMode) {
+    if (!isDemoMode) {
       if (!cityId.value || !districtId.value) throw new Error("Choose a city and district from the available locations.")
       const attachments = await uploadRequestFiles()
       const result = await requestsApi.create({
@@ -430,7 +430,7 @@ const submit = async () => {
             <VCardText class="pa-6 d-flex flex-column gap-5">
               <h2 class="text-h6">Location, timing and contact</h2>
               <div class="field-grid">
-                <template v-if="liveMode">
+                <template v-if="!isDemoMode">
                   <VSelect v-model="cityId" :items="cities.map(item => ({ title: item.name, value: item.id }))" label="City *" :rules="[required]" />
                   <VSelect v-model="districtId" :items="districts.map(item => ({ title: item.name, value: item.id }))" label="District *" :disabled="!cityId" :rules="[required]" />
                 </template>
@@ -438,7 +438,7 @@ const submit = async () => {
                 <VTextField v-model="form.phone" label="Contact phone *" type="tel" :rules="[required, validNigerianPhone]" />
                 <VSelect v-model="form.contactMethod" :items="contactMethods" label="Preferred contact method" />
                 <VTextField v-model="form.startDate" label="Preferred start date" type="date" :rules="[...(form.service === 'Hire' ? [required] : []), dateRange]" />
-                <VAlert v-if="liveMode" variant="tonal" color="info" class="field-grid__wide">Only share contact details in the project brief if the provider needs them to assess the work. XPro will keep your contact private until the request allows sharing.</VAlert>
+                <VAlert v-if="!isDemoMode" variant="tonal" color="info" class="field-grid__wide">Only share contact details in the project brief if the provider needs them to assess the work. XPro will keep your contact private until the request allows sharing.</VAlert>
                 <VTextField
                   v-model="form.address"
                   label="Site address *"
@@ -475,7 +475,7 @@ const submit = async () => {
                 <strong class="text-body-2">XPro assigns a verified provider for you</strong>
               </div>
               <div class="px-5 pb-5 d-flex flex-column gap-3">
-        <VBtn type="submit" size="large" block :loading="submitting || (!liveMode && ops.busy)" :disabled="liveMode && loadingCatalog">
+        <VBtn type="submit" size="large" block :loading="submitting || (isDemoMode && ops.busy)" :disabled="!isDemoMode && loadingCatalog">
                   {{ auth.isAuthenticated ? "Submit request" : "Continue to sign in" }}
                 </VBtn>
                 <span class="text-body-2 text-medium-emphasis text-center">

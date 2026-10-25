@@ -13,12 +13,25 @@ import {
 import { staffCan } from "@/features/operations/staff"
 import type { Actor, Command, OperationsState, ProviderProfile, StaffPermission } from "@/features/operations/types"
 import { type ProviderProfileResponse, providersApi } from "@/services/providers-api"
+import { isDemoMode } from "@/utils/demo-mode"
+import { defaultAssignmentSettings } from "@/features/operations/types"
 
 const storageKey = "xpro-demo-workspace-v1"
-const usePrototype = import.meta.env.VITE_ENABLE_MOCKS !== "false"
+
+const emptyState = (): OperationsState => ({
+  schema: 6,
+  nextRequest: 1,
+  requests: [],
+  providers: [],
+  notifications: [],
+  audit: [],
+  preferences: {},
+  staff: [],
+  settings: { quoteApprovalThreshold: null, assignment: defaultAssignmentSettings() },
+})
 
 const readState = (): OperationsState => {
-  if (!usePrototype) return createOperationsState()
+  if (!isDemoMode) return emptyState()
   try {
     const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") as OperationsState | null
     if (
@@ -64,7 +77,7 @@ export const useOperationsStore = defineStore("operations", () => {
   )
   const can = (permission: StaffPermission) =>
     actor.value?.role === "admin" &&
-    (usePrototype ? staffCan(staffMember.value, permission) : auth.user?.scopes.includes(permission) === true)
+    (isDemoMode ? staffCan(staffMember.value, permission) : auth.user?.scopes.includes(permission) === true)
   const staffById = (staffId: string) => state.value.staff.find(item => item.id === staffId)
   const requests = computed(() => (actor.value ? visibleRequests(state.value, actor.value) : []))
   const profile = computed(() => state.value.providers.find(item => item.id === actor.value?.id))
@@ -77,7 +90,9 @@ export const useOperationsStore = defineStore("operations", () => {
   )
 
   const mapProvider = (result: ProviderProfileResponse): ProviderProfile => {
-    const bank = (account: NonNullable<ProviderProfileResponse["payout"]["current"] | ProviderProfileResponse["payout"]["pending"]>) => ({
+    const bank = (
+      account: NonNullable<ProviderProfileResponse["payout"]["current"] | ProviderProfileResponse["payout"]["pending"]>,
+    ) => ({
       bankCode: account.bankCode,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
@@ -143,8 +158,11 @@ export const useOperationsStore = defineStore("operations", () => {
     providerProfile.portfolio = await Promise.all(providerProfile.portfolio.map(addLink))
     if (providerProfile.photo) providerProfile.photo = await addLink(providerProfile.photo)
     if (providerProfile.pendingChanges) {
-      providerProfile.pendingChanges.documents = await Promise.all(providerProfile.pendingChanges.documents.map(addLink))
-      if (providerProfile.pendingChanges.photo) providerProfile.pendingChanges.photo = await addLink(providerProfile.pendingChanges.photo)
+      providerProfile.pendingChanges.documents = await Promise.all(
+        providerProfile.pendingChanges.documents.map(addLink),
+      )
+      if (providerProfile.pendingChanges.photo)
+        providerProfile.pendingChanges.photo = await addLink(providerProfile.pendingChanges.photo)
     }
 
     return providerProfile
@@ -164,17 +182,22 @@ export const useOperationsStore = defineStore("operations", () => {
   }
 
   async function loadProvidersForReview() {
-    if (usePrototype) return
+    if (isDemoMode) return
     const response = await providersApi.listForReview()
     state.value.providers = await Promise.all(response.data.map(item => addFileLinks(mapProvider(item), true)))
   }
 
   async function runServerProviderCommand(command: Command) {
-    if (usePrototype) return false
+    if (isDemoMode) return false
     switch (command.type) {
       case "provider.submit": {
         const { bank, ...input } = command.input
-        await providersApi.submit({ ...input, photo: input.photo!, bankCode: bank.bankCode, accountNumber: bank.accountNumber })
+        await providersApi.submit({
+          ...input,
+          photo: input.photo!,
+          bankCode: bank.bankCode,
+          accountNumber: bank.accountNumber,
+        })
         await refreshProviderProfile()
 
         return true
@@ -186,7 +209,10 @@ export const useOperationsStore = defineStore("operations", () => {
         return true
       case "provider.hours":
         if (!profile.value) throw new Error("Submit your provider profile before setting working hours.")
-        await providersApi.setCalendar(command.workingHours, command.timeOff.map(item => ({ ...item, id: item.id ?? crypto.randomUUID() })))
+        await providersApi.setCalendar(
+          command.workingHours,
+          command.timeOff.map(item => ({ ...item, id: item.id ?? crypto.randomUUID() })),
+        )
         await refreshProviderProfile()
 
         return true
@@ -197,7 +223,8 @@ export const useOperationsStore = defineStore("operations", () => {
         return true
       case "provider.review": {
         const target = state.value.providers.find(item => item.id === command.providerId)
-        if (!target?.serverId || target.version === undefined) throw new Error("Refresh the provider review queue and try again.")
+        if (!target?.serverId || target.version === undefined)
+          throw new Error("Refresh the provider review queue and try again.")
         await providersApi.review(target.serverId, command.decision, command.note, target.version)
         await loadProvidersForReview()
 
@@ -205,7 +232,8 @@ export const useOperationsStore = defineStore("operations", () => {
       }
       case "payout.review": {
         const target = state.value.providers.find(item => item.id === command.providerId)
-        if (!target?.serverId || target.version === undefined) throw new Error("Refresh the provider review queue and try again.")
+        if (!target?.serverId || target.version === undefined)
+          throw new Error("Refresh the provider review queue and try again.")
         await providersApi.reviewBank(target.serverId, command.approve, command.note, target.version)
         await loadProvidersForReview()
 
@@ -213,7 +241,8 @@ export const useOperationsStore = defineStore("operations", () => {
       }
       case "provider.changes.review": {
         const target = state.value.providers.find(item => item.id === command.providerId)
-        if (!target?.serverId || target.version === undefined) throw new Error("Refresh the provider review queue and try again.")
+        if (!target?.serverId || target.version === undefined)
+          throw new Error("Refresh the provider review queue and try again.")
         await providersApi.reviewChanges(target.serverId, command.approve, command.note, target.version)
         await loadProvidersForReview()
 
@@ -233,8 +262,8 @@ export const useOperationsStore = defineStore("operations", () => {
       const initiator = actor.value
       const payload = JSON.parse(JSON.stringify(command)) as Command
 
-      await new Promise(resolve => setTimeout(resolve, 180))
-      if (failNext.value) {
+      if (isDemoMode) await new Promise(resolve => setTimeout(resolve, 180))
+      if (isDemoMode && failNext.value) {
         failNext.value = false
         throw new Error("The simulated save failed. Your changes have not been applied. Please retry.")
       }
@@ -246,6 +275,7 @@ export const useOperationsStore = defineStore("operations", () => {
 
         return true
       }
+      if (!isDemoMode) throw new Error("This action is not available in the live workspace yet.")
       const updated = applyCommand(toRaw(state.value), initiator, payload)
 
       sessionStorage.setItem(storageKey, JSON.stringify(updated))
@@ -263,6 +293,7 @@ export const useOperationsStore = defineStore("operations", () => {
   }
 
   function reset() {
+    if (!isDemoMode) return
     if (!can("settings.manage")) return
     try {
       const next = createOperationsState()

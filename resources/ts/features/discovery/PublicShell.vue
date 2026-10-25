@@ -3,6 +3,7 @@ import { serviceLines } from "@/features/workspace/config"
 import { XPRO_PHONE } from "@/features/discovery/contact"
 import { useAuthStore } from "@/stores/auth"
 import { XPRO_BRAND } from "@/utils/branding"
+import { isDemoMode } from "@/utils/demo-mode"
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -91,7 +92,7 @@ const nav = computed(() => [
       <div class="xp-footer-bottom">
         <div class="xp-container d-flex flex-wrap justify-space-between gap-2 py-4 text-body-2 text-medium-emphasis">
           <span>© {{ year }} {{ XPRO_BRAND.fullName }} (XPro). All rights reserved.</span>
-          <span>Demo data: requests and activity are samples.</span>
+          <span v-if="isDemoMode">Demo data: requests and activity are samples.</span>
         </div>
       </div>
     </footer>

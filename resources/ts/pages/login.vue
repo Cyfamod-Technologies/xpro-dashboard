@@ -6,6 +6,7 @@ import { emailRules, required, sixDigitCode } from "@/features/auth/validation"
 import { demoCredentials } from "@/mocks/fixtures"
 import { useAuthStore } from "@/stores/auth"
 import { getErrorMessage } from "@/utils/errors"
+import { isDemoMode } from "@/utils/demo-mode"
 
 definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } })
 
@@ -134,7 +135,7 @@ const submit = async () => {
       </RouterLink>
     </p>
 
-    <VCard variant="tonal" color="secondary">
+    <VCard v-if="isDemoMode" variant="tonal" color="secondary">
       <VCardText>
         <div class="text-subtitle-2 font-weight-bold mb-3">Prototype accounts</div>
         <button

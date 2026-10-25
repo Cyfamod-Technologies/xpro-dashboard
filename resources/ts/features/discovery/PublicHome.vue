@@ -6,6 +6,7 @@ import { serviceCoverAlt, serviceCoverImage } from "@/features/discovery/images"
 import { popularJobs } from "@/features/discovery/popular-jobs"
 import type { ServiceLine } from "@/features/operations/types"
 import { useOperationsStore } from "@/stores/operations"
+import { isDemoMode } from "@/utils/demo-mode"
 
 /**
  * Hero photo, shown behind a light-blue tonal overlay. Temporary 1024x764 image; a wider
@@ -226,7 +227,7 @@ watch(() => route.hash, scrollToHash)
     </VCard>
   </section>
 
-  <section id="network" aria-labelledby="network-title" class="xp-container pb-12">
+  <section v-if="isDemoMode" id="network" aria-labelledby="network-title" class="xp-container pb-12">
     <div class="mb-5">
       <h2 id="network-title" class="text-h4 mb-1">Our verified network</h2>
       <p class="text-medium-emphasis mb-0">
