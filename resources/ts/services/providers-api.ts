@@ -53,11 +53,13 @@ export const providersApi = {
       method: "POST",
       body: { bankCode, accountNumber },
     }),
+  // Provider onboarding files use the provider upload routes (their purposes are not in the `/uploads` enum);
+  // `payment_proof` is a request-flow purpose and stays on `/uploads`.
   upload: async (file: File, purpose: ProviderUploadPurpose): Promise<Attachment> => {
-    const upload = await $api<ApiEnvelope<{ id: string; uploadUrl: string; method: "PUT"; headers: Record<string, string> }>>(
-      "/uploads",
-      { method: "POST", body: { name: file.name, type: file.type, size: file.size, purpose } },
-    )
+    const base = purpose === "payment_proof" ? "/uploads" : "/providers/me/uploads"
+    const upload = await $api<
+      ApiEnvelope<{ id: string; uploadUrl: string; method: "PUT"; headers: Record<string, string> }>
+    >(base, { method: "POST", body: { name: file.name, type: file.type, size: file.size, purpose } })
     const response = await fetch(upload.data.uploadUrl, {
       method: upload.data.method,
       headers: upload.data.headers,
@@ -65,13 +67,14 @@ export const providersApi = {
     })
     if (!response.ok) throw new Error("The file could not be uploaded. Try again.")
     const completed = await $api<ApiEnvelope<{ id: string; name: string; size: number; type: string }>>(
-      `/uploads/${upload.data.id}/complete`,
+      `${base}/${upload.data.id}/complete`,
       { method: "POST" },
     )
 
     return { id: completed.data.id, name: completed.data.name, size: completed.data.size, type: completed.data.type }
   },
-  deleteUpload: (id: string) => $api<ApiEnvelope<{ deleted: boolean }>>(`/providers/me/uploads/${id}`, { method: "DELETE" }),
+  deleteUpload: (id: string) =>
+    $api<ApiEnvelope<{ deleted: boolean }>>(`/providers/me/uploads/${id}`, { method: "DELETE" }),
   fileUrl: (id: string, providerId?: string) =>
     $api<ApiEnvelope<{ url: string; expiresInSeconds: number }>>(
       providerId ? `/admin/providers/${providerId}/files/${id}` : `/providers/me/files/${id}`,
@@ -94,14 +97,27 @@ export const providersApi = {
     accountNumber: string
   }) => $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/submissions", { method: "POST", body: payload }),
   updateBank: (bankCode: string, accountNumber: string) =>
-    $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/bank", { method: "POST", body: { bankCode, accountNumber } }),
+    $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/bank", {
+      method: "POST",
+      body: { bankCode, accountNumber },
+    }),
   setAvailability: (available: boolean) =>
     $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/availability", { method: "PUT", body: { available } }),
   setCalendar: (workingHours: WorkingHours, timeOff: TimeOff[]) =>
-    $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/calendar", { method: "PUT", body: { workingHours, timeOff } }),
+    $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/calendar", {
+      method: "PUT",
+      body: { workingHours, timeOff },
+    }),
   listForReview: (verification?: string) =>
-    $api<ApiEnvelope<ProviderProfileResponse[]>>("/admin/providers", { query: verification ? { verification } : undefined }),
-  review: (providerId: string, decision: "approved" | "changes_requested" | "rejected", note: string, expectedVersion: number) =>
+    $api<ApiEnvelope<ProviderProfileResponse[]>>("/admin/providers", {
+      query: verification ? { verification } : undefined,
+    }),
+  review: (
+    providerId: string,
+    decision: "approved" | "changes_requested" | "rejected",
+    note: string,
+    expectedVersion: number,
+  ) =>
     $api<ApiEnvelope<ProviderProfileResponse>>(`/admin/providers/${providerId}/reviews`, {
       method: "POST",
       body: { decision, note, expectedVersion },

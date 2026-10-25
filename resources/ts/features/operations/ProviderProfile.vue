@@ -9,6 +9,7 @@ import { isNuban, maskAccount } from "@/features/operations/banks"
 import { payoutReady, profileChangeRows } from "@/features/operations/workflow"
 import { defaultWorkingHours, workingHoursProblem } from "@/features/operations/hours"
 import { abujaDistricts } from "@/features/operations/dispatch"
+import { nigeriaStates, stateForLocation } from "@/utils/nigeria-locations"
 import AvailabilityPanel from "@/features/operations/AvailabilityPanel.vue"
 import WorkingHoursEditor from "@/features/operations/WorkingHoursEditor.vue"
 import Attachments from "@/features/operations/Attachments.vue"
@@ -25,6 +26,7 @@ const known: BankInput | undefined = profile?.payout.pending ?? profile?.payout.
 
 // Changes already waiting for XPro review are shown (and resubmitted) as the form's proposed values.
 const proposed = profile?.pendingChanges ?? profile
+const selectedState = ref(stateForLocation(profile?.city ?? "")?.name ?? "")
 const form = reactive<ProviderInput>({
   phone: profile?.phone ?? "",
   trade: proposed?.trade ?? "",
@@ -57,6 +59,15 @@ const changesRejected = computed(() =>
   ops.profile?.changesReview?.state === "rejected" ? ops.profile.changesReview.note : "",
 )
 const approved = computed(() => ops.profile?.verification === "approved")
+const stateOptions = nigeriaStates.map(state => state.name)
+const cityOptions = computed(() => {
+  const state = nigeriaStates.find(item => item.name === selectedState.value)
+
+  if (state) return [...state.lgas, state.capital].filter((city, index, cities) => cities.indexOf(city) === index)
+
+  // Preserve an existing city from older profiles until the provider selects a state.
+  return form.city.trim() ? [form.city.trim()] : []
+})
 const areaSuggestions = computed(() => [...new Set([form.city.trim(), "Abuja", ...abujaDistricts].filter(Boolean))])
 const coversCity = computed(() =>
   form.serviceAreas.some(area => area.trim().toLowerCase() === form.city.trim().toLowerCase()),
@@ -85,6 +96,12 @@ const coverageReady = computed(
 )
 const hasSkill = (service: ServiceLine, skill: string) => form.skills[service]?.includes(skill) ?? false
 
+const selectState = (stateName: string | null) => {
+  selectedState.value = stateName ?? ""
+  if (!stateName || !cityOptions.value.some(city => city.toLowerCase() === form.city.trim().toLowerCase()))
+    form.city = ""
+}
+
 onMounted(async () => {
   if (isDemoMode) return
   try {
@@ -106,6 +123,7 @@ onMounted(async () => {
       portfolio: [...saved.portfolio],
       photo: saved.photo,
     })
+    selectedState.value = stateForLocation(saved.city)?.name ?? ""
     const payout = saved.payout.pending ?? saved.payout.current
     if (payout)
       form.bank = { bankCode: payout.bankCode, accountNumber: payout.accountNumber, accountName: payout.accountName }
@@ -255,7 +273,26 @@ const submit = async () => {
         <h2 class="text-h5 mb-5">Your provider profile</h2>
         <VRow>
           <VCol cols="12" sm="6"> <VTextField v-model="form.trade" label="Trade / business specialism" /> </VCol
-          ><VCol cols="12" sm="6"> <VTextField v-model="form.city" label="City" /> </VCol
+          ><VCol cols="12" sm="6">
+            <VSelect
+              :model-value="selectedState"
+              :items="stateOptions"
+              label="State"
+              clearable
+              @update:model-value="selectState"
+            />
+          </VCol>
+          <VCol cols="12" sm="6">
+            <VSelect
+              v-model="form.city"
+              :items="cityOptions"
+              label="City / LGA"
+              :disabled="!selectedState"
+              :hint="
+                selectedState ? `Select an LGA or the state capital in ${selectedState}.` : 'Choose a state first.'
+              "
+              persistent-hint
+            /> </VCol
           ><VCol cols="12" sm="6"> <VTextField v-model="form.phone" label="Private contact phone" /> </VCol
           ><VCol cols="12" sm="6">
             <VTextField v-model.number="form.experience" label="Years of experience" type="number" min="0" /> </VCol

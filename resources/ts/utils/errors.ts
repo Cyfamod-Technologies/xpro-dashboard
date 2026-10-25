@@ -1,7 +1,7 @@
 type ErrorRecord = Record<string, unknown>
 
 function asRecord(value: unknown): ErrorRecord | undefined {
-  return typeof value === "object" && value !== null ? value as ErrorRecord : undefined
+  return typeof value === "object" && value !== null ? (value as ErrorRecord) : undefined
 }
 
 function firstDetailMessage(details: unknown): string | undefined {
@@ -30,8 +30,10 @@ export const getErrorMessage = (error: unknown, fallback = "Something went wrong
   const apiError = asRecord(payload?.error) ?? payload
   const detailMessage = firstDetailMessage(apiError?.details) ?? firstDetailMessage(candidate.details)
 
-  return detailMessage
-    ?? (typeof apiError?.message === "string" ? apiError.message : undefined)
-    ?? (typeof candidate.message === "string" ? candidate.message : undefined)
-    ?? fallback
+  return (
+    detailMessage ??
+    (typeof apiError?.message === "string" ? apiError.message : undefined) ??
+    (typeof candidate.message === "string" ? candidate.message : undefined) ??
+    fallback
+  )
 }

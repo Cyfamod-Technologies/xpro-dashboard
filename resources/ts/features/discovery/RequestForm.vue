@@ -45,7 +45,7 @@ const blank: RequestInput = {
 }
 let initial = blank
 try {
-  const saved = JSON.parse(isDemoMode ? sessionStorage.getItem(draftKey) ?? "null" : "null") as RequestInput | null
+  const saved = JSON.parse(isDemoMode ? (sessionStorage.getItem(draftKey) ?? "null") : "null") as RequestInput | null
   if (saved && saved.service in intakeFields) initial = saved
 } catch {
   /* Start a new brief if a saved draft cannot be read. */
@@ -78,7 +78,9 @@ for (const field of intakeFields[form.service]) {
 
   if (value && (!field.options || field.options.includes(value))) form.details[field.key] = value
 }
-const serviceNames = computed(() => !isDemoMode && catalog.value.length ? catalog.value.map(item => item.name) : serviceLines.map(item => item.name))
+const serviceNames = computed(() =>
+  !isDemoMode && catalog.value.length ? catalog.value.map(item => item.name) : serviceLines.map(item => item.name),
+)
 const contactMethods = [
   { title: "Phone", value: "phone" },
   { title: "Email", value: "email" },
@@ -127,11 +129,25 @@ const validNigerianPhone = (value: unknown) => {
 }
 const fieldRules = (field: IntakeField) => [
   ...(field.required ? [required] : []),
-  ...(field.type === "number" ? [(value: unknown) => !value || (Number(value) > 0 && Number.isFinite(Number(value))) || `${field.label} must be positive.`] : []),
+  ...(field.type === "number"
+    ? [
+        (value: unknown) =>
+          !value || (Number(value) > 0 && Number.isFinite(Number(value))) || `${field.label} must be positive.`,
+      ]
+    : []),
   ...(field.type === "date" ? [dateRange] : []),
-  ...(field.key.toLowerCase().includes("quantity") ? [(value: unknown) => !value || (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 10) || "Quantity must be a whole number from 1 to 10."] : []),
+  ...(field.key.toLowerCase().includes("quantity")
+    ? [
+        (value: unknown) =>
+          !value ||
+          (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 10) ||
+          "Quantity must be a whole number from 1 to 10.",
+      ]
+    : []),
 ]
-const saveDraft = () => { if (isDemoMode) sessionStorage.setItem(draftKey, JSON.stringify(form)) }
+const saveDraft = () => {
+  if (isDemoMode) sessionStorage.setItem(draftKey, JSON.stringify(form))
+}
 const label = (field: IntakeField) => (field.required ? `${field.label} *` : field.label)
 const filled = (field: IntakeField) => Boolean(String(form.details[field.key] ?? "").trim())
 
@@ -218,7 +234,8 @@ onMounted(async () => {
     const [services, locations] = await Promise.all([requestsApi.services(), requestsApi.locations()])
     catalog.value = services
     cities.value = locations.filter(item => item.kind === "city")
-    if (catalog.value.length && !catalog.value.some(item => item.name === form.service)) form.service = catalog.value[0].name as RequestInput["service"]
+    if (catalog.value.length && !catalog.value.some(item => item.name === form.service))
+      form.service = catalog.value[0].name as RequestInput["service"]
   } catch (cause) {
     liveError.value = cause instanceof Error ? cause.message : "The service catalogue could not be loaded."
   } finally {
@@ -229,7 +246,12 @@ onMounted(async () => {
 async function uploadRequestFiles() {
   const attachments: Array<{ id: string }> = []
   for (const file of files.value) {
-    const upload = await requestsApi.createUpload({ name: file.name, size: file.size, type: file.type, purpose: "request_attachment" })
+    const upload = await requestsApi.createUpload({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      purpose: "request_attachment",
+    })
     const response = await fetch(upload.uploadUrl, { method: upload.method, headers: upload.headers, body: file })
     if (!response.ok) throw new Error(`Could not upload ${file.name}.`)
     await requestsApi.completeUpload(upload.id)
@@ -252,22 +274,26 @@ const submit = async () => {
       return
     }
     if (!isDemoMode) {
-      if (!cityId.value || !districtId.value) throw new Error("Choose a city and district from the available locations.")
+      if (!cityId.value || !districtId.value)
+        throw new Error("Choose a city and district from the available locations.")
       const attachments = await uploadRequestFiles()
-      const result = await requestsApi.create({
-        title: form.title,
-        service: form.service,
-        cityId: cityId.value,
-        districtId: districtId.value,
-        address: form.address,
-        phone: form.phone,
-        contactMethod: form.contactMethod,
-        description: form.description,
-        budget: form.budget ? Math.round(form.budget * 100) : null,
-        startDate: form.startDate || null,
-        details: form.details,
-        attachments,
-      }, submitKey.value)
+      const result = await requestsApi.create(
+        {
+          title: form.title,
+          service: form.service,
+          cityId: cityId.value,
+          districtId: districtId.value,
+          address: form.address,
+          phone: form.phone,
+          contactMethod: form.contactMethod,
+          description: form.description,
+          budget: form.budget ? Math.round(form.budget * 100) : 0,
+          startDate: form.startDate || undefined,
+          details: form.details,
+          attachments,
+        },
+        submitKey.value,
+      )
       submitted.value = result.id
       liveWarning.value = result.warning ?? ""
       files.value = []
@@ -338,7 +364,13 @@ const submit = async () => {
           <VCard>
             <VCardText class="pa-6 d-flex flex-column gap-5">
               <h2 class="text-h6">Service</h2>
-              <VSelect v-model="form.service" :items="serviceNames" label="Service" :rules="[required]" :loading="loadingCatalog" />
+              <VSelect
+                v-model="form.service"
+                :items="serviceNames"
+                label="Service"
+                :rules="[required]"
+                :loading="loadingCatalog"
+              />
               <div v-if="selectedLine" class="service-note">
                 <VAvatar color="primary" variant="tonal" size="44">
                   <VIcon :icon="selectedLine.icon" />
@@ -378,7 +410,11 @@ const submit = async () => {
                 v-model="form.title"
                 label="Request title *"
                 placeholder="For example, office renovation in Lekki"
-                :rules="[required, value => String(value).trim().length >= 3 && String(value).length <= 120 || 'Use 3 to 120 characters.']"
+                :rules="[
+                  required,
+                  value =>
+                    (String(value).trim().length >= 3 && String(value).length <= 120) || 'Use 3 to 120 characters.',
+                ]"
               />
               <div v-if="inputFields.length" class="field-grid">
                 <VTextField
@@ -431,14 +467,38 @@ const submit = async () => {
               <h2 class="text-h6">Location, timing and contact</h2>
               <div class="field-grid">
                 <template v-if="!isDemoMode">
-                  <VSelect v-model="cityId" :items="cities.map(item => ({ title: item.name, value: item.id }))" label="City *" :rules="[required]" />
-                  <VSelect v-model="districtId" :items="districts.map(item => ({ title: item.name, value: item.id }))" label="District *" :disabled="!cityId" :rules="[required]" />
+                  <VSelect
+                    v-model="cityId"
+                    :items="cities.map(item => ({ title: item.name, value: item.id }))"
+                    label="City *"
+                    :rules="[required]"
+                  />
+                  <VSelect
+                    v-model="districtId"
+                    :items="districts.map(item => ({ title: item.name, value: item.id }))"
+                    label="District *"
+                    :disabled="!cityId"
+                    :rules="[required]"
+                  />
                 </template>
                 <VTextField v-else v-model="form.city" label="City / service area *" :rules="[required]" />
-                <VTextField v-model="form.phone" label="Contact phone *" type="tel" :rules="[required, validNigerianPhone]" />
+                <VTextField
+                  v-model="form.phone"
+                  label="Contact phone *"
+                  type="tel"
+                  :rules="[required, validNigerianPhone]"
+                />
                 <VSelect v-model="form.contactMethod" :items="contactMethods" label="Preferred contact method" />
-                <VTextField v-model="form.startDate" label="Preferred start date" type="date" :rules="[...(form.service === 'Hire' ? [required] : []), dateRange]" />
-                <VAlert v-if="!isDemoMode" variant="tonal" color="info" class="field-grid__wide">Only share contact details in the project brief if the provider needs them to assess the work. XPro will keep your contact private until the request allows sharing.</VAlert>
+                <VTextField
+                  v-model="form.startDate"
+                  label="Preferred start date"
+                  type="date"
+                  :rules="[...(form.service === 'Hire' ? [required] : []), dateRange]"
+                />
+                <VAlert v-if="!isDemoMode" variant="tonal" color="info" class="field-grid__wide"
+                  >Only share contact details in the project brief if the provider needs them to assess the work. XPro
+                  will keep your contact private until the request allows sharing.</VAlert
+                >
                 <VTextField
                   v-model="form.address"
                   label="Site address *"
@@ -475,7 +535,13 @@ const submit = async () => {
                 <strong class="text-body-2">XPro assigns a verified provider for you</strong>
               </div>
               <div class="px-5 pb-5 d-flex flex-column gap-3">
-        <VBtn type="submit" size="large" block :loading="submitting || (isDemoMode && ops.busy)" :disabled="!isDemoMode && loadingCatalog">
+                <VBtn
+                  type="submit"
+                  size="large"
+                  block
+                  :loading="submitting || (isDemoMode && ops.busy)"
+                  :disabled="!isDemoMode && loadingCatalog"
+                >
                   {{ auth.isAuthenticated ? "Submit request" : "Continue to sign in" }}
                 </VBtn>
                 <span class="text-body-2 text-medium-emphasis text-center">
