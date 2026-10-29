@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { serviceLines } from "@/features/workspace/config"
+import { usePublicServices } from "@/features/discovery/public-services"
 
 const props = defineProps<{ modelValue?: string; all?: boolean; label?: string }>()
 const emit = defineEmits<{ "update:modelValue": [value: string] }>()
+
+const { services } = usePublicServices()
 
 const model = computed({
   get: () => props.modelValue,
@@ -11,7 +13,7 @@ const model = computed({
 
 const tabs = computed(() => [
   ...(props.all ? [{ name: "", label: "All services", icon: "tabler-layout-grid" }] : []),
-  ...serviceLines.map(item => ({ name: item.name, label: item.name, icon: item.icon })),
+  ...services.value.map(item => ({ name: item.name, label: item.name, icon: item.icon })),
 ])
 </script>
 

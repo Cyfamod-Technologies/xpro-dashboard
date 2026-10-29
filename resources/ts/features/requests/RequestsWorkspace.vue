@@ -383,6 +383,15 @@ watch([stageFilter, nextActorOnly], () => {
           <p class="text-medium-emphasis mb-3">
             {{ [request.service, request.cityName, request.districtName].filter(Boolean).join(" · ") }}
           </p>
+          <p v-if="request.servicePath?.length" class="text-body-2 mb-3">
+            <span class="text-medium-emphasis">Service:</span> {{ request.servicePath.map(step => step.name).join(" › ") }}
+          </p>
+          <dl v-if="request.answers?.length" class="answers mb-3">
+            <template v-for="answer in request.answers" :key="answer.questionId">
+              <dt>{{ answer.label }}</dt>
+              <dd>{{ answer.display }}</dd>
+            </template>
+          </dl>
           <p v-if="request.description" class="mb-0">{{ request.description }}</p>
           <div v-if="request.attachments?.length" class="d-flex flex-wrap ga-2 mt-3">
             <VBtn
@@ -1142,5 +1151,19 @@ watch([stageFilter, nextActorOnly], () => {
 .stage-filter {
   max-inline-size: 14rem;
   min-inline-size: 11rem;
+}
+.answers {
+  display: grid;
+  font-size: 0.875rem;
+  gap: 6px 16px;
+  grid-template-columns: auto 1fr;
+  margin: 0;
+}
+.answers dt {
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+.answers dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 </style>

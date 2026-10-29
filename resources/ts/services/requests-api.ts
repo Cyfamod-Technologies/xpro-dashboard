@@ -23,7 +23,6 @@ import type {
   RequestSummary,
   RequestView,
   SaveSettingsResult,
-  ServiceView,
   SettingView,
   UploadView,
 } from "@/features/requests/api-types"
@@ -95,7 +94,7 @@ export const requestsApi = {
   create: (
     body: {
       title: string
-      service: string
+      serviceId: string
       cityId: string
       districtId: string
       address: string
@@ -104,7 +103,7 @@ export const requestsApi = {
       description: string
       budget: number
       startDate?: string
-      details: Record<string, unknown>
+      answers: Record<string, string | number | string[]>
       attachments: Array<{ id: string }>
     },
     idempotencyKey = randomKey(),
@@ -262,7 +261,6 @@ export const requestsApi = {
       { note },
       version,
     ),
-  services: () => unwrap($api<ApiEnvelope<ServiceView[]>>("/services")),
   locations: (parentId?: string) => unwrap($api<ApiEnvelope<LocationView[]>>("/locations", { query: { parentId } })),
   adminLocations: () => unwrap($api<ApiEnvelope<LocationView[]>>("/admin/locations")),
   createLocation: (body: {

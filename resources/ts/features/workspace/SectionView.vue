@@ -4,11 +4,12 @@ import { useAuthStore } from "@/stores/auth"
 import RequestBoard from "@/features/operations/RequestBoard.vue"
 import ProviderProfile from "@/features/operations/ProviderProfile.vue"
 import PayoutDetails from "@/features/operations/PayoutDetails.vue"
-import ProviderReview from "@/features/operations/ProviderReview.vue"
+import ProvidersArea from "@/features/operations/ProvidersArea.vue"
 import WorkspaceUtilities from "@/features/operations/WorkspaceUtilities.vue"
 import WorkspaceOverview from "@/features/operations/WorkspaceOverview.vue"
 import ApprovalQueue from "@/features/operations/ApprovalQueue.vue"
 import StaffDirectory from "@/features/operations/StaffDirectory.vue"
+import ServiceCatalogAdmin from "@/features/catalog/ServiceCatalogAdmin.vue"
 import Feedback from "@/features/operations/Feedback.vue"
 import RequestsWorkspace from "@/features/requests/RequestsWorkspace.vue"
 import AdminPayments from "@/features/requests/AdminPayments.vue"
@@ -53,6 +54,10 @@ const platformSection = computed(() =>
     />
     <AdminPayments v-else-if="!isDemoMode && section.id === 'finance'" />
     <ProviderEarnings v-else-if="!isDemoMode && section.id === 'payouts'" />
+    <ServiceCatalogAdmin v-else-if="!isDemoMode && section.id === 'services'" />
+    <VAlert v-else-if="section.id === 'services'" color="info" variant="tonal">
+      {{ section.emptyMessage }}
+    </VAlert>
     <VAlert
       v-else-if="!isDemoMode && !['verification', 'availability', 'providers', 'payouts'].includes(section.id)"
       color="info"
@@ -71,7 +76,7 @@ const platformSection = computed(() =>
       :availability="section.id === 'availability'"
     />
     <PayoutDetails v-else-if="section.id === 'payouts'" />
-    <ProviderReview v-else-if="section.id === 'providers'" />
+    <ProvidersArea v-else-if="section.id === 'providers'" />
     <ApprovalQueue v-else-if="section.id === 'approvals'" />
     <StaffDirectory v-else-if="section.id === 'staff'" />
     <WorkspaceUtilities v-else :key="section.id" :section="section.id" />

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-definePage({ redirect: "/services", meta: { public: true, publicSite: true } })
+import FeaturedProviders from "@/features/discovery/FeaturedProviders.vue"
+
+definePage({ meta: { public: true, publicSite: true } })
 </script>
 
 <template>
-  <div />
+  <FeaturedProviders />
 </template>

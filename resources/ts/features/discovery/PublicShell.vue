@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { serviceLines } from "@/features/workspace/config"
 import { XPRO_PHONE } from "@/features/discovery/contact"
+import { usePublicServices } from "@/features/discovery/public-services"
 import { useAuthStore } from "@/stores/auth"
 import { XPRO_BRAND } from "@/utils/branding"
 import { isDemoMode } from "@/utils/demo-mode"
 
+const { services } = usePublicServices()
 const auth = useAuthStore()
 const route = useRoute()
 const year = new Date().getFullYear()
@@ -13,6 +14,7 @@ const topAddress = XPRO_BRAND.addresses[0].replace(/, Abuja$/, "")
 const nav = computed(() => [
   { label: "Home", to: "/", active: route.path === "/" && !route.hash },
   { label: "Services", to: "/services", active: route.path.startsWith("/services") },
+  { label: "Providers", to: "/providers", active: route.path.startsWith("/providers") },
   { label: "How it works", to: "/#how-it-works", active: false },
 ])
 </script>
@@ -67,7 +69,7 @@ const nav = computed(() => [
         <nav aria-label="Services" class="xp-footer-col d-flex flex-column gap-2 text-body-2">
           <strong>Services</strong>
           <RouterLink
-            v-for="item in serviceLines"
+            v-for="item in services"
             :key="item.name"
             :to="{ path: '/services', query: { service: item.name } }"
           >
@@ -220,6 +222,7 @@ const nav = computed(() => [
   }
 
   .xp-nav-link {
+    padding-inline: 8px;
     white-space: nowrap;
   }
 }

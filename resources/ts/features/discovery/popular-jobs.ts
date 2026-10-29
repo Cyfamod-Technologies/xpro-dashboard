@@ -194,3 +194,7 @@ export const popularJobs: Record<ServiceLine, PopularJob[]> = {
     },
   ],
 }
+
+/** Popular jobs for a service; a catalog service added by an admin has none yet. */
+export const popularJobsFor = (service: string): PopularJob[] =>
+  (popularJobs as Partial<Record<string, PopularJob[]>>)[service] ?? []

@@ -114,6 +114,8 @@ export const useOperationsStore = defineStore("operations", () => {
       services: result.services as ProviderProfile["services"],
       serviceAreas: result.serviceAreas,
       skills: result.skills as ProviderProfile["skills"],
+      serviceIds: result.serviceIds,
+      skillIds: result.skillIds,
       capacity: result.capacity,
       lastOfferedAt: "",
       workingHours: result.workingHours,
@@ -191,9 +193,13 @@ export const useOperationsStore = defineStore("operations", () => {
     if (isDemoMode) return false
     switch (command.type) {
       case "provider.submit": {
-        const { bank, ...input } = command.input
+        // Live profiles are saved by catalog id; the names in the form are only for display.
+        const { bank, services: _, skills: __, serviceIds, skillIds, ...input } = command.input
+
         await providersApi.submit({
           ...input,
+          serviceIds: serviceIds ?? [],
+          skillIds: skillIds ?? {},
           photo: input.photo!,
           bankCode: bank.bankCode,
           accountNumber: bank.accountNumber,

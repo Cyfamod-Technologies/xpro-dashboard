@@ -25,6 +25,7 @@ export const staffRolePermissions: Record<StaffRole, StaffPermission[] | "*"> = 
     "message.customer",
     "message.provider",
     "message.internal",
+    "catalog.manage",
   ],
   pricing: ["quote.manage", "message.provider", "message.internal"],
   client_relations: [

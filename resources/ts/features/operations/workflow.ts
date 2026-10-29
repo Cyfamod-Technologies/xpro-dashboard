@@ -250,13 +250,19 @@ const names = (files: { name: string }[]) => files.map(file => file.name).join("
 const sameIds = (a: { id: string }[], b: { id: string }[]) =>
   a.length === b.length && a.every((file, index) => file.id === b[index].id)
 const sameServices = (a: string[], b: string[]) => [...a].sort().join("|") === [...b].sort().join("|")
-const skillEntries = (skills: ProviderSkills) =>
+const skillEntries = (skills: Partial<Record<string, string[]>>) =>
   Object.entries(skills)
     .map(([service, list]) => [service, [...(list ?? [])].sort()] as const)
     .filter(([, list]) => list.length)
     .sort(([x], [y]) => x.localeCompare(y))
-const sameSkills = (a: ProviderSkills, b: ProviderSkills) =>
+const sameSkills = (a: Partial<Record<string, string[]>>, b: Partial<Record<string, string[]>>) =>
   JSON.stringify(skillEntries(a)) === JSON.stringify(skillEntries(b))
+
+// Live profiles carry catalog ids, so a rename never shows as a change; names are the fallback (and all demo mode has).
+const servicesChanged = (a: PendingProfileChanges, b: ProviderProfile) =>
+  a.serviceIds && b.serviceIds ? !sameServices(a.serviceIds, b.serviceIds) : !sameServices(a.services, b.services)
+const skillsChanged = (a: PendingProfileChanges, b: ProviderProfile) =>
+  a.skillIds && b.skillIds ? !sameSkills(a.skillIds, b.skillIds) : !sameSkills(a.skills, b.skills)
 const skillSummary = (skills: ProviderSkills) =>
   skillEntries(skills)
     .map(([service, list]) => `${service}: ${list.join(", ")}`)
@@ -287,7 +293,7 @@ export const profileChangeRows = (profile: ProviderProfile): ProfileChangeRow[] 
   if (!proposed) return rows
   if (proposed.trade.trim() !== profile.trade.trim())
     rows.push({ label: "Trade", current: profile.trade, proposed: proposed.trade })
-  if (!sameServices(proposed.services, profile.services))
+  if (servicesChanged(proposed, profile))
     rows.push({
       label: "Services",
       current: profile.services.join(", ") || "None",
@@ -304,7 +310,7 @@ export const profileChangeRows = (profile: ProviderProfile): ProfileChangeRow[] 
       current: profile.serviceAreas.join(", ") || "None",
       proposed: proposed.serviceAreas.join(", ") || "None",
     })
-  if (!sameSkills(proposed.skills, profile.skills))
+  if (skillsChanged(proposed, profile))
     rows.push({ label: "Skills", current: skillSummary(profile.skills), proposed: skillSummary(proposed.skills) })
   if (proposed.capacity !== profile.capacity)
     rows.push({ label: "Job capacity", current: String(profile.capacity), proposed: String(proposed.capacity) })
