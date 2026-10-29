@@ -3,6 +3,7 @@ import { isNuban, nigerianBanks, resolveAccountDemo } from "@/features/operation
 import type { BankInput } from "@/features/operations/types"
 import { providersApi } from "@/services/providers-api"
 import { isDemoMode } from "@/utils/demo-mode"
+import { getErrorMessage } from "@/utils/errors"
 
 const props = defineProps<{ holderName: string }>()
 const bank = defineModel<BankInput>({ required: true })
@@ -11,6 +12,19 @@ const error = ref("")
 const banks = ref(isDemoMode ? nigerianBanks : [])
 const verified = computed(() => bank.value.accountName.trim().length >= 3)
 const canVerify = computed(() => Boolean(bank.value.bankCode) && isNuban(bank.value.accountNumber) && !verified.value)
+
+const bankErrorMessage = (cause: unknown, fallback: string) => {
+  if (cause && typeof cause === "object") {
+    const candidate = cause as {
+      data?: unknown
+      response?: { _data?: unknown }
+    }
+    const responseBody = candidate.data ?? candidate.response?._data
+    if (responseBody !== undefined) return getErrorMessage({ data: responseBody }, fallback)
+  }
+
+  return getErrorMessage(cause, fallback)
+}
 
 // Any change to the bank or number clears the resolved name, so it must be verified again.
 const change = (patch: Partial<BankInput>) => {
@@ -31,7 +45,7 @@ const verify = async () => {
     if (bank.value.bankCode === bankCode && bank.value.accountNumber === accountNumber)
       bank.value = { ...bank.value, accountName }
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : "We could not verify this account."
+    error.value = bankErrorMessage(cause, "We could not verify this account. Please try again.")
   } finally {
     checking.value = false
   }
@@ -42,7 +56,7 @@ onMounted(async () => {
   try {
     banks.value = (await providersApi.banks()).data
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : "Unable to load the bank list."
+    error.value = bankErrorMessage(cause, "Unable to load the bank list. Please try again.")
   }
 })
 </script>

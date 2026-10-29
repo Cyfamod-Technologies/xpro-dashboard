@@ -427,8 +427,13 @@ const submit = async () => {
 </script>
 
 <template>
-  <VAlert variant="tonal" :color="ops.profile?.verification === 'approved' ? 'success' : 'warning'" class="mb-5">
-    Profile status: {{ ops.profile?.verification.replaceAll("_", " ") ?? "draft" }}. {{ ops.profile?.reviewNote }}
+  <VAlert
+    v-if="ops.profile && ops.profile.verification !== 'draft'"
+    variant="tonal"
+    :color="ops.profile.verification === 'approved' ? 'success' : 'warning'"
+    class="mb-5"
+  >
+    Profile status: {{ ops.profile.verification.replaceAll("_", " ") }}. {{ ops.profile.reviewNote }}
   </VAlert>
   <VAlert v-if="changesAwaiting" variant="tonal" color="warning" class="mb-5">
     <strong>Changes awaiting XPro review.</strong> Your current details stay in use until XPro approves them.
