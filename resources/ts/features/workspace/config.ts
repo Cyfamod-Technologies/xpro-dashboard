@@ -211,6 +211,14 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "Operational actions and their history will appear here.",
     ),
     section(
+      "services",
+      "Service catalog",
+      "tabler-category",
+      "Create and organise the services customers can request, and the questions they answer.",
+      "Services will appear here.",
+      "catalog.manage",
+    ),
+    section(
       "staff",
       "Staff",
       "tabler-user-shield",

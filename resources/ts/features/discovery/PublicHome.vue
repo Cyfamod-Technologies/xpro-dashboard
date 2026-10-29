@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { serviceLines } from "@/features/workspace/config"
 import JobCard from "@/features/discovery/JobCard.vue"
 import ServiceTabs from "@/features/discovery/ServiceTabs.vue"
 import { serviceCoverAlt, serviceCoverImage } from "@/features/discovery/images"
-import { popularJobs } from "@/features/discovery/popular-jobs"
+import { usePublicServices } from "@/features/discovery/public-services"
+import { popularJobsFor } from "@/features/discovery/popular-jobs"
 import type { ServiceLine } from "@/features/operations/types"
 import { useOperationsStore } from "@/stores/operations"
 import { isDemoMode } from "@/utils/demo-mode"
@@ -18,11 +18,17 @@ const ops = useOperationsStore()
 const route = useRoute()
 const router = useRouter()
 
-const activeService = ref(serviceLines[1].name)
-const activeLine = computed(() => activeService.value as ServiceLine)
-const search = reactive({ service: serviceLines[1].name, title: "", city: "Abuja", start: "" })
-const serviceNames = serviceLines.map(item => item.name)
-const jobs = computed(() => popularJobs[activeService.value as keyof typeof popularJobs] ?? [])
+const { services } = usePublicServices()
+
+// Construction leads the home page while the catalog has it; otherwise the first service.
+const DEFAULT_SERVICE = "Construction"
+
+const activeService = ref("")
+const activeLine = computed(() => services.value.find(item => item.name === activeService.value))
+const jobService = computed(() => activeService.value as ServiceLine)
+const search = reactive({ service: "", title: "", city: "Abuja", start: "" })
+const serviceNames = computed(() => services.value.map(item => item.name))
+const jobs = computed(() => popularJobsFor(activeService.value))
 
 const heroStyle = computed(() => (heroImage ? { "--hero-image": `url(${heroImage})` } : undefined))
 
@@ -81,7 +87,7 @@ const verification = [
 const network = computed(() => {
   const approved = ops.state.providers.filter(item => item.verification === "approved")
 
-  return serviceLines.map(line => {
+  return services.value.map(line => {
     const name = line.name as ServiceLine
     const offering = approved.filter(item => item.services.includes(name))
     const tally = new Map<string, number>()
@@ -102,6 +108,15 @@ const network = computed(() => {
 watch(activeService, value => {
   search.service = value
 })
+
+watch(
+  serviceNames,
+  names => {
+    if (!names.includes(activeService.value))
+      activeService.value = names.includes(DEFAULT_SERVICE) ? DEFAULT_SERVICE : (names[0] ?? "")
+  },
+  { immediate: true },
+)
 
 const clean = (query: Record<string, string>) =>
   Object.fromEntries(
@@ -196,19 +211,41 @@ watch(() => route.hash, scrollToHash)
     <ServiceTabs v-model="activeService" />
   </section>
 
-  <section class="xp-container pt-8 pb-12">
+  <section v-if="activeLine" class="xp-container pt-8 pb-12">
     <div class="d-flex flex-wrap justify-space-between align-end gap-3 mb-5">
-      <div>
-        <h2 class="text-h4 mb-1">Popular {{ activeService.toLowerCase() }} jobs</h2>
+      <div v-if="jobs.length">
+        <h2 class="text-h4 mb-1">Popular {{ activeLine.name.toLowerCase() }} jobs</h2>
         <p class="text-medium-emphasis mb-0">Tap a job to start your request with it filled in.</p>
       </div>
-      <RouterLink :to="{ path: '/services', query: { service: activeService } }">
-        All {{ activeService.toLowerCase() }} services →
+      <div v-else>
+        <h2 class="text-h4 mb-1">{{ activeLine.name }}</h2>
+        <p class="text-medium-emphasis mb-0">Tell us about the job and XPro assigns a verified provider.</p>
+      </div>
+      <RouterLink :to="{ path: '/services', query: { service: activeLine.name } }">
+        All {{ activeLine.name.toLowerCase() }} services →
       </RouterLink>
     </div>
-    <div class="job-grid">
-      <JobCard v-for="job in jobs" :key="`${activeService}-${job.name}`" :service="activeLine" :job="job" />
+    <div v-if="jobs.length" class="job-grid">
+      <JobCard v-for="job in jobs" :key="`${activeLine.name}-${job.name}`" :service="jobService" :job="job" />
     </div>
+    <VCard v-else variant="outlined">
+      <VCardText class="d-flex flex-wrap align-center justify-space-between gap-4 pa-6">
+        <div class="d-flex align-start gap-4">
+          <VAvatar color="primary" variant="tonal" size="44">
+            <VIcon :icon="activeLine.icon" />
+          </VAvatar>
+          <div>
+            <strong class="d-block mb-1">{{ activeLine.name }}</strong>
+            <span class="text-body-2 text-medium-emphasis">
+              {{ activeLine.description || "Tell us what you need and XPro takes it from there." }}
+            </span>
+          </div>
+        </div>
+        <VBtn :to="{ path: '/request', query: { service: activeLine.name } }" size="large">
+          Request {{ activeLine.name }}
+        </VBtn>
+      </VCardText>
+    </VCard>
   </section>
 
   <section aria-label="Why XPro" class="xp-container pb-12">

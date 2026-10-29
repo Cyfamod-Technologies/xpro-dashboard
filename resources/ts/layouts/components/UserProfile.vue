@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { clearDraftsForOwner } from "@/features/drafts/clear-drafts"
 import { staffRoleLabels } from "@/features/operations/staff"
 import { roleLabels } from "@/types/domain"
 import { isWorkspaceRole, sectionPath } from "@/features/workspace/config"
@@ -20,7 +21,11 @@ const router = useRouter()
 const pathFor = (id: string) => (isWorkspaceRole(auth.user?.role) ? sectionPath(auth.user.role, id) : "/")
 
 const handleLogout = async () => {
+  const userId = auth.user?.id
+
   auth.logout()
+  // Signing out on purpose also removes the user's saved form drafts from this device.
+  if (userId) await clearDraftsForOwner(userId)
   await router.push("/login")
 }
 </script>

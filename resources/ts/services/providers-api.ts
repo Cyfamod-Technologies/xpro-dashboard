@@ -14,8 +14,10 @@ export interface ProviderProfileResponse {
   trade: string
   city: string
   services: string[]
+  serviceIds: string[]
   serviceAreas: string[]
   skills: Record<string, string[]>
+  skillIds: Record<string, string[]>
   capacity: number
   workingHours: WorkingHours
   timeOff: TimeOff[]
@@ -83,9 +85,9 @@ export const providersApi = {
     phone: string
     trade: string
     city: string
-    services: string[]
+    serviceIds: string[]
     serviceAreas: string[]
-    skills: Record<string, string[]>
+    skillIds: Record<string, string[]>
     capacity: number
     workingHours: WorkingHours
     experience: number

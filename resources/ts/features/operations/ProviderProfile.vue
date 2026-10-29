@@ -18,6 +18,13 @@ import ProfileSection from "@/features/operations/ProfileSection.vue"
 import FilePicker from "@/features/operations/FilePicker.vue"
 import BankForm from "@/features/operations/BankForm.vue"
 import { providersApi } from "@/services/providers-api"
+import { useAuthStore } from "@/stores/auth"
+import DraftBanner from "@/features/drafts/DraftBanner.vue"
+import { hashString } from "@/features/drafts/draft-envelope"
+import { useFormDraft } from "@/features/drafts/use-form-draft"
+import { catalogApi } from "@/services/catalog-api"
+import type { PublicServiceNode } from "@/features/catalog/types"
+import { catalogIdsFromNames, skillOptionsForRoot } from "@/features/catalog/types"
 
 const props = defineProps<{ availability?: boolean }>()
 const ops = useOperationsStore()
@@ -51,6 +58,11 @@ const form = reactive<ProviderInput>({
     accountName: known?.accountName ?? "",
   },
 })
+// Live mode keeps what the provider offers as catalog ids (renames then change nothing); demo mode keeps names in `form`.
+const ids = reactive({
+  serviceIds: [...(proposed?.serviceIds ?? [])],
+  skillIds: structuredClone(toRaw(proposed?.skillIds ?? {})) as Record<string, string[]>,
+})
 const current = computed(() => ops.profile?.payout.current ?? null)
 const awaitingBank = computed(() =>
   ops.profile?.payout.review?.state === "pending" ? ops.profile.payout.pending : null,
@@ -83,7 +95,37 @@ const areaProblem = computed(() =>
       ? `Include ${form.city.trim()} in your service areas.`
       : "",
 )
-const missingSkills = computed(() => form.services.filter(service => !form.skills[service]?.length))
+// Live mode offers the catalog's top-level services and their skills; demo mode keeps the static lists.
+// A service is its name in demo mode and its id in live mode, and so is a skill.
+const catalogRoots = ref<PublicServiceNode[]>([])
+const serviceOptions = computed(() =>
+  isDemoMode
+    ? serviceLines.map(item => item.name)
+    : catalogRoots.value.map(item => ({ title: item.name, value: item.id })),
+)
+const chosenServices = computed<string[]>({
+  get: () => (isDemoMode ? form.services : ids.serviceIds),
+  set: value => {
+    if (isDemoMode) form.services = value as ServiceLine[]
+    else ids.serviceIds = value
+  },
+})
+const chosenSkills = () => (isDemoMode ? form.skills : ids.skillIds) as Partial<Record<string, string[]>>
+const serviceName = (service: string) =>
+  isDemoMode ? service : (catalogRoots.value.find(item => item.id === service)?.name ?? service)
+const skillsFor = (service: string): { id: string; label: string }[] => {
+  if (isDemoMode) return (serviceSkills[service as ServiceLine] ?? []).map(skill => ({ id: skill, label: skill }))
+
+  const root = catalogRoots.value.find(item => item.id === service)
+
+  return root ? skillOptionsForRoot(root) : []
+}
+// A top-level service with no sub-services has no skills to choose, so it cannot be missing one.
+const missingSkills = computed(() =>
+  chosenServices.value.filter(
+    service => (isDemoMode || !catalogRoots.value.length || skillsFor(service).length) && !chosenSkills()[service]?.length,
+  ),
+)
 const capacityProblem = computed(() =>
   Number.isInteger(form.capacity) && form.capacity >= 1 && form.capacity <= 20
     ? ""
@@ -93,12 +135,12 @@ const hoursProblem = computed(() => workingHoursProblem(form.workingHours))
 const coverageReady = computed(
   () =>
     !areaProblem.value &&
-    form.services.length > 0 &&
+    chosenServices.value.length > 0 &&
     !missingSkills.value.length &&
     !capacityProblem.value &&
     !hoursProblem.value,
 )
-const hasSkill = (service: ServiceLine, skill: string) => form.skills[service]?.includes(skill) ?? false
+const hasSkill = (service: string, skill: string) => chosenSkills()[service]?.includes(skill) ?? false
 
 const selectState = (stateName: string | null) => {
   selectedState.value = stateName ?? ""
@@ -106,8 +148,117 @@ const selectState = (stateName: string | null) => {
     form.city = ""
 }
 
+// Autosaved draft: text fields in localStorage, queued files in IndexedDB. The bank account number is never kept.
+interface ProfileDraft {
+  phone: string
+  trade: string
+  city: string
+  state: string
+  services: string[]
+  serviceAreas: string[]
+  skills: ProviderInput["skills"]
+  serviceIds: string[]
+  skillIds: Record<string, string[]>
+  capacity: number
+  workingHours: ProviderInput["workingHours"]
+  experience: number
+  bio: string
+  bankCode: string
+}
+
+const auth = useAuthStore()
+const profileFingerprint = () => {
+  const saved = ops.profile
+
+  return hashString(JSON.stringify(saved ? [saved.verification, saved.history.length, saved.changesReview?.state] : null))
+}
+const resetBank = () => {
+  const payout = ops.profile?.payout.pending ?? ops.profile?.payout.current
+
+  changingBank.value = false
+  form.bank = payout
+    ? { bankCode: payout.bankCode, accountNumber: payout.accountNumber, accountName: payout.accountName }
+    : { bankCode: "", accountNumber: "", accountName: "" }
+}
+const draft = useFormDraft<ProfileDraft>({
+  formId: "provider-profile",
+  version: 2,
+  owner: () => auth.user?.id ?? "guest",
+  snapshot: () => ({
+    phone: form.phone,
+    trade: form.trade,
+    city: form.city,
+    state: selectedState.value,
+    services: form.services,
+    serviceAreas: form.serviceAreas,
+    skills: form.skills,
+    serviceIds: ids.serviceIds,
+    skillIds: ids.skillIds,
+    capacity: form.capacity,
+    workingHours: form.workingHours,
+    experience: form.experience,
+    bio: form.bio,
+    bankCode: keepCurrent.value || awaitingBank.value ? "" : form.bank.bankCode,
+  }),
+  restore: data => {
+    Object.assign(form, {
+      phone: data.phone,
+      trade: data.trade,
+      city: data.city,
+      services: [...data.services],
+      serviceAreas: [...data.serviceAreas],
+      skills: structuredClone(data.skills),
+      capacity: data.capacity,
+      workingHours: structuredClone(data.workingHours),
+      experience: data.experience,
+      bio: data.bio,
+    })
+    ids.serviceIds = [...data.serviceIds]
+    ids.skillIds = structuredClone(data.skillIds)
+    selectedState.value = data.state
+    if (data.bankCode) {
+      changingBank.value = Boolean(current.value)
+      form.bank = { bankCode: data.bankCode, accountNumber: "", accountName: "" }
+    }
+  },
+  files: { documents: files, portfolio: portfolioFiles, photo: photoFile },
+  onFilesRestored: restored => {
+    const photo = restored.photo?.[0]
+
+    if (photo) form.photo = { id: "pending-upload", name: photo.name, size: photo.size, type: photo.type }
+  },
+  onDiscard: () => {
+    resetBank()
+    photoProblem.value = ""
+    form.photo = ops.profile?.pendingChanges?.photo ?? ops.profile?.photo ?? null
+  },
+  base: profileFingerprint,
+  // A profile waiting for review is locked, so there is nothing to draft.
+  enabled: () => ops.profile?.verification !== "pending",
+})
+
+// Drops ids the catalog no longer offers (a deactivated service or skill), so a resubmit is not rejected.
+const pruneIds = () => {
+  if (!catalogRoots.value.length) return
+  ids.serviceIds = ids.serviceIds.filter(id => catalogRoots.value.some(root => root.id === id))
+  for (const [id, chosen] of Object.entries(ids.skillIds)) {
+    const offered = skillsFor(id).map(skill => skill.id)
+
+    ids.skillIds[id] = chosen.filter(skill => offered.includes(skill))
+  }
+}
+
 onMounted(async () => {
-  if (isDemoMode) return
+  if (isDemoMode) {
+    if (!props.availability) await draft.start()
+
+    return
+  }
+  try {
+    catalogRoots.value = await catalogApi.publicTree()
+  } catch (cause) {
+    ops.error = cause instanceof Error ? cause.message : "The service list could not be loaded."
+  }
   try {
     await ops.refreshProviderProfile()
     const saved = ops.profile
@@ -127,19 +278,33 @@ onMounted(async () => {
       portfolio: [...saved.portfolio],
       photo: saved.photo,
     })
+    // A profile that has not been backfilled has no ids yet; derive them from its names.
+    const offered = saved.pendingChanges ?? saved
+    const fromNames =
+      offered.serviceIds && offered.skillIds
+        ? null
+        : catalogIdsFromNames(catalogRoots.value, offered.services, offered.skills)
+
+    ids.serviceIds = [...(offered.serviceIds ?? fromNames?.serviceIds ?? [])]
+    ids.skillIds = structuredClone(toRaw(offered.skillIds ?? fromNames?.skillIds ?? {}))
     selectedState.value = stateForLocation(saved.city)?.name ?? ""
     const payout = saved.payout.pending ?? saved.payout.current
     if (payout)
       form.bank = { bankCode: payout.bankCode, accountNumber: payout.accountNumber, accountName: payout.accountName }
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to load your provider profile."
+  } finally {
+    // The form now holds the saved profile, so a draft can be laid over it.
+    pruneIds()
+    if (!props.availability && (await draft.start())) pruneIds()
   }
 })
 
-const setSkill = (service: ServiceLine, skill: string, on: boolean | null) => {
-  const rest = (form.skills[service] ?? []).filter(item => item !== skill)
+const setSkill = (service: string, skill: string, on: boolean | null) => {
+  const skills = chosenSkills()
+  const rest = (skills[service] ?? []).filter(item => item !== skill)
 
-  form.skills[service] = on ? [...rest, skill] : rest
+  skills[service] = on ? [...rest, skill] : rest
 }
 
 const addCity = () => {
@@ -159,11 +324,11 @@ const checklist = computed(() => [
   {
     label: "Profile details",
     done: Boolean(
-      form.trade.trim() && form.city.trim() && form.phone.trim() && form.services.length && form.bio.trim(),
+      form.trade.trim() && form.city.trim() && form.phone.trim() && chosenServices.value.length && form.bio.trim(),
     ),
   },
   { label: "Service areas", done: !areaProblem.value },
-  { label: "Skills", done: form.services.length > 0 && !missingSkills.value.length },
+  { label: "Skills", done: chosenServices.value.length > 0 && !missingSkills.value.length },
   { label: "Job capacity", done: !capacityProblem.value },
   { label: "Working hours", done: !hoursProblem.value },
   { label: "Documents", done: form.documents.length + files.value.length > 0 },
@@ -235,15 +400,26 @@ const submit = async () => {
         : await providersApi.upload(photoFile.value[0], "provider_photo")
       photoFile.value = []
     }
-    await ops.run({
+    const submitted = await ops.run({
       type: "provider.submit",
       input: {
         ...toRaw(form),
         skills: Object.fromEntries(form.services.map(service => [service, form.skills[service] ?? []])),
+        ...(isDemoMode
+          ? {}
+          : {
+              serviceIds: [...ids.serviceIds],
+              skillIds: Object.fromEntries(ids.serviceIds.map(id => [id, ids.skillIds[id] ?? []])),
+            }),
         serviceAreas: form.serviceAreas.map(area => area.trim()).filter(Boolean),
       },
     })
     if (!isDemoMode) await ops.refreshProviderProfile()
+    if (submitted) {
+      await draft.clear()
+      // A profile now waiting for review is locked; an approved one can be edited again.
+      if (ops.profile?.verification !== "pending") draft.resume()
+    }
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to read your documents."
   }
@@ -281,6 +457,7 @@ const submit = async () => {
   </VCard>
   <AvailabilityPanel v-if="props.availability" />
   <template v-else>
+    <DraftBanner :draft="draft" />
     <ProfileSection
       title="Profile details"
       subtitle="Who you are and where you are based."
@@ -332,31 +509,31 @@ const submit = async () => {
       <VRow>
         <VCol cols="12">
           <VSelect
-            v-model="form.services"
-            :items="serviceLines.map(item => item.name)"
+            v-model="chosenServices"
+            :items="serviceOptions"
             label="Services offered"
             multiple
             chips
           />
         </VCol>
-        <VCol v-if="form.services.length" cols="12">
-          <fieldset v-for="service in form.services" :key="service" class="skills-group">
+        <VCol v-if="chosenServices.length" cols="12">
+          <fieldset v-for="service in chosenServices" :key="service" class="skills-group">
             <legend class="text-subtitle-1">
-              {{ service }}
+              {{ serviceName(service) }}
             </legend>
             <div class="skills-grid">
               <VCheckbox
-                v-for="skill in serviceSkills[service]"
-                :key="skill"
-                :model-value="hasSkill(service, skill)"
-                :label="skill"
+                v-for="skill in skillsFor(service)"
+                :key="skill.id"
+                :model-value="hasSkill(service, skill.id)"
+                :label="skill.label"
                 density="compact"
                 hide-details
-                @update:model-value="setSkill(service, skill, $event)"
+                @update:model-value="setSkill(service, skill.id, $event)"
               />
             </div>
             <p v-if="missingSkills.includes(service)" class="text-body-2 text-error mt-1 mb-0" role="alert">
-              Choose at least one {{ service }} skill.
+              Choose at least one {{ serviceName(service) }} skill.
             </p>
           </fieldset>
         </VCol>

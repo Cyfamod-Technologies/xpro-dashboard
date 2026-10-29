@@ -39,6 +39,7 @@ export type StaffPermission =
   | "progress.review"
   | "staff.manage"
   | "settings.manage"
+  | "catalog.manage"
   | "bank.review"
   | "payment.record"
   | "payout.approve"
@@ -220,6 +221,10 @@ export interface PendingProfileChanges {
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills
+
+  /** Catalog ids behind `services` and `skills`. Live mode only; the names above are what gets shown. */
+  serviceIds?: string[]
+  skillIds?: Record<string, string[]>
   capacity: number
   documents: Attachment[]
   photo: Attachment | null
@@ -237,6 +242,8 @@ export interface ProviderProfile {
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills
+  serviceIds?: string[]
+  skillIds?: Record<string, string[]>
 
   /** Maximum number of active jobs, 1 to 20. */
   capacity: number
@@ -351,6 +358,8 @@ export interface ProviderInput {
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills
+  serviceIds?: string[]
+  skillIds?: Record<string, string[]>
   capacity: number
   workingHours: WorkingHours
   experience: number

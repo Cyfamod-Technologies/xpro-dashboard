@@ -9,13 +9,19 @@ import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
 import { isDemoMode } from "@/utils/demo-mode"
 import { requestsApi } from "@/services/requests-api"
-import type { LocationView, ServiceView } from "@/features/requests/api-types"
+import { catalogApi } from "@/services/catalog-api"
+import type { LocationView } from "@/features/requests/api-types"
+import type { PublicOption, PublicQuestion, PublicServiceNode } from "@/features/catalog/types"
+import { isLeaf, questionsAlongPath } from "@/features/catalog/types"
+import DraftBanner from "@/features/drafts/DraftBanner.vue"
+import { useFormDraft } from "@/features/drafts/use-form-draft"
+
+type AnswerValue = string | number | string[] | null | undefined
 
 const auth = useAuthStore()
 const ops = useOperationsStore()
 const route = useRoute()
 const router = useRouter()
-const draftKey = "xpro-public-request-draft"
 const formRef = ref<VForm>()
 const error = ref("")
 const files = ref<File[]>([])
@@ -23,7 +29,11 @@ const submitted = ref("")
 const submitKey = ref(globalThis.crypto.randomUUID())
 const liveError = ref("")
 const liveWarning = ref("")
-const catalog = ref<ServiceView[]>([])
+const tree = ref<PublicServiceNode[]>([])
+
+// Live mode: the ids picked at each level (top-level service first) and the answers keyed by question id.
+const selectedIds = ref<string[]>([])
+const answers = reactive<Record<string, AnswerValue>>({})
 const cities = ref<LocationView[]>([])
 const districts = ref<LocationView[]>([])
 const cityId = ref("")
@@ -49,19 +59,9 @@ const blank: RequestInput = {
   details: {},
   attachments: [],
 }
-let initial = blank
-try {
-  const saved = JSON.parse(isDemoMode ? (sessionStorage.getItem(draftKey) ?? "null") : "null") as RequestInput | null
-  if (saved && saved.service in intakeFields) initial = saved
-} catch {
-  /* Start a new brief if a saved draft cannot be read. */
-}
-const form = reactive<RequestInput>(initial)
+const form = reactive<RequestInput>(blank)
 
 form.contactMethod ??= "phone"
-
-// XPro assigns the provider. Drop any customer provider preference left in an older saved draft.
-delete form.details.preferredProviderId
 
 // Pre-fill from the query string (home search, popular jobs, service pages). It takes priority over a saved draft.
 const queryText = (key: string) => {
@@ -72,39 +72,28 @@ const queryText = (key: string) => {
 
 const queryService = queryText("service")
 
-if (queryService in intakeFields) {
+if (isDemoMode && queryService in intakeFields) {
   if (queryService !== form.service) form.details = {}
   form.service = queryService as RequestInput["service"]
 }
 if (queryText("title")) form.title = queryText("title")
 if (queryText("city")) form.city = queryText("city")
 if (/^\d{4}-\d{2}-\d{2}$/.test(queryText("start"))) form.startDate = queryText("start")
-for (const field of intakeFields[form.service]) {
-  const value = queryText(field.key)
+if (isDemoMode) {
+  for (const field of intakeFields[form.service]) {
+    const value = queryText(field.key)
 
-  if (value && (!field.options || field.options.includes(value))) form.details[field.key] = value
+    if (value && (!field.options || field.options.includes(value))) form.details[field.key] = value
+  }
 }
-const serviceNames = computed(() =>
-  !isDemoMode && catalog.value.length ? catalog.value.map(item => item.name) : serviceLines.map(item => item.name),
-)
+const serviceNames = serviceLines.map(item => item.name)
 const contactMethods = [
   { title: "Phone", value: "phone" },
   { title: "Email", value: "email" },
   { title: "Phone and email", value: "both" },
 ]
 const selectedLine = computed(() => serviceLines.find(item => item.name === form.service))
-const fields = computed<IntakeField[]>(() => {
-  if (isDemoMode) return intakeFields[form.service]
-  const service = catalog.value.find(item => item.name === form.service)
-
-  return (service?.intakeFields ?? []).map((field): IntakeField => ({
-    key: field.key,
-    label: field.label,
-    required: field.required,
-    options: field.options,
-    type: field.type === "number" || field.type === "date" ? field.type : undefined,
-  }))
-})
+const fields = computed<IntakeField[]>(() => (isDemoMode ? intakeFields[form.service] : []))
 const choiceFields = computed(() => fields.value.filter(field => field.options))
 
 // Short option lists render as pills; longer ones (trades, material categories) as a select.
@@ -117,6 +106,175 @@ watch(
     form.details = {}
   },
 )
+
+const formatDate = (value: string) =>
+  value ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)) : ""
+
+// Live catalog: the picked path, one level at a time, and the questions it inherits.
+const pathNodes = computed(() => {
+  const nodes: PublicServiceNode[] = []
+  let level = tree.value
+
+  for (const id of selectedIds.value) {
+    const node = level.find(item => item.id === id)
+
+    if (!node) break
+    nodes.push(node)
+    level = node.children
+  }
+
+  return nodes
+})
+const rootNode = computed(() => pathNodes.value[0])
+const leafNode = computed(() => {
+  const last = pathNodes.value[pathNodes.value.length - 1]
+
+  return last && isLeaf(last) ? last : undefined
+})
+
+// Every selected node that has children opens one more level below the top-level select.
+const childLevels = computed(() =>
+  pathNodes.value
+    .map((parent, index) => ({ parent, depth: index + 1, items: parent.children }))
+    .filter(level => level.items.length),
+)
+const pathQuestions = computed(() =>
+  questionsAlongPath<PublicQuestion, PublicServiceNode>(pathNodes.value).map(item => item.question),
+)
+const isChoiceQuestion = (question: PublicQuestion) =>
+  question.type === "yes_no" || question.type === "single_choice" || question.type === "multiple_choice"
+const choiceQuestions = computed(() => pathQuestions.value.filter(isChoiceQuestion))
+const inputQuestions = computed(() => pathQuestions.value.filter(question => !isChoiceQuestion(question)))
+const requiresStartDate = computed(() =>
+  isDemoMode ? form.service === "Hire" : pathNodes.value.some(node => node.requiresStartDate),
+)
+const serviceNote = computed(() => {
+  const root = rootNode.value
+
+  if (!root) return null
+
+  const line = serviceLines.find(item => item.name === root.name)
+
+  return {
+    name: root.name,
+    icon: root.icon || line?.icon || "tabler-category",
+    description: root.description || line?.description || "",
+  }
+})
+
+const hasAnswer = (question: PublicQuestion) => {
+  const value = answers[question.id]
+
+  return Array.isArray(value) ? value.length > 0 : value !== null && value !== undefined && String(value).trim() !== ""
+}
+const questionLabel = (question: PublicQuestion) => (question.required ? `${question.label} *` : question.label)
+const optionsFor = (question: PublicQuestion): PublicOption[] =>
+  question.type === "yes_no"
+    ? [
+        { id: "Yes", label: "Yes" },
+        { id: "No", label: "No" },
+      ]
+    : question.options
+
+// Short option lists render as pills; longer ones as a select.
+const questionAsSelect = (question: PublicQuestion) => optionsFor(question).length > 6
+
+function pruneAnswers() {
+  const valid = new Set(pathQuestions.value.map(question => question.id))
+
+  for (const id of Object.keys(answers)) if (!valid.has(id)) delete answers[id]
+}
+
+// Changing a level clears every level below it, and the answers to questions that are no longer on the path.
+function selectNode(level: number, id: string | null) {
+  selectedIds.value = id ? [...selectedIds.value.slice(0, level), id] : selectedIds.value.slice(0, level)
+  pruneAnswers()
+}
+
+const answerDisplay = (question: PublicQuestion) => {
+  const value = answers[question.id]
+
+  if (!hasAnswer(question)) return ""
+  if (question.type === "single_choice")
+    return question.options.find(option => option.id === value)?.label ?? String(value)
+  if (question.type === "multiple_choice")
+    return (Array.isArray(value) ? value : [])
+      .map(id => question.options.find(option => option.id === id)?.label ?? id)
+      .join(", ")
+  if (question.type === "date") return formatDate(String(value))
+
+  return String(value)
+}
+
+const buildAnswers = () => {
+  const result: Record<string, string | number | string[]> = {}
+
+  for (const question of pathQuestions.value) {
+    const value = answers[question.id]
+
+    if (!hasAnswer(question) || value === null || value === undefined) continue
+    if (question.type === "number") result[question.id] = Number(value)
+    else if (Array.isArray(value)) result[question.id] = value
+    else result[question.id] = question.type === "short_text" || question.type === "long_text" ? String(value).trim() : String(value)
+  }
+
+  return result
+}
+
+// The first valid value for a query-string prefill, or undefined when the value does not fit the question.
+const prefillValue = (question: PublicQuestion, raw: string): AnswerValue => {
+  const match = (value: string) =>
+    question.options.find(option => option.id === value || option.label.toLowerCase() === value.toLowerCase())?.id
+
+  switch (question.type) {
+    case "yes_no":
+      return /^(?:yes|no)$/i.test(raw) ? (raw.toLowerCase() === "yes" ? "Yes" : "No") : undefined
+    case "single_choice":
+      return match(raw)
+    case "multiple_choice": {
+      const ids = raw.split(",").map(item => match(item.trim()))
+
+      return ids.length && ids.every(Boolean) ? (ids as string[]) : undefined
+    }
+    case "number":
+      return raw !== "" && Number.isFinite(Number(raw)) ? raw : undefined
+    case "date":
+      return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : undefined
+    default:
+      return raw.length <= (question.config.maxLength ?? 2000) ? raw : undefined
+  }
+}
+
+// `?service=<top-level name>` picks the service. Other query values pick a sub-service by name, or fill a question
+// by its key, so the links from older popular-job cards keep working.
+function applyQueryPrefill() {
+  const root = tree.value.find(item => item.name.toLowerCase() === queryService.toLowerCase())
+
+  if (!root) return
+
+  const reserved = ["service", "title", "city", "start"]
+  const extras = Object.entries(route.query)
+    .filter(([key]) => !reserved.includes(key))
+    .flatMap(([key, value]) => (typeof value === "string" && value.trim() ? [[key, value.trim()] as const] : []))
+  const path = [root]
+
+  for (let node = root; node.children.length; ) {
+    const child = node.children.find(item =>
+      extras.some(([, value]) => item.name.toLowerCase() === value.toLowerCase()),
+    )
+
+    if (!child) break
+    path.push(child)
+    node = child
+  }
+  selectedIds.value = path.map(node => node.id)
+  for (const question of pathQuestions.value) {
+    const raw = extras.find(([key]) => key === question.key)?.[1]
+    const value = raw === undefined ? undefined : prefillValue(question, raw)
+
+    if (value !== undefined) answers[question.id] = value
+  }
+}
 
 // One open request per customer: send them to it instead of starting a second brief.
 // The server stays authoritative, so a failed check falls back to the form.
@@ -179,8 +337,60 @@ const fieldRules = (field: IntakeField) => [
       ]
     : []),
 ]
-const saveDraft = () => {
-  if (isDemoMode) sessionStorage.setItem(draftKey, JSON.stringify(form))
+const questionRules = (question: PublicQuestion) => {
+  const rules: Array<(value: unknown) => boolean | string> = []
+  const config = question.config
+
+  if (question.required)
+    rules.push(
+      question.type === "multiple_choice"
+        ? value => (Array.isArray(value) && value.length > 0) || "Choose at least one option."
+        : required,
+    )
+  if (question.type === "number")
+    rules.push(value => {
+      if (value === null || value === undefined || value === "") return true
+
+      const number = Number(value)
+
+      if (!Number.isFinite(number)) return `${question.label} must be a number.`
+      if (config.integer && !Number.isInteger(number)) return `${question.label} must be a whole number.`
+      if (config.min !== undefined && (config.exclusiveMinimum ? number <= config.min : number < config.min))
+        return config.exclusiveMinimum
+          ? `${question.label} must be more than ${config.min}.`
+          : `${question.label} must be at least ${config.min}.`
+      if (config.max !== undefined && number > config.max) return `${question.label} must be at most ${config.max}.`
+
+      return true
+    })
+  if (question.type === "short_text" || question.type === "long_text")
+    rules.push(value => {
+      const length = String(value ?? "").trim().length
+
+      if (!length) return true
+      if (config.minLength !== undefined && length < config.minLength)
+        return `Use at least ${config.minLength} characters.`
+      if (config.maxLength !== undefined && length > config.maxLength)
+        return `Use at most ${config.maxLength} characters.`
+
+      return true
+    })
+  if (question.type === "date") {
+    rules.push(dateRange)
+    if (question.dateRole === "end")
+      rules.push(value => {
+        const starts = [
+          form.startDate,
+          ...pathQuestions.value
+            .filter(item => item.dateRole === "start")
+            .map(item => String(answers[item.id] ?? "")),
+        ].filter(Boolean)
+
+        return !value || starts.every(start => String(value) >= start) || "The end date cannot be before the start date."
+      })
+  }
+
+  return rules
 }
 const label = (field: IntakeField) => (field.required ? `${field.label} *` : field.label)
 const filled = (field: IntakeField) => Boolean(String(form.details[field.key] ?? "").trim())
@@ -194,9 +404,13 @@ const budgetInput = computed({
 
 // Progress through the four steps shown above the form.
 const stepDone = computed(() => [
-  choiceFields.value.filter(field => field.required).every(filled),
+  isDemoMode
+    ? choiceFields.value.filter(field => field.required).every(filled)
+    : Boolean(leafNode.value) && choiceQuestions.value.filter(question => question.required).every(hasAnswer),
   form.title.trim().length >= 3 &&
-    inputFields.value.filter(field => field.required).every(filled) &&
+    (isDemoMode
+      ? inputFields.value.filter(field => field.required).every(filled)
+      : inputQuestions.value.filter(question => question.required).every(hasAnswer)) &&
     form.description.trim().length >= 20,
   Boolean(form.city.trim() && form.phone.trim() && form.address.trim()),
   Boolean(submitted.value),
@@ -218,15 +432,16 @@ const steps = computed(() => {
   }))
 })
 
-const formatDate = (value: string) =>
-  value ? new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)) : ""
-
 const summary = computed(() => [
-  { key: "Service", value: form.service },
+  { key: "Service", value: isDemoMode ? form.service : pathNodes.value.map(node => node.name).join(" › ") || "Not chosen" },
   ...(form.title.trim() ? [{ key: "Title", value: form.title.trim() }] : []),
-  ...fields.value
-    .filter(filled)
-    .map(field => ({ key: field.label.replace(/ \(.*\)$/, ""), value: form.details[field.key] })),
+  ...(isDemoMode
+    ? fields.value
+        .filter(filled)
+        .map(field => ({ key: field.label.replace(/ \(.*\)$/, ""), value: form.details[field.key] }))
+    : pathQuestions.value
+        .filter(hasAnswer)
+        .map(question => ({ key: question.label.replace(/ \(.*\)$/, ""), value: answerDisplay(question) }))),
   { key: "Location", value: form.city.trim() || "Not set" },
   { key: "Contact", value: contactMethods.find(item => item.value === form.contactMethod)?.title ?? "Phone" },
   { key: "Start", value: formatDate(form.startDate) || "Flexible" },
@@ -261,19 +476,118 @@ watch(cityId, async value => {
   form.city = cities.value.find(item => item.id === value)?.name ?? ""
 })
 
+// Autosaved draft: text in localStorage, queued files in IndexedDB. A guest's draft follows them through sign-in.
+interface RequestDraft {
+  title: string
+  address: string
+  phone: string
+  contactMethod: RequestInput["contactMethod"]
+  description: string
+  budget: number
+  startDate: string
+  city: string
+  service: string
+  details: RequestInput["details"]
+  selectedIds: string[]
+  answers: Record<string, AnswerValue>
+  cityId: string
+  districtId: string
+  submitKey: string
+}
+
+const draft = useFormDraft<RequestDraft>({
+  formId: "request",
+  version: 1,
+  owner: () => auth.user?.id ?? "guest",
+  adoptGuest: true,
+  snapshot: () => ({
+    title: form.title,
+    address: form.address,
+    phone: form.phone,
+    contactMethod: form.contactMethod,
+    description: form.description,
+    budget: form.budget,
+    startDate: form.startDate,
+    city: form.city,
+    service: form.service,
+    details: form.details,
+    selectedIds: selectedIds.value,
+    answers,
+    cityId: cityId.value,
+    districtId: districtId.value,
+    submitKey: submitKey.value,
+  }),
+  restore: async data => {
+    Object.assign(form, {
+      title: data.title,
+      address: data.address,
+      phone: data.phone,
+      contactMethod: data.contactMethod ?? "phone",
+      description: data.description,
+      budget: data.budget,
+      startDate: data.startDate,
+    })
+    submitKey.value = (data.submitKey || submitKey.value) as typeof submitKey.value
+    if (isDemoMode) {
+      form.city = data.city
+      if (!(queryService in intakeFields) && data.service in intakeFields) {
+        form.service = data.service as RequestInput["service"]
+        // Changing the service clears the answers; wait for that before putting them back.
+        await nextTick()
+        form.details = { ...data.details }
+      }
+    } else {
+      let level = tree.value
+      const path: string[] = []
+
+      for (const id of data.selectedIds) {
+        const node = level.find(item => item.id === id)
+
+        if (!node) break
+        path.push(id)
+        level = node.children
+      }
+      selectedIds.value = path
+      for (const key of Object.keys(answers)) delete answers[key]
+      Object.assign(answers, data.answers)
+      pruneAnswers()
+      if (cities.value.some(item => item.id === data.cityId)) {
+        cityId.value = data.cityId
+        // The city watcher resets the district and loads its list; wait for the list before choosing one.
+        await nextTick()
+        await loadLocations(data.cityId)
+        if (districts.value.some(item => item.id === data.districtId)) districtId.value = data.districtId
+      }
+    }
+    // Links that pre-fill the form (popular jobs, service pages) win over a saved draft.
+    if (queryText("title")) form.title = queryText("title")
+    if (queryText("city") && isDemoMode) form.city = queryText("city")
+    if (/^\d{4}-\d{2}-\d{2}$/.test(queryText("start"))) form.startDate = queryText("start")
+    if (!isDemoMode) {
+      applyQueryPrefill()
+      pruneAnswers()
+    }
+  },
+  files: { attachments: files },
+})
+
 onMounted(async () => {
-  if (isDemoMode) return
+  if (isDemoMode) {
+    await draft.start()
+
+    return
+  }
   loadingCatalog.value = true
   try {
-    const [services, locations] = await Promise.all([requestsApi.services(), requestsApi.locations()])
-    catalog.value = services
+    const [services, locations] = await Promise.all([catalogApi.publicTree(), requestsApi.locations()])
+    tree.value = services
     cities.value = locations.filter(item => item.kind === "city")
-    if (catalog.value.length && !catalog.value.some(item => item.name === form.service))
-      form.service = catalog.value[0].name as RequestInput["service"]
+    applyQueryPrefill()
   } catch (cause) {
     liveError.value = cause instanceof Error ? cause.message : "The service catalogue could not be loaded."
   } finally {
     loadingCatalog.value = false
+    await draft.start()
   }
 })
 
@@ -310,11 +624,15 @@ const submit = async () => {
     if (!isDemoMode) {
       if (!cityId.value || !districtId.value)
         throw new Error("Choose a city and district from the available locations.")
+      const leaf = leafNode.value
+
+      if (!leaf) throw new Error("Choose a service to continue.")
+
       const attachments = await uploadRequestFiles()
       const result = await requestsApi.create(
         {
           title: form.title,
-          service: form.service,
+          serviceId: leaf.id,
           cityId: cityId.value,
           districtId: districtId.value,
           address: form.address,
@@ -323,7 +641,7 @@ const submit = async () => {
           description: form.description,
           budget: form.budget ? Math.round(form.budget * 100) : 0,
           startDate: form.startDate || undefined,
-          details: form.details,
+          answers: buildAnswers(),
           attachments,
         },
         submitKey.value,
@@ -331,13 +649,13 @@ const submit = async () => {
       submitted.value = result.id
       liveWarning.value = result.warning ?? ""
       files.value = []
+      await draft.clear()
     } else {
       form.attachments = [...form.attachments, ...(await prepareFiles(files.value))]
       files.value = []
-      saveDraft()
       if (await ops.run({ type: "request.create", input: JSON.parse(JSON.stringify(form)) as RequestInput })) {
         submitted.value = ops.requests[0]?.id ?? ""
-        sessionStorage.removeItem(draftKey)
+        await draft.clear()
       }
     }
   } catch (cause) {
@@ -398,6 +716,7 @@ const submit = async () => {
       </div>
     </VAlert>
     <VForm v-else id="request-form" ref="formRef" aria-label="Request details" @submit.prevent="submit">
+      <DraftBanner :draft="draft" />
       <VCard class="mb-6">
         <ol aria-label="Steps" class="steps pa-4 pa-sm-5">
           <li
@@ -425,41 +744,132 @@ const submit = async () => {
           <VCard>
             <VCardText class="pa-6 d-flex flex-column gap-5">
               <h2 class="text-h6">Service</h2>
-              <VSelect
-                v-model="form.service"
-                :items="serviceNames"
-                label="Service"
-                :rules="[required]"
-                :loading="loadingCatalog"
-              />
-              <div v-if="selectedLine" class="service-note">
-                <VAvatar color="primary" variant="tonal" size="44">
-                  <VIcon :icon="selectedLine.icon" />
-                </VAvatar>
-                <div>
-                  <strong class="d-block">{{ selectedLine.name }}</strong>
-                  <span class="text-body-2 text-medium-emphasis">{{ selectedLine.description }}</span>
-                </div>
-              </div>
-              <template v-for="field in choiceFields" :key="`${form.service}-${field.key}`">
+              <template v-if="isDemoMode">
                 <VSelect
-                  v-if="asSelect(field)"
-                  v-model="form.details[field.key]"
-                  :items="field.options"
-                  :label="label(field)"
-                  :rules="fieldRules(field)"
-                  :clearable="!field.required"
+                  v-model="form.service"
+                  :items="serviceNames"
+                  label="Service"
+                  :rules="[required]"
+                  :loading="loadingCatalog"
                 />
-                <VRadioGroup
-                  v-else
-                  v-model="form.details[field.key]"
-                  :label="label(field)"
-                  :rules="fieldRules(field)"
-                  inline
-                  class="pills"
-                >
-                  <VRadio v-for="option in field.options" :key="option" :label="option" :value="option" />
-                </VRadioGroup>
+                <div v-if="selectedLine" class="service-note">
+                  <VAvatar color="primary" variant="tonal" size="44">
+                    <VIcon :icon="selectedLine.icon" />
+                  </VAvatar>
+                  <div>
+                    <strong class="d-block">{{ selectedLine.name }}</strong>
+                    <span class="text-body-2 text-medium-emphasis">{{ selectedLine.description }}</span>
+                  </div>
+                </div>
+                <template v-for="field in choiceFields" :key="`${form.service}-${field.key}`">
+                  <VSelect
+                    v-if="asSelect(field)"
+                    v-model="form.details[field.key]"
+                    :items="field.options"
+                    :label="label(field)"
+                    :rules="fieldRules(field)"
+                    :clearable="!field.required"
+                  />
+                  <VRadioGroup
+                    v-else
+                    v-model="form.details[field.key]"
+                    :label="label(field)"
+                    :rules="fieldRules(field)"
+                    inline
+                    class="pills"
+                  >
+                    <VRadio v-for="option in field.options" :key="option" :label="option" :value="option" />
+                  </VRadioGroup>
+                </template>
+              </template>
+              <template v-else>
+                <VSelect
+                  :model-value="selectedIds[0]"
+                  :items="tree"
+                  item-title="name"
+                  item-value="id"
+                  label="Service *"
+                  :rules="[required]"
+                  :loading="loadingCatalog"
+                  @update:model-value="selectNode(0, $event)"
+                />
+                <div v-if="serviceNote" class="service-note">
+                  <VAvatar color="primary" variant="tonal" size="44">
+                    <VIcon :icon="serviceNote.icon" />
+                  </VAvatar>
+                  <div>
+                    <strong class="d-block">{{ serviceNote.name }}</strong>
+                    <span class="text-body-2 text-medium-emphasis">{{ serviceNote.description }}</span>
+                  </div>
+                </div>
+                <template v-for="level in childLevels" :key="level.parent.id">
+                  <VSelect
+                    v-if="level.items.length > 6"
+                    :model-value="selectedIds[level.depth]"
+                    :items="level.items"
+                    item-title="name"
+                    item-value="id"
+                    :label="`Choose a ${level.parent.name.toLowerCase()} service *`"
+                    :rules="[required]"
+                    @update:model-value="selectNode(level.depth, $event)"
+                  />
+                  <VRadioGroup
+                    v-else
+                    :model-value="selectedIds[level.depth]"
+                    :label="`Choose a ${level.parent.name.toLowerCase()} service *`"
+                    :rules="[required]"
+                    inline
+                    class="pills"
+                    @update:model-value="selectNode(level.depth, $event)"
+                  >
+                    <VRadio v-for="item in level.items" :key="item.id" :label="item.name" :value="item.id" />
+                  </VRadioGroup>
+                </template>
+                <template v-for="question in choiceQuestions" :key="question.id">
+                  <VSelect
+                    v-if="question.type === 'multiple_choice'"
+                    v-model="answers[question.id]"
+                    :items="question.options"
+                    item-title="label"
+                    item-value="id"
+                    :label="questionLabel(question)"
+                    :hint="question.helpText ?? undefined"
+                    :persistent-hint="Boolean(question.helpText)"
+                    :rules="questionRules(question)"
+                    multiple
+                    chips
+                    closable-chips
+                  />
+                  <VSelect
+                    v-else-if="questionAsSelect(question)"
+                    v-model="answers[question.id]"
+                    :items="optionsFor(question)"
+                    item-title="label"
+                    item-value="id"
+                    :label="questionLabel(question)"
+                    :hint="question.helpText ?? undefined"
+                    :persistent-hint="Boolean(question.helpText)"
+                    :rules="questionRules(question)"
+                    :clearable="!question.required"
+                  />
+                  <VRadioGroup
+                    v-else
+                    v-model="answers[question.id]"
+                    :label="questionLabel(question)"
+                    :hint="question.helpText ?? undefined"
+                    :persistent-hint="Boolean(question.helpText)"
+                    :rules="questionRules(question)"
+                    inline
+                    class="pills"
+                  >
+                    <VRadio
+                      v-for="option in optionsFor(question)"
+                      :key="option.id"
+                      :label="option.label"
+                      :value="option.id"
+                    />
+                  </VRadioGroup>
+                </template>
               </template>
             </VCardText>
           </VCard>
@@ -477,15 +887,40 @@ const submit = async () => {
                     (String(value).trim().length >= 3 && String(value).length <= 120) || 'Use 3 to 120 characters.',
                 ]"
               />
-              <div v-if="inputFields.length" class="field-grid">
-                <VTextField
-                  v-for="field in inputFields"
-                  :key="`${form.service}-${field.key}`"
-                  v-model="form.details[field.key]"
-                  :type="field.type ?? 'text'"
-                  :label="label(field)"
-                  :rules="fieldRules(field)"
-                />
+              <div v-if="isDemoMode ? inputFields.length : inputQuestions.length" class="field-grid">
+                <template v-if="isDemoMode">
+                  <VTextField
+                    v-for="field in inputFields"
+                    :key="`${form.service}-${field.key}`"
+                    v-model="form.details[field.key]"
+                    :type="field.type ?? 'text'"
+                    :label="label(field)"
+                    :rules="fieldRules(field)"
+                  />
+                </template>
+                <template v-else>
+                  <template v-for="question in inputQuestions" :key="question.id">
+                    <VTextarea
+                      v-if="question.type === 'long_text'"
+                      v-model="answers[question.id]"
+                      :label="questionLabel(question)"
+                      :hint="question.helpText ?? undefined"
+                      :persistent-hint="Boolean(question.helpText)"
+                      :rules="questionRules(question)"
+                      rows="3"
+                      class="field-grid__wide"
+                    />
+                    <VTextField
+                      v-else
+                      v-model="answers[question.id]"
+                      :type="question.type === 'number' ? 'number' : question.type === 'date' ? 'date' : 'text'"
+                      :label="questionLabel(question)"
+                      :hint="question.helpText ?? undefined"
+                      :persistent-hint="Boolean(question.helpText)"
+                      :rules="questionRules(question)"
+                    />
+                  </template>
+                </template>
               </div>
               <VTextarea
                 v-model="form.description"
@@ -544,9 +979,9 @@ const submit = async () => {
                 <VSelect v-model="form.contactMethod" :items="contactMethods" label="Preferred contact method" />
                 <VTextField
                   v-model="form.startDate"
-                  label="Preferred start date"
+                  :label="requiresStartDate && !isDemoMode ? 'Preferred start date *' : 'Preferred start date'"
                   type="date"
-                  :rules="[...(form.service === 'Hire' ? [required] : []), dateRange]"
+                  :rules="[...(requiresStartDate ? [required] : []), dateRange]"
                 />
                 <VAlert v-if="!isDemoMode" variant="tonal" color="info" class="field-grid__wide"
                   >Only share contact details in the project brief if the provider needs them to assess the work. XPro

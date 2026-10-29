@@ -25,6 +25,24 @@ Routes live in `resources/ts/pages`; feature components in
 shared template infrastructure in `resources/ts/@core` and
 `resources/ts/@layouts`. Follow existing aliases and TypeScript conventions.
 
+## Form drafts
+
+The provider profile and the request form autosave to the browser so a reload or
+closed tab does not lose the work. The code lives in `resources/ts/features/drafts`.
+
+- Text is saved to `localStorage` under `xpro:draft:<form>:<user id or "guest">`.
+  Queued files are saved to the `xpro-drafts` IndexedDB database.
+- Drafts expire after 14 days. Bump the `version` passed to `useFormDraft` when a
+  form's saved shape changes; older drafts are then dropped.
+- A guest's request draft moves to their account after they sign in.
+- The bank account number is never saved. A provider profile waiting for review
+  is not drafted.
+- Choosing Logout from the user menu removes that user's drafts. An expired
+  session keeps them.
+- To clear drafts while testing, delete the `xpro:draft:*` keys and the
+  `xpro-drafts` database in the browser's storage tools.
+- `pnpm exec tsx tests/form-drafts.mts` runs the draft envelope tests.
+
 ## Git and CI
 
 The repository has an `origin` remote. `.github/workflows/ci.yml` runs frozen

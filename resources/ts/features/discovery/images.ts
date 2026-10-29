@@ -3,6 +3,9 @@ import type { ServiceLine } from "@/features/operations/types"
 /** Demo-only AI-generated scenes in /public/images/generated. Replace with real XPro project photos before launch. */
 const BASE = "/images/generated"
 
+/** Cover for a catalog service that has no photo of its own yet. */
+const GENERIC_COVER = { path: "hero/home-hero.jpg", alt: "Building work in progress in Abuja" }
+
 const SERVICE_COVERS: Record<ServiceLine, { file: string; alt: string }> = {
   Design: { file: "design", alt: "Architectural drawings and a laptop on a desk" },
   Construction: { file: "construction", alt: "Floor tiling in progress" },
@@ -12,10 +15,16 @@ const SERVICE_COVERS: Record<ServiceLine, { file: string; alt: string }> = {
   "Waste management": { file: "waste-management", alt: "Loader clearing construction debris" },
 }
 
-export const serviceCoverImage = (service: ServiceLine): string =>
-  `${BASE}/services/${SERVICE_COVERS[service].file}.jpg`
+const serviceCover = (service: string) =>
+  (SERVICE_COVERS as Partial<Record<string, { file: string; alt: string }>>)[service]
 
-export const serviceCoverAlt = (service: ServiceLine): string => SERVICE_COVERS[service].alt
+export const serviceCoverImage = (service: string): string => {
+  const cover = serviceCover(service)
+
+  return `${BASE}/${cover ? `services/${cover.file}.jpg` : GENERIC_COVER.path}`
+}
+
+export const serviceCoverAlt = (service: string): string => serviceCover(service)?.alt ?? GENERIC_COVER.alt
 
 interface JobCover {
   path: string
@@ -109,11 +118,12 @@ const JOB_COVERS: Record<ServiceLine, Record<string, JobCover>> = {
   },
 }
 
-export const jobCoverImage = (service: ServiceLine, jobName: string): string => {
-  const cover = JOB_COVERS[service][jobName]
+export const jobCoverImage = (service: string, jobName: string): string => {
+  const cover = (JOB_COVERS as Partial<Record<string, Record<string, JobCover>>>)[service]?.[jobName]
 
   return cover ? `${BASE}/${cover.path}` : serviceCoverImage(service)
 }
 
-export const jobCoverAlt = (service: ServiceLine, jobName: string): string =>
-  JOB_COVERS[service][jobName]?.alt ?? `${serviceCoverAlt(service)} — ${jobName}`
+export const jobCoverAlt = (service: string, jobName: string): string =>
+  (JOB_COVERS as Partial<Record<string, Record<string, JobCover>>>)[service]?.[jobName]?.alt ??
+  `${serviceCoverAlt(service)} — ${jobName}`

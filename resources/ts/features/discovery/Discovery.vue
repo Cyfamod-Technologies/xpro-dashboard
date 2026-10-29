@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { serviceLines } from "@/features/workspace/config"
 import JobCard from "@/features/discovery/JobCard.vue"
 import ServiceTabs from "@/features/discovery/ServiceTabs.vue"
 import { serviceCoverAlt, serviceCoverImage } from "@/features/discovery/images"
-import { popularJobs } from "@/features/discovery/popular-jobs"
+import { usePublicServices } from "@/features/discovery/public-services"
+import { popularJobsFor } from "@/features/discovery/popular-jobs"
 import type { ServiceLine } from "@/features/operations/types"
 
 const route = useRoute()
 const router = useRouter()
 
-const serviceNames = serviceLines.map(item => item.name)
+const { services, ready } = usePublicServices()
+const serviceNames = computed(() => services.value.map(item => item.name))
 
 const handled = [
   {
@@ -45,33 +46,45 @@ const readService = (): string => {
   const raw = route.query.service
   const list = Array.isArray(raw) ? raw : [raw]
 
-  return list.find((item): item is string => typeof item === "string" && serviceNames.includes(item)) ?? serviceNames[0]
+  return (
+    list.find((item): item is string => typeof item === "string" && serviceNames.value.includes(item)) ??
+    serviceNames.value[0] ??
+    ""
+  )
 }
 
-const activeService = ref(readService())
+const activeService = ref("")
 
-// Normalise a legacy or invalid query to the single service in use.
-if (route.query.service !== undefined && route.query.service !== activeService.value)
-  router.replace({ query: { service: activeService.value } })
+// Once the catalog is in, take the service from the URL and normalise a legacy or unknown query to it.
+watch(
+  ready,
+  isReady => {
+    if (!isReady) return
+    activeService.value = readService()
+    if (route.query.service !== undefined && route.query.service !== activeService.value)
+      router.replace({ query: { service: activeService.value } })
+  },
+  { immediate: true },
+)
 
-watch(activeService, value => {
-  if (route.query.service !== value) router.replace({ query: { service: value } })
+watch(activeService, (value, previous) => {
+  if (previous && route.query.service !== value) router.replace({ query: { service: value } })
 })
 
 // URL -> tab (for example when following a footer link while on this page)
 watch(
   () => route.query.service,
   () => {
-    if (route.path !== "/services") return
+    if (route.path !== "/services" || !ready.value) return
     const next = readService()
 
     if (next !== activeService.value) activeService.value = next
   },
 )
 
-const line = computed(() => serviceLines.find(item => item.name === activeService.value) ?? serviceLines[0])
-const service = computed(() => line.value.name as ServiceLine)
-const jobs = computed(() => popularJobs[service.value])
+const line = computed(() => services.value.find(item => item.name === activeService.value))
+const service = computed(() => activeService.value as ServiceLine)
+const jobs = computed(() => popularJobsFor(activeService.value))
 </script>
 
 <template>
@@ -83,43 +96,51 @@ const jobs = computed(() => popularJobs[service.value])
     <ServiceTabs v-model="activeService" />
   </section>
 
-  <section :aria-label="`${line.name} service`" class="xp-container pt-8">
-    <VCard variant="outlined">
-      <div class="service-intro">
-        <div class="service-intro__media">
-          <img
-            :src="serviceCoverImage(service)"
-            :alt="serviceCoverAlt(service)"
-            class="service-intro__img"
-            width="640"
-            height="320"
-          />
-        </div>
-        <div class="service-intro__body">
-          <VAvatar color="primary" variant="tonal" size="48">
-            <VIcon :icon="line.icon" />
-          </VAvatar>
-          <h2 class="text-h4">
-            {{ line.name }}
-          </h2>
-          <p class="text-body-1 text-medium-emphasis mb-0">
-            {{ line.description }} Tell us what you need and XPro takes it from there.
-          </p>
-          <VBtn :to="{ path: '/request', query: { service: line.name } }" size="large"> Request {{ line.name }} </VBtn>
-        </div>
-      </div>
-    </VCard>
+  <section v-if="ready && !services.length" class="xp-container pt-8">
+    <p class="text-medium-emphasis mb-0">No services are open for requests right now. Please check back soon.</p>
   </section>
 
-  <section class="xp-container pt-10">
-    <div class="mb-5">
-      <h2 class="text-h5 mb-1">Popular {{ line.name.toLowerCase() }} jobs</h2>
-      <p class="text-medium-emphasis mb-0">Tap a job to start your request with it filled in.</p>
-    </div>
-    <div class="job-grid">
-      <JobCard v-for="job in jobs" :key="`${line.name}-${job.name}`" :service="service" :job="job" />
-    </div>
-  </section>
+  <template v-if="line">
+    <section :aria-label="`${line.name} service`" class="xp-container pt-8">
+      <VCard variant="outlined">
+        <div class="service-intro">
+          <div class="service-intro__media">
+            <img
+              :src="serviceCoverImage(line.name)"
+              :alt="serviceCoverAlt(line.name)"
+              class="service-intro__img"
+              width="640"
+              height="320"
+            />
+          </div>
+          <div class="service-intro__body">
+            <VAvatar color="primary" variant="tonal" size="48">
+              <VIcon :icon="line.icon" />
+            </VAvatar>
+            <h2 class="text-h4">
+              {{ line.name }}
+            </h2>
+            <p class="text-body-1 text-medium-emphasis mb-0">
+              {{ line.description }} Tell us what you need and XPro takes it from there.
+            </p>
+            <VBtn :to="{ path: '/request', query: { service: line.name } }" size="large">
+              Request {{ line.name }}
+            </VBtn>
+          </div>
+        </div>
+      </VCard>
+    </section>
+
+    <section v-if="jobs.length" class="xp-container pt-10">
+      <div class="mb-5">
+        <h2 class="text-h5 mb-1">Popular {{ line.name.toLowerCase() }} jobs</h2>
+        <p class="text-medium-emphasis mb-0">Tap a job to start your request with it filled in.</p>
+      </div>
+      <div class="job-grid">
+        <JobCard v-for="job in jobs" :key="`${line.name}-${job.name}`" :service="service" :job="job" />
+      </div>
+    </section>
+  </template>
 
   <section class="xp-container pt-10 pb-12">
     <h2 class="text-h5 mb-5">What XPro handles for you</h2>
@@ -138,7 +159,7 @@ const jobs = computed(() => popularJobs[service.value])
         </VCard>
       </li>
     </ol>
-    <VCard color="primary" variant="tonal" class="mt-8">
+    <VCard v-if="line" color="primary" variant="tonal" class="mt-8">
       <VCardText class="on-tonal d-flex flex-wrap justify-space-between align-center gap-3">
         <span class="cta-copy"
           >Ready to start? Send your brief and XPro will assign a verified provider and send your quote. No consultation

@@ -108,6 +108,26 @@ export type RequestStage = (typeof REQUEST_STAGES)[number] | string
 /** Raw for staff (`staff:<permission>`, `system`); `customer`, `provider`, `xpro` or `none` for everyone else. */
 export type NextActor = "customer" | "provider" | "xpro" | "none" | "system" | `staff:${string}` | string
 
+/** A step on the path a customer picked, top-level service first. `null` on requests made before the catalog. */
+export interface ServicePathItem {
+  id: string
+  name: string
+}
+
+/** A snapshot of one question and the customer's answer, as they were when the request was made. */
+export interface RequestAnswerView {
+  questionId: string
+  serviceId: string
+  serviceName: string
+  key: string
+  label: string
+  type: string
+  value: string | number | string[]
+  display: string
+  sensitive: boolean
+  dateRole: "start" | "end" | null
+}
+
 export interface RequestSummary {
   id: string
   version: number
@@ -118,6 +138,7 @@ export interface RequestSummary {
   allowedActions: RequestAction[]
   title?: string
   service?: string
+  servicePath?: ServicePathItem[] | null
   cityName?: string | null
   districtName?: string | null
   createdAt?: string
@@ -141,6 +162,9 @@ export interface RequestView extends RequestSummary {
   effectiveStartDate?: string | null
   effectiveEndDate?: string | null
   details?: Record<string, unknown>
+
+  /** May be empty for legacy requests; then `details` is all there is. */
+  answers?: RequestAnswerView[]
   customerName?: string
   ownerId?: string
   staffOwnerId?: string | null
@@ -314,20 +338,6 @@ export interface LocationView {
 export interface PendingRequestView {
   hasPending: boolean
   requestId?: string
-}
-
-export interface ServiceView {
-  id: string
-  name: string
-  intakeFields: Array<{
-    key: string
-    label: string
-    type: string
-    options?: string[]
-    required: boolean
-    sensitive?: boolean
-    isSkill?: boolean
-  }>
 }
 
 export interface SettingView {
