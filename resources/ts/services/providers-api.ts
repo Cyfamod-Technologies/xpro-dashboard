@@ -95,8 +95,8 @@ export const providersApi = {
     documents: Attachment[]
     photo: Attachment
     portfolio: Attachment[]
-    bankCode: string
-    accountNumber: string
+    bankCode?: string
+    accountNumber?: string
   }) => $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/submissions", { method: "POST", body: payload }),
   updateBank: (bankCode: string, accountNumber: string) =>
     $api<ApiEnvelope<ProviderProfileResponse>>("/providers/me/bank", {

@@ -333,7 +333,10 @@ const checklist = computed(() => [
   { label: "Working hours", done: !hoursProblem.value },
   { label: "Documents", done: form.documents.length + files.value.length > 0 },
   { label: "Face photo", done: Boolean(form.photo) },
-  { label: "Bank details", done: bankReady.value },
+  {
+    label: "Bank details (optional)",
+    done: bankReady.value || (!form.bank.bankCode && !form.bank.accountNumber),
+  },
   { label: "Submitted", done: ["pending", "approved", "rejected"].includes(ops.profile?.verification ?? "") },
   { label: "Verified (identity)", done: ops.profile?.verification === "approved" },
   { label: "Bank verified", done: Boolean(ops.profile) && payoutReady(ops.profile!) },
@@ -404,6 +407,10 @@ const submit = async () => {
       type: "provider.submit",
       input: {
         ...toRaw(form),
+        bank:
+          awaitingBank.value || (current.value && !changingBank.value)
+            ? { bankCode: "", accountNumber: "", accountName: "" }
+            : toRaw(form.bank),
         skills: Object.fromEntries(form.services.map(service => [service, form.skills[service] ?? []])),
         ...(isDemoMode
           ? {}
@@ -427,8 +434,13 @@ const submit = async () => {
 </script>
 
 <template>
-  <VAlert variant="tonal" :color="ops.profile?.verification === 'approved' ? 'success' : 'warning'" class="mb-5">
-    Profile status: {{ ops.profile?.verification.replaceAll("_", " ") ?? "draft" }}. {{ ops.profile?.reviewNote }}
+  <VAlert
+    v-if="ops.profile && ops.profile.verification !== 'draft'"
+    variant="tonal"
+    :color="ops.profile.verification === 'approved' ? 'success' : 'warning'"
+    class="mb-5"
+  >
+    Profile status: {{ ops.profile.verification.replaceAll("_", " ") }}. {{ ops.profile.reviewNote }}
   </VAlert>
   <VAlert v-if="changesAwaiting" variant="tonal" color="warning" class="mb-5">
     <strong>Changes awaiting XPro review.</strong> Your current details stay in use until XPro approves them.
@@ -636,8 +648,8 @@ const submit = async () => {
     </ProfileSection>
 
     <ProfileSection
-      title="Bank details"
-      subtitle="XPro pays you into this account once Finance has verified it. The account name must match your business or personal name."
+      title="Bank details (optional)"
+      subtitle="You can submit your profile without bank details and add them later. Payouts require an account verified by XPro."
     >
       <template v-if="awaitingBank">
         <p class="mb-1">{{ awaitingBank.bankName }} · {{ maskAccount(awaitingBank.accountNumber) }}</p>
@@ -669,7 +681,7 @@ const submit = async () => {
     </VAlert>
     <VBtn
       class="mb-5"
-      :disabled="ops.profile?.verification === 'pending' || !bankReady || !coverageReady"
+      :disabled="ops.profile?.verification === 'pending' || !coverageReady"
       :loading="ops.busy"
       @click="submit"
     >

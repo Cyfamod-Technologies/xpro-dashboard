@@ -823,13 +823,16 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       const workingHours = cleanHours(input.workingHours)
       const { bank, ...rest } = input
       const profileInput = { ...rest, serviceAreas, skills, capacity, workingHours }
-      const submittedBank = validateBank(bank)
+      const submittedBank =
+        bank.bankCode && isNuban(bank.accountNumber) && bank.accountName.trim().length >= 3
+          ? validateBank(bank)
+          : undefined
       let profile = state.providers.find(item => item.id === actor.id)
       const awaitingBank =
         profile?.payout.pending && profile.payout.review?.state === "pending" ? profile.payout.pending : null
 
       need(
-        !awaitingBank || sameAccount(awaitingBank, submittedBank),
+        !submittedBank || !awaitingBank || sameAccount(awaitingBank, submittedBank),
         "Your previous bank change is still awaiting XPro review.",
       )
       if (!profile) {
@@ -908,8 +911,11 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
           notify(member.id, "Provider verification submitted", profile.name)
       }
 
-      const unchanged = (profile.payout.current && sameAccount(profile.payout.current, submittedBank)) || awaitingBank
-      if (!unchanged) {
+      const unchanged =
+        !submittedBank ||
+        (profile.payout.current && sameAccount(profile.payout.current, submittedBank)) ||
+        awaitingBank
+      if (!unchanged && submittedBank) {
         requestBankReview(profile, submittedBank, "Bank details submitted")
         for (const member of activeStaffWith(state, "bank.review"))
           notify(member.id, "Bank details to verify", profile.name)
