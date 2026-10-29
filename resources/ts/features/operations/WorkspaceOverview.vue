@@ -6,15 +6,18 @@ import { isFinished, statusLabelFor, when } from "@/features/operations/types"
 import { isUnclaimedOverdue } from "@/features/operations/staff"
 import { pendingApprovals } from "@/features/operations/workflow"
 import { isDemoMode } from "@/utils/demo-mode"
+import ProviderOnboardingDialog from "@/features/operations/ProviderOnboardingDialog.vue"
 
 const ops = useOperationsStore()
 const auth = useAuthStore()
 const role = computed(() => ops.actor?.role)
+const profileLoaded = ref(isDemoMode)
 
 onMounted(async () => {
   if (isDemoMode || role.value !== "provider") return
   try {
     await ops.refreshProviderProfile()
+    profileLoaded.value = true
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to load your provider profile."
   }
@@ -79,6 +82,7 @@ const requestPath = computed(() => pathFor(role.value === "provider" ? "jobs" : 
 </script>
 
 <template>
+  <ProviderOnboardingDialog v-if="role === 'provider'" :ready="profileLoaded" />
   <div class="d-flex justify-space-between align-start flex-wrap gap-4 mb-6">
     <div>
       <div class="text-overline text-primary">{{ role }} WORKSPACE</div>
