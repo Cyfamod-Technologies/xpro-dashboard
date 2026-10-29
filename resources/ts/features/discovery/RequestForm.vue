@@ -4,7 +4,7 @@ import { serviceLines } from "@/features/workspace/config"
 import { intakeFields } from "@/features/operations/types"
 import type { IntakeField, RequestInput } from "@/features/operations/types"
 import { prepareFiles } from "@/features/operations/files"
-import Attachments from "@/features/operations/Attachments.vue"
+import FilePicker from "@/features/operations/FilePicker.vue"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
 import { isDemoMode } from "@/utils/demo-mode"
@@ -29,7 +29,13 @@ const districts = ref<LocationView[]>([])
 const cityId = ref("")
 const districtId = ref("")
 const loadingCatalog = ref(false)
+const pendingRequestId = ref("")
+const hasPending = ref(false)
+const checkingPending = ref(false)
 const submitting = ref(false)
+const isCustomer = computed(() => auth.isAuthenticated && auth.user?.role === "customer")
+const isOtherRole = computed(() => auth.isAuthenticated && auth.user?.role !== "customer")
+const accountLabel = computed(() => (auth.user?.role === "admin" ? "an XPro staff account" : "a provider account"))
 const blank: RequestInput = {
   title: "",
   service: "Design",
@@ -111,6 +117,34 @@ watch(
     form.details = {}
   },
 )
+
+// One open request per customer: send them to it instead of starting a second brief.
+// The server stays authoritative, so a failed check falls back to the form.
+watch(
+  isCustomer,
+  async customer => {
+    hasPending.value = false
+    pendingRequestId.value = ""
+    if (!customer || isDemoMode) return
+    checkingPending.value = true
+    try {
+      const result = await requestsApi.pending()
+
+      hasPending.value = result.hasPending
+      pendingRequestId.value = result.requestId ?? ""
+    } catch {
+      hasPending.value = false
+    } finally {
+      checkingPending.value = false
+    }
+  },
+  { immediate: true },
+)
+
+const startCustomerSignup = async () => {
+  auth.logout()
+  await router.push({ path: "/auth/signup", query: { role: "customer" } })
+}
 
 const required = (value: unknown) => Boolean(String(value ?? "").trim()) || "This field is required."
 const dateRange = (value: unknown) => {
@@ -332,9 +366,36 @@ const submit = async () => {
         <VBtn :to="{ path: '/requests', query: { request: submitted } }"> View my request </VBtn>
       </VCardText>
     </VCard>
-    <VAlert v-else-if="auth.isAuthenticated && auth.user?.role !== 'customer'" color="info" variant="tonal">
-      Service requests are submitted from a customer account.
-      <RouterLink :to="auth.homePath"> Return to your workspace </RouterLink>.
+    <VAlert v-else-if="isOtherRole" color="info" variant="tonal">
+      <h2 class="text-h6 mb-1">Requests are made from a customer account</h2>
+      <p class="mb-4">
+        You're signed in with {{ accountLabel }}. To request a service, sign out and create a customer account with a
+        different email address.
+      </p>
+      <div class="d-flex flex-wrap gap-3">
+        <VBtn color="primary" @click="startCustomerSignup"> Create a customer account </VBtn>
+        <VBtn color="primary" variant="outlined" :to="auth.homePath"> Back to my dashboard </VBtn>
+      </div>
+    </VAlert>
+    <VCard v-else-if="checkingPending" class="pa-6 d-flex align-center gap-3" aria-busy="true">
+      <VProgressCircular indeterminate size="24" color="primary" />
+      <span class="text-body-1">Checking your open requests…</span>
+    </VCard>
+    <VAlert v-else-if="hasPending" color="info" variant="tonal">
+      <h2 class="text-h6 mb-1">You already have a request in progress</h2>
+      <p class="mb-4">
+        <template v-if="pendingRequestId">{{ pendingRequestId }} is</template>
+        <template v-else>Your last request is</template>
+        still open with XPro. Follow it from your dashboard. You can start a new request once it's closed.
+      </p>
+      <div class="d-flex flex-wrap gap-3">
+        <VBtn v-if="pendingRequestId" color="primary" :to="{ path: '/requests', query: { request: pendingRequestId } }">
+          View my request
+        </VBtn>
+        <VBtn color="primary" :variant="pendingRequestId ? 'outlined' : 'elevated'" :to="auth.homePath">
+          Go to my dashboard
+        </VBtn>
+      </div>
     </VAlert>
     <VForm v-else id="request-form" ref="formRef" aria-label="Request details" @submit.prevent="submit">
       <VCard class="mb-6">
@@ -444,20 +505,12 @@ const submit = async () => {
                     <span class="text-body-2 text-medium-emphasis">Up to 6 files, 20 MB each</span>
                   </div>
                 </div>
-                <VFileInput
-                  v-model="files"
+                <FilePicker
+                  v-model:saved="form.attachments"
+                  v-model:queued="files"
+                  purpose="request_attachment"
                   label="Drawings, brief or reference files"
-                  multiple
-                  accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.mp4"
-                  hint="Small images preview locally; other files retain their details."
-                  persistent-hint
-                  prepend-icon=""
-                  prepend-inner-icon="tabler-paperclip"
                 />
-                <Attachments :files="form.attachments" />
-                <VBtn v-if="form.attachments.length" variant="text" size="small" @click="form.attachments = []">
-                  Remove saved attachments
-                </VBtn>
               </div>
             </VCardText>
           </VCard>

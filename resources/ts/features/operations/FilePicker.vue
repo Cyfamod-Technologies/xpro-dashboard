@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import type { Attachment } from "@/features/operations/types"
-import type { ProviderFilePurpose } from "@/features/operations/provider-files"
+import type { FilePurpose } from "@/features/operations/file-rules"
 import {
-  checkProviderFiles,
+  checkFiles,
+  fileAccept,
+  fileHint,
   formatFileSize,
-  providerFileAccept,
-  providerFileHint,
-} from "@/features/operations/provider-files"
+} from "@/features/operations/file-rules"
 import Attachments from "@/features/operations/Attachments.vue"
 
 const props = defineProps<{
-  purpose: Exclude<ProviderFilePurpose, "provider_photo">
+  purpose: Exclude<FilePurpose, "provider_photo">
   label: string
   /** Files already stored for the provider. */
   saved: Attachment[]
@@ -26,7 +26,7 @@ const add = (value: File | File[] | null) => {
 
   if (!picked.length) return
 
-  const result = checkProviderFiles(props.purpose, picked, props.queued, props.saved.length)
+  const result = checkFiles(props.purpose, picked, props.queued, props.saved.length)
 
   problems.value = result.problems
   if (result.accepted.length) emit("update:queued", [...props.queued, ...result.accepted])
@@ -63,7 +63,7 @@ const removeQueued = (index: number) =>
       class="d-flex align-center gap-2 my-3 text-body-2"
     >
       <VIcon icon="tabler-file-upload" size="18" />
-      <span class="flex-grow-1">{{ file.name }} · {{ formatFileSize(file.size) }} (uploads when you submit)</span>
+      <span class="flex-grow-1">{{ file.name }} · {{ formatFileSize(file.size) }}</span>
       <VBtn
         icon="tabler-x"
         variant="text"
@@ -76,8 +76,8 @@ const removeQueued = (index: number) =>
       :key="pickerKey"
       multiple
       :label="label"
-      :accept="providerFileAccept(purpose)"
-      :hint="providerFileHint(purpose)"
+      :accept="fileAccept(purpose)"
+      :hint="fileHint(purpose)"
       persistent-hint
       :error-messages="problems"
       :max-errors="problems.length || 1"

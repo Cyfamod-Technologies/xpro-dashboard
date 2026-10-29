@@ -53,7 +53,7 @@ const nav = computed(() => [
         </div>
       </div>
     </header>
-    <main id="main-content">
+    <main id="main-content" class="xp-main">
       <slot />
     </main>
     <footer class="xp-footer">
@@ -116,9 +116,16 @@ const nav = computed(() => [
 
 <style lang="scss" scoped>
 .xp-site {
+  display: flex;
+  flex-direction: column;
   min-block-size: 100vh;
+  min-block-size: 100dvh;
   background: rgb(var(--v-theme-background));
   color: rgb(var(--v-theme-on-background));
+}
+
+.xp-main {
+  flex: 1 0 auto;
 }
 
 .xp-utility {
