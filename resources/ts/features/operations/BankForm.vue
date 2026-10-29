@@ -22,7 +22,10 @@ const bankErrorMessage = (cause: unknown, fallback: string) => {
     if (candidate.data !== undefined) return getErrorMessage({ data: candidate.data }, fallback)
     if (candidate.response && typeof candidate.response === "object") {
       const responseBody = candidate.response._data
-      return responseBody !== undefined ? getErrorMessage({ data: responseBody }, fallback) : fallback
+
+      if (responseBody === undefined) return fallback
+
+      return getErrorMessage({ data: responseBody }, fallback)
     }
   }
 
