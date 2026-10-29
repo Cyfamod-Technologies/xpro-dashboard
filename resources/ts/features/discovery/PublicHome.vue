@@ -26,7 +26,7 @@ const DEFAULT_SERVICE = "Construction"
 const activeService = ref("")
 const activeLine = computed(() => services.value.find(item => item.name === activeService.value))
 const jobService = computed(() => activeService.value as ServiceLine)
-const search = reactive({ service: "", title: "", city: "Abuja", start: "" })
+const search = reactive({ service: "", title: "", city: "", start: "" })
 const serviceNames = computed(() => services.value.map(item => item.name))
 const jobs = computed(() => popularJobsFor(activeService.value))
 

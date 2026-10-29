@@ -53,7 +53,7 @@ export const popularJobs: Record<ServiceLine, PopularJob[]> = {
     },
     {
       name: "POP ceiling",
-      group: "Ceiling",
+      group: "Ceiling Finishing",
       icon: "tabler-lamp",
       body: "Plaster of Paris ceilings with profile lighting.",
       details: { workType: "Roof and ceiling" },
@@ -67,7 +67,7 @@ export const popularJobs: Record<ServiceLine, PopularJob[]> = {
     },
     {
       name: "Roofing & waterproofing",
-      group: "Roof",
+      group: "Roofing",
       icon: "tabler-home-check",
       body: "Lightweight metal roofing and EPDM waterproofing.",
       details: { workType: "Roof and ceiling" },
