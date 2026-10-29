@@ -234,6 +234,9 @@ export interface ProviderProfile {
   id: string
   serverId?: string
   version?: number
+  registrationOnly?: boolean
+  accountStatus?: string
+  registeredAt?: string
   name: string
   email: string
   phone: string

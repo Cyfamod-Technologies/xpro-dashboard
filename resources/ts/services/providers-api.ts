@@ -39,6 +39,18 @@ export interface ProviderProfileResponse {
   history: { kind: string; decision: string; note?: string; createdAt: string }[]
 }
 
+export interface ProviderSignupResponse {
+  userId: string
+  firstName?: string | null
+  lastName?: string | null
+  email: string
+  profileStarted: false
+  accountStatus: string
+  registeredAt: string
+}
+
+export type ProviderReviewResponse = ProviderProfileResponse | ProviderSignupResponse
+
 interface BankAccountResponse {
   bankCode: string
   bankName: string
@@ -111,7 +123,7 @@ export const providersApi = {
       body: { workingHours, timeOff },
     }),
   listForReview: (verification?: string) =>
-    $api<ApiEnvelope<ProviderProfileResponse[]>>("/admin/providers", {
+    $api<ApiEnvelope<ProviderReviewResponse[]>>("/admin/providers", {
       query: verification ? { verification } : undefined,
     }),
   review: (

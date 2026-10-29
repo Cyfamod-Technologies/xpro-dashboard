@@ -28,7 +28,7 @@ const providers = computed(() =>
   ops.state.providers.filter(
     item =>
       (!status.value || item.verification === status.value) &&
-      `${item.name} ${item.city} ${item.serviceAreas.join(" ")} ${item.services.join(" ")} ${item.trade}`
+      `${item.name} ${item.email} ${item.city} ${item.serviceAreas.join(" ")} ${item.services.join(" ")} ${item.trade}`
         .toLowerCase()
         .includes(search.value.toLowerCase()),
   ),
@@ -63,7 +63,15 @@ const pendingBank = computed(() =>
           <VSelect
             v-model="status"
             label="Verification status"
-            :items="['pending', 'approved', 'changes_requested', 'rejected']"
+            :items="[
+              { title: 'Profile not started', value: 'draft' },
+              { title: 'Pending review', value: 'pending' },
+              { title: 'Approved', value: 'approved' },
+              { title: 'Changes requested', value: 'changes_requested' },
+              { title: 'Rejected', value: 'rejected' },
+            ]"
+            item-title="title"
+            item-value="value"
             hide-details
             clearable
             @click:clear="status = ''"
@@ -79,8 +87,10 @@ const pendingBank = computed(() =>
           <h2 class="text-h5 mb-2">
             {{ provider.name }}
           </h2>
-          <p>{{ provider.trade }} · {{ provider.city }}</p>
-          <VChip color="primary" variant="tonal" class="mb-3"> {{ provider.verification.replaceAll("_", " ") }} </VChip
+          <p v-if="!provider.registrationOnly">{{ provider.trade }} · {{ provider.city }}</p>
+          <VChip color="primary" variant="tonal" class="mb-3">
+            {{ provider.registrationOnly ? "Profile not started" : provider.verification.replaceAll("_", " ") }}
+          </VChip
           ><VChip
             v-if="provider.pendingChanges && provider.changesReview?.state === 'pending'"
             color="warning"
@@ -89,13 +99,18 @@ const pendingBank = computed(() =>
           >
             Changes to review
           </VChip>
-          <p class="text-body-2">
+          <p v-if="provider.registrationOnly" class="text-body-2">
+            {{ provider.email }} · Signed up {{ provider.registeredAt ? when(provider.registeredAt) : "date unavailable" }}
+            · Account {{ provider.accountStatus }}
+          </p>
+          <p v-else class="text-body-2">
             {{ provider.services.join(" · ") }}<br />{{
               provider.available ? "Accepting new jobs" : "Not accepting new jobs"
             }}
             · {{ jobsOf(provider.id) }} of {{ provider.capacity }} jobs active
           </p>
           <VBtn
+            v-if="!provider.registrationOnly"
             variant="outlined"
             @click="
               () => {

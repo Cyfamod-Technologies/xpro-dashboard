@@ -12,9 +12,10 @@ import {
 } from "@/features/operations/workflow"
 import { staffCan } from "@/features/operations/staff"
 import type { Actor, Command, OperationsState, ProviderProfile, StaffPermission } from "@/features/operations/types"
-import { type ProviderProfileResponse, providersApi } from "@/services/providers-api"
+import { type ProviderProfileResponse, type ProviderSignupResponse, providersApi } from "@/services/providers-api"
 import { isDemoMode } from "@/utils/demo-mode"
 import { defaultAssignmentSettings } from "@/features/operations/types"
+import { defaultWorkingHours } from "@/features/operations/hours"
 
 const storageKey = "xpro-demo-workspace-v1"
 
@@ -146,6 +147,39 @@ export const useOperationsStore = defineStore("operations", () => {
     }
   }
 
+  const mapProviderSignup = (result: ProviderSignupResponse): ProviderProfile => ({
+    id: result.userId,
+    name: `${result.firstName ?? ""} ${result.lastName ?? ""}`.trim() || result.email,
+    email: result.email,
+    phone: "",
+    trade: "",
+    city: "",
+    services: [],
+    serviceAreas: [],
+    skills: {},
+    capacity: 0,
+    lastOfferedAt: "",
+    workingHours: defaultWorkingHours(),
+    timeOff: [],
+    experience: 0,
+    bio: "",
+    rating: 0,
+    reviewCount: 0,
+    portfolio: [],
+    available: false,
+    verification: "draft",
+    documents: [],
+    reviewNote: "",
+    history: [],
+    photo: null,
+    pendingChanges: null,
+    changesReview: null,
+    payout: { current: null, pending: null, review: null, history: [] },
+    registrationOnly: true,
+    accountStatus: result.accountStatus,
+    registeredAt: result.registeredAt,
+  })
+
   const addFileLinks = async (providerProfile: ProviderProfile, asReviewer = false) => {
     const addLink = async (file: ProviderProfile["documents"][number]) => {
       try {
@@ -186,7 +220,13 @@ export const useOperationsStore = defineStore("operations", () => {
   async function loadProvidersForReview() {
     if (isDemoMode) return
     const response = await providersApi.listForReview()
-    state.value.providers = await Promise.all(response.data.map(item => addFileLinks(mapProvider(item), true)))
+    state.value.providers = await Promise.all(
+      response.data.map(item =>
+        "profileStarted" in item && item.profileStarted === false
+          ? mapProviderSignup(item)
+          : addFileLinks(mapProvider(item), true),
+      ),
+    )
   }
 
   async function runServerProviderCommand(command: Command) {
