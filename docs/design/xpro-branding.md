@@ -33,12 +33,11 @@ its proportions and transparency; do not add a white CSS backing. Hide duplicate
 
 ## Public company details
 
-Source: [Xpro about page](https://xpro.ng/about.php).
-
-- Name: Excellent Professionals and Procurement
+- Name: Xpro Enterprise
 - Email: `admin@xpro.ng`
+- Service area: Nigeria
 - Location: Abuja, Nigeria
 - Address: 63 Claude Ake Street, 2nd Avenue, Abuja
-- Address: No. 4 Aminu Ifesinachi Crescent, Abuja
+- Address: No. 4 Aminu Ifesinachi Crescent, Asokoro, Abuja
 
 These details are centralised in `resources/ts/utils/branding.ts`.

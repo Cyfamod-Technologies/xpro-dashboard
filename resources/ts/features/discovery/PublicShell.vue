@@ -9,7 +9,6 @@ const { services } = usePublicServices()
 const auth = useAuthStore()
 const route = useRoute()
 const year = new Date().getFullYear()
-const topAddress = XPRO_BRAND.addresses[0].replace(/, Abuja$/, "")
 
 const nav = computed(() => [
   { label: "Home", to: "/", active: route.path === "/" && !route.hash },
@@ -23,7 +22,7 @@ const nav = computed(() => [
   <div class="xp-site">
     <div class="xp-utility">
       <div class="xp-container d-flex flex-wrap justify-space-between gap-2 py-2 text-body-2">
-        <span>Serving Abuja · {{ topAddress }}</span>
+        <span>Serving Nigeria</span>
         <span class="d-flex flex-wrap gap-x-5">
           <RouterLink v-if="!auth.isAuthenticated" to="/auth/signup?role=provider">Become a provider</RouterLink>
           <a :href="XPRO_PHONE.href">{{ XPRO_PHONE.label }}</a>
@@ -63,7 +62,8 @@ const nav = computed(() => [
         <div class="xp-footer-col xp-footer-col--wide d-flex flex-column gap-3">
           <img :src="XPRO_BRAND.logo" alt="XPro" class="xp-logo xp-logo--small" />
           <span class="text-body-2 text-medium-emphasis">
-            Design, construction, hire, procurement and property services in Abuja, coordinated by one accountable team.
+            Design, construction, hire, procurement and property services across Nigeria, coordinated by one accountable
+            team.
           </span>
         </div>
         <nav aria-label="Services" class="xp-footer-col d-flex flex-column gap-2 text-body-2">
@@ -93,7 +93,7 @@ const nav = computed(() => [
       </div>
       <div class="xp-footer-bottom">
         <div class="xp-container d-flex flex-wrap justify-space-between gap-2 py-4 text-body-2 text-medium-emphasis">
-          <span>© {{ year }} {{ XPRO_BRAND.fullName }} (XPro). All rights reserved.</span>
+          <span>© {{ year }} {{ XPRO_BRAND.fullName }}. All rights reserved.</span>
           <span v-if="isDemoMode">Demo data: requests and activity are samples.</span>
         </div>
       </div>

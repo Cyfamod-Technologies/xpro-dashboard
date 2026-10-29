@@ -43,8 +43,8 @@ const metaLine = (provider: FeaturedProviderCard) => {
   <section class="xp-container pt-8">
     <h1 class="text-h4 mb-1">Featured providers</h1>
     <p class="text-body-1 text-medium-emphasis mb-6 intro">
-      Verified Abuja professionals who deliver XPro jobs. Tell us what you need and XPro assigns the right verified
-      provider — you don't need to contact anyone directly.
+      Verified professionals across Nigeria who deliver XPro jobs. Tell us what you need and XPro assigns the right
+      verified provider — you don't need to contact anyone directly.
     </p>
   </section>
 

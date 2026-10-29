@@ -14,7 +14,7 @@ defineProps<{
       <div class="auth-story__content">
         <div class="d-flex align-center gap-3 mb-12">
           <div class="xpro-brand-mark xpro-brand-mark--large">
-            <img :src="XPRO_BRAND.logo" alt="Xpro — Excellent Professionals and Procurement" />
+            <img :src="XPRO_BRAND.logo" alt="Xpro Enterprise" />
           </div>
           <!--
             <div>
@@ -46,7 +46,7 @@ defineProps<{
       <div class="auth-panel pa-6 pa-sm-10">
         <RouterLink to="/login" class="d-flex d-md-none align-center gap-3 mb-10 text-decoration-none">
           <div class="xpro-brand-mark">
-            <img :src="XPRO_BRAND.logo" alt="Xpro — Excellent Professionals and Procurement" />
+            <img :src="XPRO_BRAND.logo" alt="Xpro Enterprise" />
           </div>
         </RouterLink>
 
