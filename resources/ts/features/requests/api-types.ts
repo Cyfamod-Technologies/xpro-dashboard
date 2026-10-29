@@ -311,6 +311,11 @@ export interface LocationView {
   active: boolean
 }
 
+export interface PendingRequestView {
+  hasPending: boolean
+  requestId?: string
+}
+
 export interface ServiceView {
   id: string
   name: string

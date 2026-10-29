@@ -10,6 +10,7 @@ import type {
   PaginatedResult,
   PaymentView,
   PayoutView,
+  PendingRequestView,
   ProgressUpdateView,
   QuoteItemView,
   QuoteView,
@@ -89,6 +90,7 @@ export interface RequestListParams {
 export const requestsApi = {
   list: (params: RequestListParams = {}) =>
     unwrap($api<ApiEnvelope<PaginatedResult<RequestSummary>>>("/requests", { query: params })),
+  pending: () => unwrap($api<ApiEnvelope<PendingRequestView>>("/requests/pending")),
   get: (id: string) => unwrap($api<ApiEnvelope<RequestView>>(`/requests/${pathId(id)}`)),
   create: (
     body: {

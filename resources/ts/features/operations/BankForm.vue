@@ -48,47 +48,86 @@ onMounted(async () => {
 </script>
 
 <template>
-  <VRow>
-    <VCol cols="12" sm="6">
-      <VSelect
-        :model-value="bank.bankCode"
-        :items="banks"
-        item-title="name"
-        item-value="code"
-        label="Bank"
-        @update:model-value="change({ bankCode: String($event ?? '') })"
-      /> </VCol
-    ><VCol cols="12" sm="6">
-      <VTextField
-        :model-value="bank.accountNumber"
-        label="Account number"
-        inputmode="numeric"
-        maxlength="10"
-        hint="10 digits"
-        @update:model-value="
-          change({
-            accountNumber: String($event ?? '')
-              .replace(/\D/g, '')
-              .slice(0, 10),
-          })
-        "
-      /> </VCol
-    ><VCol cols="12" sm="6">
-      <VBtn variant="outlined" :loading="checking" :disabled="!canVerify" @click="verify">
-        {{ verified ? "Account verified" : "Verify account" }}
+  <div>
+    <VRow>
+      <VCol cols="12" md="6">
+        <VAutocomplete
+          :model-value="bank.bankCode"
+          :items="banks"
+          item-title="name"
+          item-value="code"
+          label="Bank"
+          placeholder="Search for your bank"
+          no-data-text="No bank matches your search."
+          auto-select-first
+          @update:model-value="change({ bankCode: String($event ?? '') })"
+        />
+      </VCol>
+      <VCol cols="12" md="6">
+        <VTextField
+          :model-value="bank.accountNumber"
+          label="Account number"
+          inputmode="numeric"
+          maxlength="10"
+          hint="10 digits"
+          persistent-hint
+          @update:model-value="
+            change({
+              accountNumber: String($event ?? '')
+                .replace(/\D/g, '')
+                .slice(0, 10),
+            })
+          "
+        />
+      </VCol>
+    </VRow>
+    <div class="account-result mt-4" :class="{ 'account-result--verified': verified }" aria-live="polite">
+      <VAvatar :color="verified ? 'success' : undefined" variant="tonal" size="40" class="flex-shrink-0">
+        <VIcon :icon="verified ? 'tabler-circle-check' : 'tabler-user-search'" size="22" />
+      </VAvatar>
+      <div class="flex-grow-1">
+        <div class="text-caption text-medium-emphasis">Account name</div>
+        <div v-if="verified" class="text-subtitle-1 font-weight-medium">
+          {{ bank.accountName }}
+        </div>
+        <div v-else class="text-body-2 text-medium-emphasis">
+          Select your bank, enter your account number, then verify to see the account name.
+        </div>
+        <div v-if="error" class="text-body-2 text-error mt-1" role="alert">
+          {{ error }}
+        </div>
+      </div>
+      <VBtn
+        v-if="!verified"
+        variant="outlined"
+        prepend-icon="tabler-shield-check"
+        :loading="checking"
+        :disabled="!canVerify"
+        @click="verify"
+      >
+        Verify account
       </VBtn>
-      <p class="text-caption text-medium-emphasis mt-2 mb-0">
-        {{ isDemoMode ? "Demo account verification is simulated." : "Account name is verified by the server." }}
-      </p> </VCol
-    ><VCol cols="12" sm="6">
-      <VTextField
-        :model-value="bank.accountName"
-        label="Account name"
-        readonly
-        :error-messages="error"
-        :hint="verified ? 'Confirmed by the bank lookup' : 'Appears after you verify the account'"
-        persistent-hint
-      />
-    </VCol>
-  </VRow>
+      <VChip v-else color="success" variant="tonal" size="small" prepend-icon="tabler-check"> Verified </VChip>
+    </div>
+    <p class="text-caption text-medium-emphasis mt-2 mb-3">
+      {{ isDemoMode ? "Demo account verification is simulated." : "The account name is looked up from your bank." }}
+    </p>
+  </div>
 </template>
+
+<style scoped>
+.account-result {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px dashed rgba(var(--v-border-color), 0.4);
+  border-radius: 8px;
+}
+.account-result--verified {
+  border-style: solid;
+  border-color: rgba(var(--v-theme-success), 0.4);
+  background: rgba(var(--v-theme-success), 0.06);
+}
+</style>

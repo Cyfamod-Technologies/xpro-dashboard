@@ -5,7 +5,7 @@ import type { BankInput, ProviderInput, ServiceLine } from "@/features/operation
 import { serviceLines } from "@/features/workspace/config"
 import { serviceSkills, when } from "@/features/operations/types"
 import { prepareFiles } from "@/features/operations/files"
-import { checkProviderFiles, providerFileAccept, providerFileHint } from "@/features/operations/provider-files"
+import { checkFiles, fileAccept, fileHint } from "@/features/operations/file-rules"
 import { isNuban, maskAccount } from "@/features/operations/banks"
 import { payoutReady, profileChangeRows } from "@/features/operations/workflow"
 import { defaultWorkingHours, workingHoursProblem } from "@/features/operations/hours"
@@ -15,7 +15,7 @@ import AvailabilityPanel from "@/features/operations/AvailabilityPanel.vue"
 import WorkingHoursEditor from "@/features/operations/WorkingHoursEditor.vue"
 import Attachments from "@/features/operations/Attachments.vue"
 import ProfileSection from "@/features/operations/ProfileSection.vue"
-import ProviderFilePicker from "@/features/operations/ProviderFilePicker.vue"
+import FilePicker from "@/features/operations/FilePicker.vue"
 import BankForm from "@/features/operations/BankForm.vue"
 import { providersApi } from "@/services/providers-api"
 
@@ -180,7 +180,7 @@ const choosePhoto = async (value: File | File[] | null) => {
   photoProblem.value = ""
   if (!file) return
 
-  const { problems } = checkProviderFiles("provider_photo", [file])
+  const { problems } = checkFiles("provider_photo", [file])
 
   if (problems.length) {
     photoFile.value = []
@@ -284,7 +284,6 @@ const submit = async () => {
     <ProfileSection
       title="Profile details"
       subtitle="Who you are and where you are based."
-      icon="tabler-user-circle"
     >
       <VRow>
         <VCol cols="12" sm="6">
@@ -329,7 +328,6 @@ const submit = async () => {
     <ProfileSection
       title="Services & skills"
       subtitle="Choose at least one skill for each service you offer. XPro uses these to match you to the right jobs."
-      icon="tabler-tools"
     >
       <VRow>
         <VCol cols="12">
@@ -368,7 +366,6 @@ const submit = async () => {
     <ProfileSection
       title="Coverage & capacity"
       subtitle="XPro assigns you jobs, so tell us which areas you cover and how many jobs you can run at once."
-      icon="tabler-map-pin"
     >
       <VAlert v-if="approved" variant="tonal" color="info" density="comfortable" class="mb-4">
         Changes to your areas, skills and capacity are reviewed by XPro before they affect your offers.
@@ -408,17 +405,15 @@ const submit = async () => {
     <ProfileSection
       title="Weekly working hours"
       subtitle="Required. XPro only offers you jobs that start on a day you work. Hours apply as soon as you save."
-      icon="tabler-clock"
     >
       <WorkingHoursEditor v-model="form.workingHours" />
     </ProfileSection>
 
     <ProfileSection
       title="Private verification documents"
-      subtitle="Identity, qualification or business documents. Only XPro review staff can see these."
-      icon="tabler-file-certificate"
+      subtitle="Identity, qualification or business documents. Only XPro review staff can see these. Files upload when you submit your profile."
     >
-      <ProviderFilePicker
+      <FilePicker
         v-model:saved="form.documents"
         v-model:queued="files"
         purpose="provider_document"
@@ -428,8 +423,7 @@ const submit = async () => {
 
     <ProfileSection
       title="Face photo"
-      subtitle="Used by XPro staff to verify your identity. Not shown publicly."
-      icon="tabler-camera"
+      subtitle="Used by XPro staff to verify your identity. Not shown publicly. Your photo uploads when you submit your profile."
     >
       <VImg
         v-if="form.photo?.dataUrl"
@@ -444,8 +438,8 @@ const submit = async () => {
       <VFileInput
         v-model="photoFile"
         label="Upload a clear face photo"
-        :accept="providerFileAccept('provider_photo')"
-        :hint="providerFileHint('provider_photo')"
+        :accept="fileAccept('provider_photo')"
+        :hint="fileHint('provider_photo')"
         persistent-hint
         :error-messages="photoProblem"
         @update:model-value="choosePhoto"
@@ -454,10 +448,9 @@ const submit = async () => {
 
     <ProfileSection
       title="Public portfolio"
-      subtitle="These samples appear on your public profile after approval."
-      icon="tabler-photo"
+      subtitle="These samples appear on your public profile after approval. Files upload when you submit your profile."
     >
-      <ProviderFilePicker
+      <FilePicker
         v-model:saved="form.portfolio"
         v-model:queued="portfolioFiles"
         purpose="provider_portfolio"
@@ -468,7 +461,6 @@ const submit = async () => {
     <ProfileSection
       title="Bank details"
       subtitle="XPro pays you into this account once Finance has verified it. The account name must match your business or personal name."
-      icon="tabler-building-bank"
     >
       <template v-if="awaitingBank">
         <p class="mb-1">{{ awaitingBank.bankName }} · {{ maskAccount(awaitingBank.accountNumber) }}</p>
