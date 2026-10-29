@@ -222,7 +222,7 @@ export const useOperationsStore = defineStore("operations", () => {
     const response = await providersApi.listForReview()
     state.value.providers = await Promise.all(
       response.data.map(item =>
-        "profileStarted" in item && item.profileStarted === false
+        "profileStarted" in item
           ? mapProviderSignup(item)
           : addFileLinks(mapProvider(item), true),
       ),
