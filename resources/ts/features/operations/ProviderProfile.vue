@@ -19,6 +19,7 @@ import { providersApi } from "@/services/providers-api"
 const props = defineProps<{ availability?: boolean }>()
 const ops = useOperationsStore()
 const files = ref<File[]>([])
+const documentPickerKey = ref(0)
 const portfolioFiles = ref<File[]>([])
 const photoFile = ref<File[]>([])
 const profile = ops.profile
@@ -184,6 +185,13 @@ const choosePhoto = async (value: File | File[] | null) => {
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to read this photo."
   }
+}
+
+const addDocuments = (value: File | File[] | null) => {
+  const selected = Array.isArray(value) ? value : value ? [value] : []
+
+  files.value.push(...selected)
+  documentPickerKey.value += 1
 }
 
 const useDifferentAccount = () => {
@@ -372,18 +380,34 @@ const submit = async () => {
             <p class="text-body-2 text-medium-emphasis">
               Identity, qualification or business documents are visible to XPro review staff.
             </p>
-            <Attachments :files="form.documents" /><VBtn
-              v-if="form.documents.length"
-              variant="text"
-              size="small"
-              @click="form.documents = []"
-            >
-              Remove existing documents </VBtn
-            ><VFileInput
-              v-model="files"
+            <div v-for="file in form.documents" :key="file.id" class="d-flex align-center gap-2">
+              <Attachments :files="[file]" class="flex-grow-1" />
+              <VBtn
+                icon="tabler-x"
+                variant="text"
+                size="small"
+                :aria-label="`Remove ${file.name}`"
+                @click="form.documents = form.documents.filter(document => document.id !== file.id)"
+              />
+            </div>
+            <div v-for="(file, index) in files" :key="`${file.name}-${file.size}-${index}`" class="d-flex align-center gap-2 my-3">
+              <span class="flex-grow-1 text-body-2">{{ file.name }} · {{ Math.ceil(file.size / 1024) }} KB (ready to upload)</span>
+              <VBtn
+                icon="tabler-x"
+                variant="text"
+                size="small"
+                :aria-label="`Remove ${file.name}`"
+                @click="files.splice(index, 1)"
+              />
+            </div>
+            <VFileInput
+              :key="documentPickerKey"
               multiple
               label="Add verification documents"
               accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+              hint="Select several files at once, or add more in separate picks."
+              persistent-hint
+              @update:model-value="addDocuments"
             /> </VCol
           ><VCol cols="12">
             <h3 class="text-h6 mb-3">Face photo</h3>
