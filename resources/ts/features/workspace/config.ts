@@ -110,6 +110,13 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "Your activity will appear here.",
     ),
     section(
+      "verification",
+      "Profile & verification",
+      "tabler-shield-check",
+      "Introduce your services and submit your verification documents.",
+      "Your provider profile and verification documents will appear here.",
+    ),
+    section(
       "jobs",
       "My jobs",
       "tabler-briefcase",
@@ -122,13 +129,6 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "tabler-file-invoice",
       "Submit provider costings and follow quote decisions.",
       "Costing requests will appear here when assigned work needs pricing.",
-    ),
-    section(
-      "verification",
-      "Profile & verification",
-      "tabler-shield-check",
-      "Introduce your services and submit your verification documents.",
-      "Your provider profile and verification documents will appear here.",
     ),
     section(
       "availability",

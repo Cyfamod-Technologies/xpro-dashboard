@@ -5,6 +5,7 @@ import type { BankInput, ProviderInput, ServiceLine } from "@/features/operation
 import { serviceLines } from "@/features/workspace/config"
 import { serviceSkills, when } from "@/features/operations/types"
 import { prepareFiles } from "@/features/operations/files"
+import { checkProviderFiles, providerFileAccept, providerFileHint } from "@/features/operations/provider-files"
 import { isNuban, maskAccount } from "@/features/operations/banks"
 import { payoutReady, profileChangeRows } from "@/features/operations/workflow"
 import { defaultWorkingHours, workingHoursProblem } from "@/features/operations/hours"
@@ -13,6 +14,8 @@ import { nigeriaStates, stateForLocation } from "@/utils/nigeria-locations"
 import AvailabilityPanel from "@/features/operations/AvailabilityPanel.vue"
 import WorkingHoursEditor from "@/features/operations/WorkingHoursEditor.vue"
 import Attachments from "@/features/operations/Attachments.vue"
+import ProfileSection from "@/features/operations/ProfileSection.vue"
+import ProviderFilePicker from "@/features/operations/ProviderFilePicker.vue"
 import BankForm from "@/features/operations/BankForm.vue"
 import { providersApi } from "@/services/providers-api"
 
@@ -21,6 +24,7 @@ const ops = useOperationsStore()
 const files = ref<File[]>([])
 const portfolioFiles = ref<File[]>([])
 const photoFile = ref<File[]>([])
+const photoProblem = ref("")
 const profile = ops.profile
 const known: BankInput | undefined = profile?.payout.pending ?? profile?.payout.current ?? undefined
 
@@ -173,9 +177,18 @@ const checklist = computed(() => [
 const choosePhoto = async (value: File | File[] | null) => {
   const file = Array.isArray(value) ? value[0] : value
 
+  photoProblem.value = ""
   if (!file) return
+
+  const { problems } = checkProviderFiles("provider_photo", [file])
+
+  if (problems.length) {
+    photoFile.value = []
+    photoProblem.value = problems[0]
+
+    return
+  }
   try {
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw new Error("Use a PNG, JPG or WebP photo.")
     if (isDemoMode) form.photo = (await prepareFiles([file]))[0]
     else {
       photoFile.value = [file]
@@ -268,211 +281,239 @@ const submit = async () => {
   </VCard>
   <AvailabilityPanel v-if="props.availability" />
   <template v-else>
-    <VCard class="mb-5">
-      <VCardText>
-        <h2 class="text-h5 mb-5">Your provider profile</h2>
-        <VRow>
-          <VCol cols="12" sm="6"> <VTextField v-model="form.trade" label="Trade / business specialism" /> </VCol
-          ><VCol cols="12" sm="6">
-            <VSelect
-              :model-value="selectedState"
-              :items="stateOptions"
-              label="State"
-              clearable
-              @update:model-value="selectState"
-            />
-          </VCol>
-          <VCol cols="12" sm="6">
-            <VSelect
-              v-model="form.city"
-              :items="cityOptions"
-              label="City / LGA"
-              :disabled="!selectedState"
-              :hint="
-                selectedState ? `Select an LGA or the state capital in ${selectedState}.` : 'Choose a state first.'
-              "
-              persistent-hint
-            /> </VCol
-          ><VCol cols="12" sm="6"> <VTextField v-model="form.phone" label="Private contact phone" /> </VCol
-          ><VCol cols="12" sm="6">
-            <VTextField v-model.number="form.experience" label="Years of experience" type="number" min="0" /> </VCol
-          ><VCol cols="12">
-            <VSelect
-              v-model="form.services"
-              :items="serviceLines.map(item => item.name)"
-              label="Services offered"
-              multiple
-              chips
-            /> </VCol
-          ><VCol cols="12">
-            <h3 class="text-h6 mb-1">Where you work</h3>
-            <p class="text-body-2 text-medium-emphasis">
-              XPro assigns you jobs, so tell us which areas you cover, what you are skilled at and how many jobs you can
-              run at once.<template v-if="approved">
-                Changes to your areas, skills and capacity are reviewed by XPro before they affect your offers.
-              </template>
+    <ProfileSection
+      title="Profile details"
+      subtitle="Who you are and where you are based."
+      icon="tabler-user-circle"
+    >
+      <VRow>
+        <VCol cols="12" sm="6">
+          <VTextField v-model="form.trade" label="Trade / business specialism" />
+        </VCol>
+        <VCol cols="12" sm="6">
+          <VSelect
+            :model-value="selectedState"
+            :items="stateOptions"
+            label="State"
+            clearable
+            @update:model-value="selectState"
+          />
+        </VCol>
+        <VCol cols="12" sm="6">
+          <VSelect
+            v-model="form.city"
+            :items="cityOptions"
+            label="City / LGA"
+            :disabled="!selectedState"
+            :hint="selectedState ? `Select an LGA or the state capital in ${selectedState}.` : 'Choose a state first.'"
+            persistent-hint
+          />
+        </VCol>
+        <VCol cols="12" sm="6">
+          <VTextField v-model="form.phone" label="Private contact phone" />
+        </VCol>
+        <VCol cols="12" sm="6">
+          <VTextField v-model.number="form.experience" label="Years of experience" type="number" min="0" />
+        </VCol>
+        <VCol cols="12">
+          <VTextarea
+            v-model="form.bio"
+            label="Public introduction"
+            hint="Shown on your public profile after approval."
+            persistent-hint
+          />
+        </VCol>
+      </VRow>
+    </ProfileSection>
+
+    <ProfileSection
+      title="Services & skills"
+      subtitle="Choose at least one skill for each service you offer. XPro uses these to match you to the right jobs."
+      icon="tabler-tools"
+    >
+      <VRow>
+        <VCol cols="12">
+          <VSelect
+            v-model="form.services"
+            :items="serviceLines.map(item => item.name)"
+            label="Services offered"
+            multiple
+            chips
+          />
+        </VCol>
+        <VCol v-if="form.services.length" cols="12">
+          <fieldset v-for="service in form.services" :key="service" class="skills-group">
+            <legend class="text-subtitle-1">
+              {{ service }}
+            </legend>
+            <div class="skills-grid">
+              <VCheckbox
+                v-for="skill in serviceSkills[service]"
+                :key="skill"
+                :model-value="hasSkill(service, skill)"
+                :label="skill"
+                density="compact"
+                hide-details
+                @update:model-value="setSkill(service, skill, $event)"
+              />
+            </div>
+            <p v-if="missingSkills.includes(service)" class="text-body-2 text-error mt-1 mb-0" role="alert">
+              Choose at least one {{ service }} skill.
             </p>
-            <VCombobox
-              v-model="form.serviceAreas"
-              :items="areaSuggestions"
-              label="Service areas"
-              hint="Pick from the list, or type an area and press Enter."
-              persistent-hint
-              multiple
-              chips
-              closable-chips
-              :error-messages="areaProblem"
-            /><VBtn v-if="form.city.trim() && !coversCity" variant="text" size="small" class="mt-1" @click="addCity">
-              Add {{ form.city.trim() }}
-            </VBtn> </VCol
-          ><VCol v-if="form.services.length" cols="12">
-            <h3 class="text-h6 mb-1">Skills</h3>
-            <p class="text-body-2 text-medium-emphasis">
-              Choose at least one skill for each service you offer. XPro uses these to match you to the right jobs.
-            </p>
-            <fieldset v-for="service in form.services" :key="service" class="skills-group">
-              <legend class="text-subtitle-1">
-                {{ service }}
-              </legend>
-              <div class="skills-grid">
-                <VCheckbox
-                  v-for="skill in serviceSkills[service]"
-                  :key="skill"
-                  :model-value="hasSkill(service, skill)"
-                  :label="skill"
-                  density="compact"
-                  hide-details
-                  @update:model-value="setSkill(service, skill, $event)"
-                />
-              </div>
-              <p v-if="missingSkills.includes(service)" class="text-body-2 text-error mt-1 mb-0" role="alert">
-                Choose at least one {{ service }} skill.
-              </p>
-            </fieldset> </VCol
-          ><VCol cols="12" sm="6">
-            <VTextField
-              v-model.number="form.capacity"
-              label="Job capacity"
-              type="number"
-              min="1"
-              max="20"
-              hint="The most jobs you can have active at once (1 to 20)."
-              persistent-hint
-              :error-messages="capacityProblem"
-            /> </VCol
-          ><VCol cols="12">
-            <h3 class="text-h6 mb-1">Weekly working hours</h3>
-            <p class="text-body-2 text-medium-emphasis">
-              Required. XPro only offers you jobs that start on a day you work. Hours apply as soon as you save.
-            </p>
-            <WorkingHoursEditor v-model="form.workingHours" /> </VCol
-          ><VCol cols="12"> <VTextarea v-model="form.bio" label="Public introduction" /> </VCol
-          ><VCol cols="12">
-            <h3 class="text-h6 mb-3">Private verification documents</h3>
-            <p class="text-body-2 text-medium-emphasis">
-              Identity, qualification or business documents are visible to XPro review staff.
-            </p>
-            <Attachments :files="form.documents" /><VBtn
-              v-if="form.documents.length"
-              variant="text"
-              size="small"
-              @click="form.documents = []"
-            >
-              Remove existing documents </VBtn
-            ><VFileInput
-              v-model="files"
-              multiple
-              label="Add verification documents"
-              accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
-            /> </VCol
-          ><VCol cols="12">
-            <h3 class="text-h6 mb-3">Face photo</h3>
-            <p class="text-body-2 text-medium-emphasis">
-              Used by XPro staff to verify your identity. Not shown publicly.
-            </p>
-            <VImg
-              v-if="form.photo?.dataUrl"
-              :src="form.photo.dataUrl"
-              :alt="form.photo.name"
-              max-width="160"
-              max-height="160"
-              rounded
-              class="my-3"
-            /><Attachments v-else-if="form.photo" :files="[form.photo]" /><VFileInput
-              v-model="photoFile"
-              label="Upload a clear face photo"
-              accept="image/png,image/jpeg,image/webp"
-              @update:model-value="choosePhoto"
-            /> </VCol
-          ><VCol cols="12">
-            <h3 class="text-h6 mb-3">Public portfolio</h3>
-            <p class="text-body-2 text-medium-emphasis">These samples appear on your public profile after approval.</p>
-            <Attachments :files="form.portfolio" /><VBtn
-              v-if="form.portfolio.length"
-              variant="text"
-              size="small"
-              @click="form.portfolio = []"
-            >
-              Remove existing portfolio </VBtn
-            ><VFileInput
-              v-model="portfolioFiles"
-              multiple
-              label="Add public portfolio samples"
-              accept=".pdf,.png,.jpg,.jpeg,.webp"
-            />
-          </VCol> </VRow
-        ><VCard variant="outlined" class="mb-5">
-          <VCardText>
-            <h3 class="text-h6 mb-1">Bank details</h3>
-            <p class="text-body-2 text-medium-emphasis">
-              XPro pays you into this account once Finance has verified it. The account name must match your business or
-              personal name.
-            </p>
-            <template v-if="awaitingBank">
-              <p class="mb-1">{{ awaitingBank.bankName }} · {{ maskAccount(awaitingBank.accountNumber) }}</p>
-              <p class="text-body-2 text-medium-emphasis">
-                {{ awaitingBank.accountName }}
-              </p>
-              <VAlert variant="tonal" color="warning">
-                Your bank change is awaiting XPro review. Payouts are paused until XPro verifies your new bank details.
-                You can change bank details again once it is reviewed.
-              </VAlert> </template
-            ><template v-else-if="keepCurrent">
-              <p class="mb-1">{{ current!.bankName }} · {{ maskAccount(current!.accountNumber) }}</p>
-              <p class="text-body-2 text-medium-emphasis">
-                {{ current!.accountName }}
-              </p>
-              <VBtn variant="text" size="small" @click="useDifferentAccount"> Use a different account </VBtn> </template
-            ><template v-else>
-              <BankForm v-model="form.bank" :holder-name="ops.actor?.name ?? ''" /><VBtn
-                v-if="current"
-                variant="text"
-                size="small"
-                @click="keepAccount"
-              >
-                Keep my current account
-              </VBtn>
-            </template>
-          </VCardText> </VCard
-        ><VAlert v-if="ops.profile?.verification === 'approved'" color="info" variant="tonal" class="mb-4">
-          Changes to your phone, city, experience, bio, portfolio and weekly working hours apply straight away. Changes
-          to your trade, services, service areas, skills, job capacity, verification documents or face photo are
-          reviewed by XPro first. Your current details stay in use while they are reviewed. </VAlert
-        ><VBtn
-          :disabled="ops.profile?.verification === 'pending' || !bankReady || !coverageReady"
-          :loading="ops.busy"
-          @click="submit"
-        >
-          {{
-            ops.profile?.verification === "pending"
-              ? "Awaiting XPro review"
-              : ops.profile?.verification === "approved"
-                ? "Save profile changes"
-                : "Submit profile for review"
-          }}
-        </VBtn>
-      </VCardText> </VCard
-    ><VCard v-if="ops.profile?.history.length">
+          </fieldset>
+        </VCol>
+      </VRow>
+    </ProfileSection>
+
+    <ProfileSection
+      title="Coverage & capacity"
+      subtitle="XPro assigns you jobs, so tell us which areas you cover and how many jobs you can run at once."
+      icon="tabler-map-pin"
+    >
+      <VAlert v-if="approved" variant="tonal" color="info" density="comfortable" class="mb-4">
+        Changes to your areas, skills and capacity are reviewed by XPro before they affect your offers.
+      </VAlert>
+      <VRow>
+        <VCol cols="12">
+          <VCombobox
+            v-model="form.serviceAreas"
+            :items="areaSuggestions"
+            label="Service areas"
+            hint="Pick from the list, or type an area and press Enter."
+            persistent-hint
+            multiple
+            chips
+            closable-chips
+            :error-messages="areaProblem"
+          />
+          <VBtn v-if="form.city.trim() && !coversCity" variant="text" size="small" class="mt-1" @click="addCity">
+            Add {{ form.city.trim() }}
+          </VBtn>
+        </VCol>
+        <VCol cols="12" sm="6">
+          <VTextField
+            v-model.number="form.capacity"
+            label="Job capacity"
+            type="number"
+            min="1"
+            max="20"
+            hint="The most jobs you can have active at once (1 to 20)."
+            persistent-hint
+            :error-messages="capacityProblem"
+          />
+        </VCol>
+      </VRow>
+    </ProfileSection>
+
+    <ProfileSection
+      title="Weekly working hours"
+      subtitle="Required. XPro only offers you jobs that start on a day you work. Hours apply as soon as you save."
+      icon="tabler-clock"
+    >
+      <WorkingHoursEditor v-model="form.workingHours" />
+    </ProfileSection>
+
+    <ProfileSection
+      title="Private verification documents"
+      subtitle="Identity, qualification or business documents. Only XPro review staff can see these."
+      icon="tabler-file-certificate"
+    >
+      <ProviderFilePicker
+        v-model:saved="form.documents"
+        v-model:queued="files"
+        purpose="provider_document"
+        label="Add verification documents"
+      />
+    </ProfileSection>
+
+    <ProfileSection
+      title="Face photo"
+      subtitle="Used by XPro staff to verify your identity. Not shown publicly."
+      icon="tabler-camera"
+    >
+      <VImg
+        v-if="form.photo?.dataUrl"
+        :src="form.photo.dataUrl"
+        :alt="form.photo.name"
+        max-width="160"
+        max-height="160"
+        rounded
+        class="mb-3"
+      />
+      <Attachments v-else-if="form.photo" :files="[form.photo]" />
+      <VFileInput
+        v-model="photoFile"
+        label="Upload a clear face photo"
+        :accept="providerFileAccept('provider_photo')"
+        :hint="providerFileHint('provider_photo')"
+        persistent-hint
+        :error-messages="photoProblem"
+        @update:model-value="choosePhoto"
+      />
+    </ProfileSection>
+
+    <ProfileSection
+      title="Public portfolio"
+      subtitle="These samples appear on your public profile after approval."
+      icon="tabler-photo"
+    >
+      <ProviderFilePicker
+        v-model:saved="form.portfolio"
+        v-model:queued="portfolioFiles"
+        purpose="provider_portfolio"
+        label="Add public portfolio samples"
+      />
+    </ProfileSection>
+
+    <ProfileSection
+      title="Bank details"
+      subtitle="XPro pays you into this account once Finance has verified it. The account name must match your business or personal name."
+      icon="tabler-building-bank"
+    >
+      <template v-if="awaitingBank">
+        <p class="mb-1">{{ awaitingBank.bankName }} · {{ maskAccount(awaitingBank.accountNumber) }}</p>
+        <p class="text-body-2 text-medium-emphasis">
+          {{ awaitingBank.accountName }}
+        </p>
+        <VAlert variant="tonal" color="warning">
+          Your bank change is awaiting XPro review. Payouts are paused until XPro verifies your new bank details. You
+          can change bank details again once it is reviewed.
+        </VAlert>
+      </template>
+      <template v-else-if="keepCurrent">
+        <p class="mb-1">{{ current!.bankName }} · {{ maskAccount(current!.accountNumber) }}</p>
+        <p class="text-body-2 text-medium-emphasis">
+          {{ current!.accountName }}
+        </p>
+        <VBtn variant="text" size="small" @click="useDifferentAccount"> Use a different account </VBtn>
+      </template>
+      <template v-else>
+        <BankForm v-model="form.bank" :holder-name="ops.actor?.name ?? ''" />
+        <VBtn v-if="current" variant="text" size="small" @click="keepAccount"> Keep my current account </VBtn>
+      </template>
+    </ProfileSection>
+
+    <VAlert v-if="ops.profile?.verification === 'approved'" color="info" variant="tonal" class="mb-5">
+      Changes to your phone, city, experience, bio, portfolio and weekly working hours apply straight away. Changes to
+      your trade, services, service areas, skills, job capacity, verification documents or face photo are reviewed by
+      XPro first. Your current details stay in use while they are reviewed.
+    </VAlert>
+    <VBtn
+      class="mb-5"
+      :disabled="ops.profile?.verification === 'pending' || !bankReady || !coverageReady"
+      :loading="ops.busy"
+      @click="submit"
+    >
+      {{
+        ops.profile?.verification === "pending"
+          ? "Awaiting XPro review"
+          : ops.profile?.verification === "approved"
+            ? "Save profile changes"
+            : "Submit profile for review"
+      }}
+    </VBtn>
+
+    <VCard v-if="ops.profile?.history.length">
       <VCardText>
         <h2 class="text-h5 mb-4">Review history</h2>
         <p v-for="(entry, index) in ops.profile.history" :key="index">
