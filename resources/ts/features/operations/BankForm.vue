@@ -19,8 +19,11 @@ const bankErrorMessage = (cause: unknown, fallback: string) => {
       data?: unknown
       response?: { _data?: unknown }
     }
-    const responseBody = candidate.data ?? candidate.response?._data
-    if (responseBody !== undefined) return getErrorMessage({ data: responseBody }, fallback)
+    if (candidate.data !== undefined) return getErrorMessage({ data: candidate.data }, fallback)
+    if (candidate.response && typeof candidate.response === "object") {
+      const responseBody = candidate.response._data
+      return responseBody !== undefined ? getErrorMessage({ data: responseBody }, fallback) : fallback
+    }
   }
 
   return getErrorMessage(cause, fallback)
