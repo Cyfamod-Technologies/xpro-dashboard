@@ -562,6 +562,7 @@ const submit = async () => {
             v-else
             v-model="form.phone"
             :required="phoneVerificationRequired"
+            :verifiable="phoneVerificationRequired"
             :show-validation="showPhoneValidation"
             @update:verified="phoneVerified = $event"
           />

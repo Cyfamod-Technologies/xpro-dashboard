@@ -3,9 +3,10 @@ import PhoneVerificationDialog from "@/features/phone/PhoneVerificationDialog.vu
 import { normalizePhone } from "@/features/phone/phone"
 import { usePhoneVerification } from "@/features/phone/use-phone-verification"
 
-const props = withDefaults(defineProps<{ required?: boolean; showValidation?: boolean }>(), {
+const props = withDefaults(defineProps<{ required?: boolean; showValidation?: boolean; verifiable?: boolean }>(), {
   required: false,
   showValidation: false,
+  verifiable: true,
 })
 const emit = defineEmits<{ "update:verified": [verified: boolean] }>()
 const phone = defineModel<string>({ required: true })
@@ -45,10 +46,10 @@ watch(verified, value => emit("update:verified", value), { immediate: true })
       :disabled="loading || sending || confirming"
       :loading="loading"
       :error-messages="phoneProblem"
-      hint="Use a Nigerian number that can receive SMS."
+      :hint="props.verifiable ? 'Use a Nigerian number that can receive SMS.' : 'Use a Nigerian number we can reach.'"
       persistent-hint
     />
-    <div class="d-flex align-center flex-wrap gap-2 mt-2">
+    <div v-if="props.verifiable" class="d-flex align-center flex-wrap gap-2 mt-2">
       <VChip
         size="small"
         variant="tonal"

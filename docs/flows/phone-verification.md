@@ -22,8 +22,9 @@ and autosaved before verification. Admin Settings has a **Require provider phone
 verification** switch, disabled by default, saved through the existing settings
 API with a reason and history. Only staff with `settings.manage` can change it.
 When enabled, all providers must verify their phone before submitting or saving
-their profile. When disabled, verification is optional and the phone checklist
-does not block submission.
+their profile. When disabled, the provider form shows a plain phone input with no
+Verify number button or verification status, and the checklist does not block submission.
+(The Account screen keeps its own verification field.)
 
 `GET /providers/me/onboarding-policy` exposes only the requirement flags
 (`phoneVerificationRequired`, `emailVerificationRequired`) to a provider. The email flag
