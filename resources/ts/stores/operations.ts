@@ -243,9 +243,7 @@ export const useOperationsStore = defineStore("operations", () => {
         // Live profiles are saved by catalog id; the names in the form are only for display.
         const { bank, services: _, skills: __, serviceIds, skillIds, ...input } = command.input
         const bankIsVerified =
-          Boolean(bank.bankCode) &&
-          /^\d{10}$/.test(bank.accountNumber) &&
-          bank.accountName.trim().length >= 3
+          Boolean(bank.bankCode) && /^\d{10}$/.test(bank.accountNumber) && bank.accountName.trim().length >= 3
 
         await providersApi.submit({
           ...input,
