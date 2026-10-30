@@ -4,7 +4,7 @@ function asRecord(value: unknown): ErrorRecord | undefined {
   return typeof value === "object" && value !== null ? (value as ErrorRecord) : undefined
 }
 
-function firstDetailMessage(details: unknown): string | undefined {
+export function firstDetailMessage(details: unknown): string | undefined {
   if (!Array.isArray(details)) return typeof details === "string" ? details : undefined
 
   for (const detail of details) {
