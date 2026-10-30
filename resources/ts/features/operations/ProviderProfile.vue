@@ -141,6 +141,14 @@ const capacityProblem = computed(() =>
     ? ""
     : "Enter a whole number from 1 to 20.",
 )
+const bioProblem = computed(() => {
+  const length = form.bio.trim().length
+  if (length && length < 20) return "Write at least 20 characters."
+  if (form.bio.length > 2000) return "Use 2000 characters or fewer."
+
+  return ""
+})
+const bioReady = computed(() => form.bio.trim().length >= 20 && form.bio.length <= 2000)
 const hoursProblem = computed(() => workingHoursProblem(form.workingHours))
 const coverageReady = computed(
   () =>
@@ -353,7 +361,7 @@ const checklist = computed(() => [
   {
     label: "Profile details",
     done: Boolean(
-      form.trade.trim() && form.city.trim() && form.phone.trim() && chosenServices.value.length && form.bio.trim(),
+      form.trade.trim() && form.city.trim() && form.phone.trim() && chosenServices.value.length && bioReady.value,
     ),
   },
   { label: "Service areas", done: !areaProblem.value },
@@ -569,8 +577,11 @@ const submit = async () => {
           <VTextarea
             v-model="form.bio"
             label="Public introduction"
-            hint="Shown on your public profile after approval."
+            hint="Shown on your public profile after approval (20 to 2000 characters)."
             persistent-hint
+            maxlength="2000"
+            counter="2000"
+            :error-messages="bioProblem"
           />
         </VCol>
       </VRow>
@@ -738,7 +749,7 @@ const submit = async () => {
     </VAlert>
     <VBtn
       class="mb-5"
-      :disabled="ops.profile?.verification === 'pending' || !coverageReady || !phonePolicyLoaded"
+      :disabled="ops.profile?.verification === 'pending' || !coverageReady || !bioReady || !phonePolicyLoaded"
       :loading="ops.busy || phonePolicyLoading"
       @click="submit"
     >

@@ -803,8 +803,12 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       const input = command.input
 
       need(
-        input.phone.trim() && input.trade.trim() && input.city.trim() && input.services.length && input.bio.trim(),
-        "Complete your contact, trade, location, services and introduction.",
+        input.phone.trim() && input.trade.trim() && input.city.trim() && input.services.length,
+        "Complete your contact, trade, location and services.",
+      )
+      need(
+        input.bio.trim().length >= 20 && input.bio.trim().length <= 2000,
+        "Your introduction must be between 20 and 2000 characters.",
       )
       need(
         input.services.every(service => Object.hasOwn(intakeFields, service)),
