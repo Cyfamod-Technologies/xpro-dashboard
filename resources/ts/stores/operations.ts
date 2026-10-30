@@ -223,6 +223,9 @@ export const useOperationsStore = defineStore("operations", () => {
     state.value.providers = [...state.value.providers.filter(item => item.id !== mapped.id), mapped]
   }
 
+  const isProviderSignupResponse = (item: ProviderReviewResponse): item is ProviderSignupResponse =>
+    "profileStarted" in item && item.profileStarted === false
+
   async function loadProvidersForReview(query: ProviderListQuery = {}) {
     if (isDemoMode) return undefined
     const response = await providersApi.listForReview(query)
@@ -232,9 +235,6 @@ export const useOperationsStore = defineStore("operations", () => {
 
     return response.data
   }
-
-  const isProviderSignupResponse = (item: ProviderReviewResponse): item is ProviderSignupResponse =>
-    "profileStarted" in item && item.profileStarted === false
 
   async function runServerProviderCommand(command: Command) {
     if (isDemoMode) return false

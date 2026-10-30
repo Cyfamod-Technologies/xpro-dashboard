@@ -43,6 +43,7 @@ const revealedBanks = ref<Awaited<ReturnType<typeof providersApi.revealBankDetai
 
 const fullName = computed(() => {
   const item = provider.value
+
   return item
     ? [item.firstName, item.lastName].filter(Boolean).join(" ") || item.businessName || item.email
     : "Provider"
@@ -140,6 +141,7 @@ const currentAction = computed(() => (action.value ? actionCopy[action.value] : 
 const pendingChangeEntries = computed(() => {
   const changes = provider.value?.pendingChanges
   if (!changes) return []
+
   return Object.entries(changes).filter(([key]) => !["documents", "photo"].includes(key))
 })
 const skillRows = computed(() => Object.entries(provider.value?.skills ?? {}))
@@ -159,6 +161,7 @@ const load = async () => {
       detail.portfolio.map(async file => {
         try {
           const response = await providersApi.fileUrl(file.id, detail.id)
+
           return { ...file, downloadUrl: response.data.url }
         } catch {
           return file
@@ -188,10 +191,12 @@ const submitAction = async () => {
   if (!item || !selected) return
   if (requiresNote.value && note.value.trim().length < 5) {
     actionError.value = "Enter a reason of at least 5 characters."
+
     return
   }
   if (selected === "delist" && !password.value) {
     actionError.value = "Enter your password to reauthenticate."
+
     return
   }
 
@@ -275,7 +280,7 @@ const formatChange = (value: unknown) =>
 const currentValueFor = (key: string) =>
   formatChange((provider.value as unknown as Record<string, unknown> | undefined)?.[key])
 
-watch(providerId, () => void load())
+watch(providerId, load)
 onMounted(load)
 </script>
 

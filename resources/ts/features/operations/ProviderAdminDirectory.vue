@@ -37,6 +37,7 @@ const bankStatus = (provider: ProviderReviewResponse) => {
   if (status === "pending") return "Pending review"
   if (status === "verified") return "Verified"
   if (status === "rejected") return "Rejected"
+
   return "Not set"
 }
 
@@ -62,15 +63,15 @@ const load = async () => {
 
 const searchLater = useDebounceFn(() => {
   page.value = 1
-  void load()
+  load()
 }, 300)
 
 watch([verification, bankReview], () => {
   page.value = 1
-  void load()
+  load()
 })
 watch(search, searchLater)
-watch([page, itemsPerPage], () => void load())
+watch([page, itemsPerPage], () => load())
 onMounted(load)
 
 const openProvider = (provider: ProviderReviewResponse) => {
