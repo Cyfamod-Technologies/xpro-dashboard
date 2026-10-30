@@ -40,6 +40,7 @@ export type StaffPermission =
   | "message.internal"
   | "progress.review"
   | "staff.manage"
+  | "staff.mfa.reset"
   | "settings.manage"
   | "catalog.manage"
   | "bank.review"

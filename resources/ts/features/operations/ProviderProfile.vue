@@ -234,7 +234,13 @@ const draft = useFormDraft<ProfileDraft>({
     })
     ids.serviceIds = [...data.serviceIds]
     ids.skillIds = structuredClone(data.skillIds)
-    selectedState.value = data.state
+    // A draft saved without a state, or with one that does not contain its city, gets it from the city when only one state fits.
+    const savedState = nigeriaStates.find(item => item.name === data.state)
+    const stateHasCity = savedState
+      ? [...savedState.lgas, savedState.capital].some(city => city.toLowerCase() === data.city.trim().toLowerCase())
+      : false
+
+    selectedState.value = stateHasCity ? data.state : (stateForLocation(data.city)?.name ?? data.state ?? "")
     if (data.bankCode) {
       changingBank.value = Boolean(current.value)
       form.bank = { bankCode: data.bankCode, accountNumber: "", accountName: "" }
@@ -357,6 +363,15 @@ const bankReady = computed(
     (Boolean(form.bank.bankCode) && isNuban(form.bank.accountNumber) && form.bank.accountName.trim().length >= 3),
 )
 
+// Live profiles need a state and a city that belongs to it, the pair the server validates; the demo only needs a city.
+const locationReady = computed(
+  () =>
+    Boolean(form.city.trim()) &&
+    (isDemoMode ||
+      (Boolean(selectedState.value) &&
+        cityOptions.value.some(city => city.toLowerCase() === form.city.trim().toLowerCase()))),
+)
+const submitting = ref(false)
 const checklist = computed(() => [
   {
     label: "Profile details",
@@ -364,6 +379,7 @@ const checklist = computed(() => [
       form.trade.trim() && form.city.trim() && form.phone.trim() && chosenServices.value.length && bioReady.value,
     ),
   },
+  { label: "State and city", done: locationReady.value },
   { label: "Service areas", done: !areaProblem.value },
   ...(!isDemoMode && emailVerificationRequired.value
     ? [{ label: "Email verified", done: Boolean(auth.user?.emailVerified) }]
@@ -423,7 +439,14 @@ const keepAccount = () => {
     }
 }
 
-const submit = async () => {
+// Everything the checklist asks for before a submit makes sense; the last two items only report review progress.
+const submitBlockers = computed(() =>
+  checklist.value
+    .filter(item => !item.done && !["Submitted", "Verified (identity)"].includes(item.label))
+    .map(item => item.label.replace(" (optional)", "")),
+)
+
+const runSubmit = async () => {
   if (phonePolicyLoading.value) return
   if (!isDemoMode) await loadPhonePolicy()
   if (!phonePolicyLoaded.value) return
@@ -462,7 +485,7 @@ const submit = async () => {
       type: "provider.submit",
       input: {
         ...toRaw(form),
-        ...(isDemoMode ? {} : { state: selectedState.value }),
+        ...(isDemoMode ? {} : { state: selectedState.value || stateForLocation(form.city)?.name || undefined }),
         bank:
           awaitingBank.value || (current.value && !changingBank.value)
             ? { bankCode: "", accountNumber: "", accountName: "" }
@@ -492,6 +515,17 @@ const submit = async () => {
     }
   } catch (cause) {
     ops.error = cause instanceof Error ? cause.message : "Unable to read your documents."
+  }
+}
+
+// One flag covers the whole submit: policy check, file uploads, saving, refreshing the profile and clearing the draft.
+const submit = async () => {
+  if (submitting.value) return
+  submitting.value = true
+  try {
+    await runSubmit()
+  } finally {
+    submitting.value = false
   }
 }
 </script>
@@ -751,8 +785,14 @@ const submit = async () => {
     </VAlert>
     <VBtn
       class="mb-5"
-      :disabled="ops.profile?.verification === 'pending' || !coverageReady || !bioReady || !phonePolicyLoaded"
-      :loading="ops.busy || phonePolicyLoading"
+      :disabled="
+        ops.profile?.verification === 'pending' ||
+        !coverageReady ||
+        !bioReady ||
+        !phonePolicyLoaded ||
+        submitBlockers.length > 0
+      "
+      :loading="submitting || ops.busy || phonePolicyLoading"
       @click="submit"
     >
       {{
@@ -763,6 +803,12 @@ const submit = async () => {
             : "Submit profile for review"
       }}
     </VBtn>
+    <p
+      v-if="submitBlockers.length && ops.profile?.verification !== 'pending'"
+      class="text-body-2 text-medium-emphasis mt-n3 mb-5"
+    >
+      To submit, complete: {{ submitBlockers.join(", ") }}.
+    </p>
 
     <VCard v-if="ops.profile?.history.length">
       <VCardText>
