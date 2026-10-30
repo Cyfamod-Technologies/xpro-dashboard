@@ -360,6 +360,8 @@ export interface ProviderInput {
   phone: string
   trade: string
   city: string
+  /** Id of the active managed city. Live profiles are saved by this id; `city` is its display name. */
+  cityId?: string
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills

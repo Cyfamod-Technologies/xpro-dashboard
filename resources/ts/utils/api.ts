@@ -1,7 +1,6 @@
 import { ofetch } from "ofetch"
 import { isDemoMode } from "@/utils/demo-mode"
-
-const baseURL = import.meta.env.VITE_API_BASE_URL?.trim()
+import { firstDetailMessage } from "@/utils/errors"
 
 export class ApiError extends Error {
   readonly code?: string
@@ -17,7 +16,11 @@ export class ApiError extends Error {
   }
 }
 
+const NETWORK_ERROR_MESSAGE = "We could not reach XPro. Check your connection and try again."
+
 export function toApiError(value: unknown): ApiError {
+  if (value instanceof ApiError) return value
+
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {}
   const response =
     source.response && typeof source.response === "object" ? (source.response as Record<string, unknown>) : {}
@@ -30,12 +33,17 @@ export function toApiError(value: unknown): ApiError {
   const error =
     payload.error && typeof payload.error === "object" ? (payload.error as Record<string, unknown>) : payload
 
+  const unreachable = source.name === "FetchError" && !source.response
+
   return new ApiError(
-    typeof error.message === "string"
-      ? error.message
-      : typeof source.message === "string"
-        ? source.message
-        : "The request could not be completed.",
+    firstDetailMessage(error.details) ??
+      (typeof error.message === "string"
+        ? error.message
+        : unreachable
+          ? NETWORK_ERROR_MESSAGE
+          : typeof source.message === "string"
+            ? source.message
+            : "The request could not be completed."),
     {
       code: typeof error.code === "string" ? error.code : undefined,
       details: error.details,
@@ -49,7 +57,9 @@ export function toApiError(value: unknown): ApiError {
   )
 }
 
-export const $api = ofetch.create({
+const baseURL = import.meta.env.VITE_API_BASE_URL?.trim()
+
+const rawApi = ofetch.create({
   baseURL,
   async onRequest({ options }) {
     if (!baseURL && !isDemoMode)
@@ -60,3 +70,15 @@ export const $api = ofetch.create({
       options.headers.set("Authorization", `Bearer ${accessToken}`)
   },
 })
+
+/**
+ * Every failed call rejects with an `ApiError` carrying the server's own message, code, details and status, not
+ * ofetch's generic `[POST] "url": 400`. Retries still happen inside `rawApi`; only the final error is converted.
+ */
+export const $api = Object.assign(
+  (request: Parameters<typeof rawApi>[0], options?: Parameters<typeof rawApi>[1]) =>
+    rawApi(request, options).catch((error: unknown) => {
+      throw toApiError(error)
+    }),
+  rawApi,
+) as typeof rawApi

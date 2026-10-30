@@ -145,6 +145,7 @@ export const providersApi = {
     phone: string
     trade: string
     city: string
+    cityId?: string
     serviceIds: string[]
     serviceAreas: string[]
     skillIds: Record<string, string[]>
