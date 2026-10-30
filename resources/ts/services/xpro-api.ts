@@ -10,6 +10,9 @@ interface ServerAuthUser {
   platformRoles: ("customer" | "provider" | "staff")[]
   staffStatus: string | null
   emailVerified: boolean
+  phone: string | null
+  phoneVerified: boolean
+  phoneVerifiedAt: string | null
   onboardingCompleted: boolean
   mfaEnabled: boolean
 }
@@ -34,6 +37,10 @@ const mapUser = (source: ServerAuthUser): User => {
     firstName,
     lastName,
     email: source.email,
+    emailVerified: source.emailVerified ?? false,
+    phone: source.phone ?? null,
+    phoneVerified: source.phoneVerified ?? false,
+    phoneVerifiedAt: source.phoneVerifiedAt ?? null,
     role,
     status: "active",
     title: staff ? "XPro Staff" : role === "provider" ? "XPro Service Provider" : "XPro Customer",
@@ -59,6 +66,18 @@ const mapStaffPermissions = async (user: User, accessToken?: string): Promise<Us
 }
 
 export const authApi = {
+  reauthenticate: (password: string, code?: string) =>
+    $api<ApiEnvelope<{ reauthToken: string; expiresInSeconds: number }>>("/auth/reauthenticate", {
+      method: "POST",
+      body: { password, ...(code ? { code } : {}) },
+    }),
+  startPhoneVerification: (phone: string) =>
+    $api<ApiEnvelope<PhoneVerificationChallenge>>("/me/phone/verify/start", { method: "POST", body: { phone } }),
+  confirmPhoneVerification: (verificationId: string, code: string) =>
+    $api<ApiEnvelope<VerifiedPhone>>("/me/phone/verify/confirm", {
+      method: "POST",
+      body: { verificationId, code },
+    }),
   login: async (payload: LoginPayload): Promise<ApiEnvelope<LoginResponse>> => {
     const response = await $api<ApiEnvelope<ServerLoginResponse>>("/auth/login", {
       method: "POST",
@@ -140,4 +159,17 @@ export const authApi = {
 
     return { ...response, data: await mapStaffPermissions(mapUser(response.data)) }
   },
+}
+
+export interface PhoneVerificationChallenge {
+  verificationId: string
+  phone: string
+  expiresAt: string
+  resendAfter: string
+}
+
+export interface VerifiedPhone {
+  phone: string
+  phoneVerified: boolean
+  phoneVerifiedAt: string
 }
