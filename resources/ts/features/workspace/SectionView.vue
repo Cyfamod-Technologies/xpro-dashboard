@@ -10,6 +10,7 @@ import WorkspaceUtilities from "@/features/operations/WorkspaceUtilities.vue"
 import WorkspaceOverview from "@/features/operations/WorkspaceOverview.vue"
 import ApprovalQueue from "@/features/operations/ApprovalQueue.vue"
 import StaffDirectory from "@/features/operations/StaffDirectory.vue"
+import StaffDirectoryLive from "@/features/staff/StaffDirectoryLive.vue"
 import ServiceCatalogAdmin from "@/features/catalog/ServiceCatalogAdmin.vue"
 import Feedback from "@/features/operations/Feedback.vue"
 import MessagesInbox from "@/features/messages/MessagesInbox.vue"
@@ -65,6 +66,7 @@ const platformSection = computed(() =>
     <ProviderEarnings v-else-if="!isDemoMode && section.id === 'payouts'" />
     <AccountPhoneVerification v-else-if="!isDemoMode && section.id === 'account'" />
     <ServiceCatalogAdmin v-else-if="!isDemoMode && section.id === 'services'" />
+    <StaffDirectoryLive v-else-if="!isDemoMode && section.id === 'staff'" />
     <VAlert v-else-if="section.id === 'services'" color="info" variant="tonal">
       {{ section.emptyMessage }}
     </VAlert>
