@@ -43,6 +43,7 @@ closed tab does not lose the work. The code lives in `resources/ts/features/draf
   `xpro-drafts` database in the browser's storage tools.
 - `pnpm exec tsx tests/form-drafts.mts` runs the draft envelope tests.
 - `pnpm exec tsx tests/review-cycles.mts` runs the tests for how the provider's review history is grouped into one card per review (`features/operations/review-cycles.ts`).
+- `pnpm exec tsx tests/featured-slots.mts` runs the tests for the Featured providers slot helpers (reorder, search, unsaved-change count).
 
 ## Chat
 
