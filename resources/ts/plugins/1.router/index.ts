@@ -7,7 +7,7 @@ import { createRouter, createWebHistory } from "vue-router/auto"
 import { store } from "@/plugins/2.pinia"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
-import { isWorkspaceRole, sectionPath, workspaceSections } from "@/features/workspace/config"
+import { isWorkspaceRole, sectionAllowed, sectionPath, workspaceSections } from "@/features/workspace/config"
 import { isDemoMode } from "@/utils/demo-mode"
 
 function recursiveLayouts(route: RouteRecordRaw): RouteRecordRaw {
@@ -97,7 +97,7 @@ router.beforeEach(async to => {
 
     if (role !== "admin" || !adminSection) return "/access-denied"
 
-    if (adminSection.permission && !useOperationsStore(store).can(adminSection.permission)) return "/access-denied"
+    if (!sectionAllowed(adminSection, useOperationsStore(store).can)) return "/access-denied"
   } else if (typeof to.meta.section === "string") {
     const section = to.meta.section
 

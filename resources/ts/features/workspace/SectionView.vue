@@ -12,6 +12,7 @@ import ApprovalQueue from "@/features/operations/ApprovalQueue.vue"
 import StaffDirectory from "@/features/operations/StaffDirectory.vue"
 import ServiceCatalogAdmin from "@/features/catalog/ServiceCatalogAdmin.vue"
 import Feedback from "@/features/operations/Feedback.vue"
+import MessagesInbox from "@/features/messages/MessagesInbox.vue"
 import RequestsWorkspace from "@/features/requests/RequestsWorkspace.vue"
 import AdminPayments from "@/features/requests/AdminPayments.vue"
 import ProviderEarnings from "@/features/requests/ProviderEarnings.vue"
@@ -25,6 +26,8 @@ const section = computed(() =>
     ? workspaceSections[auth.user.role].find(item => item.id === props.sectionId)
     : undefined,
 )
+// Staff get the Messages inbox, which fills the page, so the standard title block is replaced by a hidden heading.
+const showsInbox = computed(() => !isDemoMode && auth.user?.role === "admin" && section.value?.id === "messages")
 const platformSection = computed(() =>
   section.value?.id === "notifications" || section.value?.id === "approvals" ? section.value.id : null,
 )
@@ -32,7 +35,11 @@ const platformSection = computed(() =>
 
 <template>
   <div v-if="section">
-    <div v-if="section.id !== 'overview'" class="mb-6">
+    <div v-if="showsInbox" class="visually-hidden">
+      <h1>{{ section.title }}</h1>
+      <p>{{ section.description }}</p>
+    </div>
+    <div v-else-if="section.id !== 'overview'" class="mb-6">
       <div class="text-overline text-primary">{{ auth.user?.role }} WORKSPACE</div>
       <h1 class="text-h3 mb-2">
         {{ section.title }}
@@ -43,6 +50,7 @@ const platformSection = computed(() =>
     </div>
     <Feedback />
     <WorkspaceOverview v-if="section.id === 'overview'" />
+    <MessagesInbox v-else-if="showsInbox" />
     <RequestsWorkspace
       v-else-if="!isDemoMode && ['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(section.id)"
       :key="section.id"
@@ -84,3 +92,14 @@ const platformSection = computed(() =>
     <WorkspaceUtilities v-else :key="section.id" :section="section.id" />
   </div>
 </template>
+
+<style scoped>
+.visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  block-size: 1px;
+  inline-size: 1px;
+  white-space: nowrap;
+}
+</style>

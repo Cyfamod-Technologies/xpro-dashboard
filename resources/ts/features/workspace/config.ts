@@ -11,6 +11,8 @@ export interface WorkspaceSection {
   description: string
   emptyMessage: string
   permission?: StaffPermission
+  /** Shown when the staff member holds at least one of these (the Messages item needs any `message.*`). */
+  anyPermission?: StaffPermission[]
 }
 
 export const isWorkspaceRole = (role?: UserRole): role is WorkspaceRole =>
@@ -48,6 +50,19 @@ const messages = section(
   "Stay connected with the XPro team about your work.",
   "Your conversations with XPro will appear here.",
 )
+
+// Staff see every request's conversation in one inbox, so their Messages item has its own wording and is hidden from
+// staff who may not use any message channel.
+const adminMessages: WorkspaceSection = {
+  ...messages,
+  description: "Every request's conversation in one place. Reply to customers and providers, and keep notes for the team.",
+  emptyMessage: "No conversations yet. They start when a customer or provider writes to XPro.",
+  anyPermission: ["message.customer", "message.provider", "message.internal"],
+}
+
+/** True when the viewer may see a sidebar item or open its page. */
+export const sectionAllowed = (item: WorkspaceSection, can: (permission: StaffPermission) => boolean): boolean =>
+  (!item.permission || can(item.permission)) && (!item.anyPermission || item.anyPermission.some(can))
 
 const quotes = section(
   "quotes",
@@ -202,7 +217,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "payment.record",
     ),
     schedule,
-    messages,
+    adminMessages,
     section(
       "audit",
       "Activity history",
