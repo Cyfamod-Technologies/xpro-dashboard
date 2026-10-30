@@ -61,6 +61,12 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function refreshUser() {
+    const response = await authApi.me()
+
+    user.value = response.data
+  }
+
   function logout() {
     token.value = null
     user.value = null
@@ -85,6 +91,7 @@ export const useAuthStore = defineStore("auth", () => {
     login,
     completeMfa,
     hydrate,
+    refreshUser,
     logout,
     cancelMfa,
     hasRole,

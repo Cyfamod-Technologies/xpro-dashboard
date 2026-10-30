@@ -27,6 +27,8 @@ export type StaffPermission =
   | "request.flag"
   | "request.reassign"
   | "provider.review"
+  | "view.provider_identity"
+  | "view.bank_full"
   | "dispatch.manage"
   | "quote.manage"
   | "quote.approve"

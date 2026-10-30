@@ -1,6 +1,6 @@
 import type { StaffPermission } from "@/features/operations/types"
 import type { UserRole } from "@/types/domain"
-import { isWorkspaceRole, sectionPath, workspaceSections } from "@/features/workspace/config"
+import { isWorkspaceRole, sectionAllowed, sectionPath, workspaceSections } from "@/features/workspace/config"
 import type { VerticalNavItems } from "@layouts/types"
 
 export const getVerticalNavItems = (
@@ -14,7 +14,7 @@ export const getVerticalNavItems = (
       ? [{ title: "Browse services", to: "/", icon: { icon: "tabler-world" } }]
       : [{ title: "Public site", to: "/", icon: { icon: "tabler-world" } }]),
     ...workspaceSections[role]
-      .filter(item => !item.permission || can(item.permission))
+      .filter(item => sectionAllowed(item, can))
       .map(item => ({
         title: item.title,
         to: sectionPath(role, item.id),

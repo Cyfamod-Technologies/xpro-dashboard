@@ -6,6 +6,10 @@ export interface User {
   firstName: string
   lastName: string
   email: string
+  emailVerified?: boolean
+  phone?: string | null
+  phoneVerified?: boolean
+  phoneVerifiedAt?: string | null
   role: UserRole
   status: AccountStatus
   title: string

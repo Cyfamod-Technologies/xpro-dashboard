@@ -1,4 +1,9 @@
-export type FilePurpose = "provider_document" | "provider_portfolio" | "provider_photo" | "request_attachment"
+export type FilePurpose =
+  | "provider_document"
+  | "provider_portfolio"
+  | "provider_photo"
+  | "request_attachment"
+  | "message_attachment"
 
 interface FileRule {
   /** Human readable list, e.g. "PDF, PNG, JPG, WebP, DOC or DOCX". */
@@ -35,6 +40,22 @@ export const fileRules: Record<FilePurpose, FileRule> = {
     maxFiles: 10,
   },
   request_attachment: {
+    formats: "PDF, PNG, JPG, WebP, Word, Excel or MP4",
+    extensions: ["pdf", "png", "jpg", "jpeg", "webp", "doc", "docx", "xls", "xlsx", "mp4"],
+    types: [
+      "application/pdf",
+      ...images,
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "video/mp4",
+    ],
+    maxSize: 20 * MB,
+    maxFiles: 6,
+  },
+  // Chat attachments follow the request attachment rules: same formats and size, six files per message.
+  message_attachment: {
     formats: "PDF, PNG, JPG, WebP, Word, Excel or MP4",
     extensions: ["pdf", "png", "jpg", "jpeg", "webp", "doc", "docx", "xls", "xlsx", "mp4"],
     types: [

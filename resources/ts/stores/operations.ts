@@ -12,7 +12,13 @@ import {
 } from "@/features/operations/workflow"
 import { staffCan } from "@/features/operations/staff"
 import type { Actor, Command, OperationsState, ProviderProfile, StaffPermission } from "@/features/operations/types"
-import { type ProviderProfileResponse, type ProviderSignupResponse, providersApi } from "@/services/providers-api"
+import {
+  type ProviderListQuery,
+  type ProviderProfileResponse,
+  type ProviderReviewResponse,
+  type ProviderSignupResponse,
+  providersApi,
+} from "@/services/providers-api"
 import { isDemoMode } from "@/utils/demo-mode"
 import { defaultAssignmentSettings } from "@/features/operations/types"
 import { defaultWorkingHours } from "@/features/operations/hours"
@@ -217,16 +223,17 @@ export const useOperationsStore = defineStore("operations", () => {
     state.value.providers = [...state.value.providers.filter(item => item.id !== mapped.id), mapped]
   }
 
-  async function loadProvidersForReview() {
-    if (isDemoMode) return
-    const response = await providersApi.listForReview()
+  const isProviderSignupResponse = (item: ProviderReviewResponse): item is ProviderSignupResponse =>
+    "profileStarted" in item && item.profileStarted === false
+
+  async function loadProvidersForReview(query: ProviderListQuery = {}) {
+    if (isDemoMode) return undefined
+    const response = await providersApi.listForReview(query)
     state.value.providers = await Promise.all(
-      response.data.map(item =>
-        "profileStarted" in item
-          ? mapProviderSignup(item)
-          : addFileLinks(mapProvider(item), true),
-      ),
+      response.data.items.map(item => (isProviderSignupResponse(item) ? mapProviderSignup(item) : mapProvider(item))),
     )
+
+    return response.data
   }
 
   async function runServerProviderCommand(command: Command) {
@@ -236,9 +243,7 @@ export const useOperationsStore = defineStore("operations", () => {
         // Live profiles are saved by catalog id; the names in the form are only for display.
         const { bank, services: _, skills: __, serviceIds, skillIds, ...input } = command.input
         const bankIsVerified =
-          Boolean(bank.bankCode) &&
-          /^\d{10}$/.test(bank.accountNumber) &&
-          bank.accountName.trim().length >= 3
+          Boolean(bank.bankCode) && /^\d{10}$/.test(bank.accountNumber) && bank.accountName.trim().length >= 3
 
         await providersApi.submit({
           ...input,

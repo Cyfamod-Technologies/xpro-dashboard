@@ -64,7 +64,7 @@ const command = <T>(
   method: HttpMethod,
   body?: unknown,
   version?: number,
-  idempotencyKey = randomKey(),
+  idempotencyKey: string = randomKey(),
   extraHeaders: Record<string, string> = {},
 ) => {
   const headers = new Headers(extraHeaders)
@@ -247,8 +247,9 @@ export const requestsApi = {
       attachments: Array<{ id: string }>
       providerId?: string
     },
-    version: number,
-  ) => command<RequestView>(`/requests/${pathId(id)}/messages`, "POST", body, version),
+    version?: number,
+    idempotencyKey?: string,
+  ) => command<RequestView>(`/requests/${pathId(id)}/messages`, "POST", body, version, idempotencyKey),
   requestEscalations: (id: string) =>
     unwrap($api<ApiEnvelope<EscalationView[]>>(`/requests/${pathId(id)}/escalations`)),
   // Spec 04 §11 and plan §E name the body field `to`; the server DTO (`RaiseEscalationDto`) takes `target`.
