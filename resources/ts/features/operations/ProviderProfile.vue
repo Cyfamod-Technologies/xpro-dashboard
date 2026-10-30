@@ -439,10 +439,12 @@ const keepAccount = () => {
     }
 }
 
-// Everything the checklist asks for before a submit makes sense; the last two items only report review progress.
+// The checklist items that must be done before a submit makes sense. The review-progress items (submitted, identity
+// and bank verified by XPro) come after a submit, and bank details are optional, so only a half-filled form blocks.
+const reviewProgress = ["Submitted", "Verified (identity)", "Bank verified"]
 const submitBlockers = computed(() =>
   checklist.value
-    .filter(item => !item.done && !["Submitted", "Verified (identity)"].includes(item.label))
+    .filter(item => !item.done && !reviewProgress.includes(item.label))
     .map(item => item.label.replace(" (optional)", "")),
 )
 
