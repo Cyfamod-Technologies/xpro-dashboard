@@ -17,6 +17,7 @@ export const staffRolePermissions: Record<StaffRole, StaffPermission[] | "*"> = 
     "request.cancel",
     "request.flag",
     "provider.review",
+    "view.provider_identity",
     "dispatch.manage",
     "progress.review",
     "schedule.manage",
@@ -40,6 +41,7 @@ export const staffRolePermissions: Record<StaffRole, StaffPermission[] | "*"> = 
   ],
   finance: [
     "bank.review",
+    "view.bank_full",
     "payment.record",
     "payout.approve",
     "refund.manage",

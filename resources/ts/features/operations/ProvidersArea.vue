@@ -3,6 +3,7 @@ import { useOperationsStore } from "@/stores/operations"
 import { isDemoMode } from "@/utils/demo-mode"
 import ProviderReview from "@/features/operations/ProviderReview.vue"
 import FeaturedProvidersPanel from "@/features/operations/FeaturedProvidersPanel.vue"
+import ProviderAdminDirectory from "@/features/operations/ProviderAdminDirectory.vue"
 
 const ops = useOperationsStore()
 const route = useRoute()
@@ -29,7 +30,9 @@ const tab = computed<"review" | "featured">({
       <VTab value="featured"> Featured on public page </VTab>
     </VTabs>
     <FeaturedProvidersPanel v-if="tab === 'featured'" />
+    <ProviderAdminDirectory v-else-if="!isDemoMode" />
     <ProviderReview v-else />
   </template>
-  <ProviderReview v-else />
+  <ProviderAdminDirectory v-if="!canFeature && !isDemoMode" />
+  <ProviderReview v-else-if="!canFeature" />
 </template>
