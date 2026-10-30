@@ -60,6 +60,9 @@ interface BankAccountResponse {
 }
 
 export const providersApi = {
+  onboardingPolicy: () => $api<ApiEnvelope<{ phoneVerificationRequired: boolean; emailVerificationRequired: boolean }>>(
+      "/providers/me/onboarding-policy",
+    ),
   me: () => $api<ApiEnvelope<{ verification: "draft"; profile: null } | ProviderProfileResponse>>("/providers/me"),
   banks: () => $api<ApiEnvelope<{ code: string; name: string }[]>>("/providers/banks"),
   resolveBank: (bankCode: string, accountNumber: string) =>

@@ -17,6 +17,7 @@ import Attachments from "@/features/operations/Attachments.vue"
 import ProfileSection from "@/features/operations/ProfileSection.vue"
 import FilePicker from "@/features/operations/FilePicker.vue"
 import BankForm from "@/features/operations/BankForm.vue"
+import PhoneVerificationField from "@/features/phone/PhoneVerificationField.vue"
 import { providersApi } from "@/services/providers-api"
 import { useAuthStore } from "@/stores/auth"
 import DraftBanner from "@/features/drafts/DraftBanner.vue"
@@ -28,10 +29,18 @@ import { catalogIdsFromNames, skillOptionsForRoot } from "@/features/catalog/typ
 
 const props = defineProps<{ availability?: boolean }>()
 const ops = useOperationsStore()
+const auth = useAuthStore()
 const files = ref<File[]>([])
 const portfolioFiles = ref<File[]>([])
 const photoFile = ref<File[]>([])
 const photoProblem = ref("")
+const phoneVerified = ref(isDemoMode)
+const showPhoneValidation = ref(false)
+const phoneVerificationRequired = ref(false)
+const emailVerificationRequired = ref(false)
+const phonePolicyLoaded = ref(isDemoMode)
+const phonePolicyLoading = ref(false)
+const phonePolicyError = ref("")
 const profile = ops.profile
 const known: BankInput | undefined = profile?.payout.pending ?? profile?.payout.current ?? undefined
 
@@ -39,7 +48,7 @@ const known: BankInput | undefined = profile?.payout.pending ?? profile?.payout.
 const proposed = profile?.pendingChanges ?? profile
 const selectedState = ref(stateForLocation(profile?.city ?? "")?.name ?? "")
 const form = reactive<ProviderInput>({
-  phone: profile?.phone ?? "",
+  phone: auth.user?.phone ?? profile?.phone ?? "",
   trade: proposed?.trade ?? "",
   city: profile?.city ?? "",
   services: [...(proposed?.services ?? [])],
@@ -123,7 +132,8 @@ const skillsFor = (service: string): { id: string; label: string }[] => {
 // A top-level service with no sub-services has no skills to choose, so it cannot be missing one.
 const missingSkills = computed(() =>
   chosenServices.value.filter(
-    service => (isDemoMode || !catalogRoots.value.length || skillsFor(service).length) && !chosenSkills()[service]?.length,
+    service =>
+      (isDemoMode || !catalogRoots.value.length || skillsFor(service).length) && !chosenSkills()[service]?.length,
   ),
 )
 const capacityProblem = computed(() =>
@@ -166,11 +176,12 @@ interface ProfileDraft {
   bankCode: string
 }
 
-const auth = useAuthStore()
 const profileFingerprint = () => {
   const saved = ops.profile
 
-  return hashString(JSON.stringify(saved ? [saved.verification, saved.history.length, saved.changesReview?.state] : null))
+  return hashString(
+    JSON.stringify(saved ? [saved.verification, saved.history.length, saved.changesReview?.state] : null),
+  )
 }
 const resetBank = () => {
   const payout = ops.profile?.payout.pending ?? ops.profile?.payout.current
@@ -248,12 +259,30 @@ const pruneIds = () => {
   }
 }
 
+async function loadPhonePolicy() {
+  phonePolicyLoading.value = true
+  phonePolicyError.value = ""
+  phonePolicyLoaded.value = false
+  try {
+    const response = await providersApi.onboardingPolicy()
+
+    phoneVerificationRequired.value = response.data.phoneVerificationRequired
+    emailVerificationRequired.value = response.data.emailVerificationRequired
+    phonePolicyLoaded.value = true
+  } catch {
+    phonePolicyError.value = "Unable to load verification requirements. Try again before submitting."
+  } finally {
+    phonePolicyLoading.value = false
+  }
+}
+
 onMounted(async () => {
   if (isDemoMode) {
     if (!props.availability) await draft.start()
 
     return
   }
+  if (!props.availability) await loadPhonePolicy()
   try {
     catalogRoots.value = await catalogApi.publicTree()
   } catch (cause) {
@@ -264,7 +293,7 @@ onMounted(async () => {
     const saved = ops.profile
     if (!saved) return
     Object.assign(form, {
-      phone: saved.phone,
+      phone: auth.user?.phone ?? saved.phone,
       trade: saved.trade,
       city: saved.city,
       services: [...saved.services],
@@ -328,6 +357,10 @@ const checklist = computed(() => [
     ),
   },
   { label: "Service areas", done: !areaProblem.value },
+  ...(!isDemoMode && emailVerificationRequired.value
+    ? [{ label: "Email verified", done: Boolean(auth.user?.emailVerified) }]
+    : []),
+  ...(!isDemoMode && phoneVerificationRequired.value ? [{ label: "Phone verified", done: phoneVerified.value }] : []),
   { label: "Skills", done: chosenServices.value.length > 0 && !missingSkills.value.length },
   { label: "Job capacity", done: !capacityProblem.value },
   { label: "Working hours", done: !hoursProblem.value },
@@ -383,6 +416,20 @@ const keepAccount = () => {
 }
 
 const submit = async () => {
+  if (phonePolicyLoading.value) return
+  if (!isDemoMode) await loadPhonePolicy()
+  if (!phonePolicyLoaded.value) return
+  if (!isDemoMode && emailVerificationRequired.value && !auth.user?.emailVerified) {
+    ops.error = "Verify your email before submitting your provider profile."
+
+    return
+  }
+  showPhoneValidation.value = true
+  if (phoneVerificationRequired.value && !phoneVerified.value) {
+    ops.error = "Verify your phone number before submitting your profile."
+
+    return
+  }
   try {
     if (isDemoMode) {
       form.documents.push(...(await prepareFiles(files.value)))
@@ -423,6 +470,13 @@ const submit = async () => {
     })
     if (!isDemoMode) await ops.refreshProviderProfile()
     if (submitted) {
+      if (!isDemoMode) {
+        try {
+          await auth.refreshUser()
+        } catch {
+          ops.error = "Profile saved, but phone verification status could not be refreshed. Reload this page."
+        }
+      }
       await draft.clear()
       // A profile now waiting for review is locked; an approved one can be edited again.
       if (ops.profile?.verification !== "pending") draft.resume()
@@ -470,10 +524,7 @@ const submit = async () => {
   <AvailabilityPanel v-if="props.availability" />
   <template v-else>
     <DraftBanner :draft="draft" />
-    <ProfileSection
-      title="Profile details"
-      subtitle="Who you are and where you are based."
-    >
+    <ProfileSection title="Profile details" subtitle="Who you are and where you are based.">
       <VRow>
         <VCol cols="12" sm="6">
           <VTextField v-model="form.trade" label="Trade / business specialism" />
@@ -498,7 +549,18 @@ const submit = async () => {
           />
         </VCol>
         <VCol cols="12" sm="6">
-          <VTextField v-model="form.phone" label="Private contact phone" />
+          <VTextField v-if="isDemoMode" v-model="form.phone" label="Private contact phone" />
+          <PhoneVerificationField
+            v-else
+            v-model="form.phone"
+            :required="phoneVerificationRequired"
+            :show-validation="showPhoneValidation"
+            @update:verified="phoneVerified = $event"
+          />
+          <VAlert v-if="phonePolicyError" color="error" variant="tonal" class="mt-3" role="alert">
+            {{ phonePolicyError }}
+            <VBtn variant="text" size="small" :loading="phonePolicyLoading" @click="loadPhonePolicy">Retry</VBtn>
+          </VAlert>
         </VCol>
         <VCol cols="12" sm="6">
           <VTextField v-model.number="form.experience" label="Years of experience" type="number" min="0" />
@@ -520,13 +582,7 @@ const submit = async () => {
     >
       <VRow>
         <VCol cols="12">
-          <VSelect
-            v-model="chosenServices"
-            :items="serviceOptions"
-            label="Services offered"
-            multiple
-            chips
-          />
+          <VSelect v-model="chosenServices" :items="serviceOptions" label="Services offered" multiple chips />
         </VCol>
         <VCol v-if="chosenServices.length" cols="12">
           <fieldset v-for="service in chosenServices" :key="service" class="skills-group">
@@ -675,14 +731,15 @@ const submit = async () => {
     </ProfileSection>
 
     <VAlert v-if="ops.profile?.verification === 'approved'" color="info" variant="tonal" class="mb-5">
-      Changes to your phone, city, experience, bio, portfolio and weekly working hours apply straight away. Changes to
-      your trade, services, service areas, skills, job capacity, verification documents or face photo are reviewed by
-      XPro first. Your current details stay in use while they are reviewed.
+      <template v-if="phoneVerificationRequired">Phone changes require SMS verification. </template>Changes to your
+      city, experience, bio, portfolio and weekly working hours apply straight away. Changes to your trade, services,
+      service areas, skills, job capacity, verification documents or face photo are reviewed by XPro first. Your current
+      details stay in use while they are reviewed.
     </VAlert>
     <VBtn
       class="mb-5"
-      :disabled="ops.profile?.verification === 'pending' || !coverageReady"
-      :loading="ops.busy"
+      :disabled="ops.profile?.verification === 'pending' || !coverageReady || !phonePolicyLoaded"
+      :loading="ops.busy || phonePolicyLoading"
       @click="submit"
     >
       {{

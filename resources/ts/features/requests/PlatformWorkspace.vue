@@ -17,6 +17,35 @@ const error = ref("")
 const reason = ref("")
 const settingValue = reactive<Record<string, string>>({})
 const history = ref<Awaited<ReturnType<typeof requestsApi.settingsHistory>>>()
+const switchSettings = [
+  {
+    key: "provider.requireEmailVerification",
+    title: "Provider email verification",
+    label: "Require provider email verification",
+    description:
+      "When enabled, a provider must have a verified email before submitting their profile. Enabled by default.",
+    note: "Turning this off lets providers with an unverified email submit their profile for review.",
+  },
+  {
+    key: "provider.requirePhoneVerification",
+    title: "Provider phone verification",
+    label: "Require provider phone verification",
+    description:
+      "When enabled, every provider must verify their phone number by SMS before submitting or saving their profile. Disabled by default.",
+    note: "Configure SMS delivery before enabling this requirement. Save to apply your change to all providers.",
+  },
+]
+const switchKeys = switchSettings.map(item => item.key)
+const switchDraft = reactive<Record<string, boolean>>({})
+const switchCards = computed(() =>
+  switchSettings.flatMap(item => {
+    const setting = settings.value.find(candidate => candidate.key === item.key)
+
+    return setting ? [{ ...item, setting }] : []
+  }),
+)
+const otherSettings = computed(() => settings.value.filter(setting => !switchKeys.includes(setting.key)))
+const canManageSettings = computed(() => auth.user?.scopes.includes("settings.manage") ?? false)
 const title = (kind: string) => kind.replaceAll("_", " ")
 const requestPath = computed(() =>
   auth.user?.role === "admin" ? "/admin/requests" : auth.user?.role === "provider" ? "/jobs" : "/requests",
@@ -36,6 +65,7 @@ async function load() {
     } else {
       settings.value = await requestsApi.settings()
       for (const setting of settings.value) settingValue[setting.key] = JSON.stringify(setting.value, null, 2) ?? "null"
+      for (const card of switchCards.value) switchDraft[card.key] = card.setting.value === true
     }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "The workspace data could not be loaded."
@@ -61,7 +91,8 @@ async function save(setting: SettingView) {
   saving.value = setting.key
   error.value = ""
   try {
-    const value: unknown = JSON.parse(settingValue[setting.key] ?? "null")
+    const value: unknown =
+      setting.key in switchDraft ? switchDraft[setting.key] : JSON.parse(settingValue[setting.key] ?? "null")
     await requestsApi.saveSettings({
       changes: [{ key: setting.key, value, expectedVersion: setting.version }],
       reason: reason.value,
@@ -186,7 +217,36 @@ onBeforeUnmount(() => {
 
     <template v-else>
       <VTextField v-model="reason" label="Required reason for changes" class="mb-4" />
-      <VCard v-for="setting in settings" :key="setting.key" class="mb-4"
+      <VCard v-for="card in switchCards" :key="card.key" class="mb-4">
+        <VCardText>
+          <h3 class="text-h6 mb-2">{{ card.title }}</h3>
+          <p class="text-body-2 text-medium-emphasis">{{ card.description }}</p>
+          <VSwitch
+            v-model="switchDraft[card.key]"
+            :label="card.label"
+            color="primary"
+            :disabled="!canManageSettings || !!saving"
+            hide-details
+            class="mb-3"
+          />
+          <p class="text-body-2 text-medium-emphasis mb-4">{{ card.note }}</p>
+          <div class="d-flex flex-wrap gap-2">
+            <VBtn
+              :disabled="
+                !canManageSettings ||
+                reason.trim().length < 5 ||
+                switchDraft[card.key] === card.setting.value ||
+                !!saving
+              "
+              :loading="saving === card.key"
+              @click="save(card.setting)"
+              >Save requirement</VBtn
+            >
+            <VBtn variant="outlined" @click="loadHistory(card.key)">History</VBtn>
+          </div>
+        </VCardText>
+      </VCard>
+      <VCard v-for="setting in otherSettings" :key="setting.key" class="mb-4"
         ><VCardText>
           <div class="d-flex justify-space-between align-center flex-wrap ga-2 mb-2">
             <h3 class="text-h6">{{ setting.key }}</h3>
