@@ -1,4 +1,5 @@
 import { $api } from "@/utils/api"
+import type { StaffRole } from "@/features/operations/types"
 import type { ApiEnvelope, LoginPayload, LoginResponse, User } from "@/types/domain"
 
 interface ServerAuthUser {
@@ -63,6 +64,38 @@ const mapStaffPermissions = async (user: User, accessToken?: string): Promise<Us
     // A staff permission lookup must not block authentication; server commands remain authoritative.
     return user
   }
+}
+
+export interface StaffInvitePreview {
+  firstName: string | null
+  lastName: string | null
+  email: string
+  roles: StaffRole[]
+  expiresAt: string
+  /** The staff policy the invitee must accept; its version is sent back on accept. */
+  policy: { version: string; url: string } | null
+}
+
+export interface StaffInviteAccepted {
+  result: "mfa_enrollment_required"
+  enrollmentToken: string
+  secret: string
+  otpauthUrl: string
+}
+
+export const staffInviteApi = {
+  preview: (token: string) => $api<ApiEnvelope<StaffInvitePreview>>(`/auth/staff-invite/${encodeURIComponent(token)}`),
+  accept: (payload: {
+    token: string
+    password: string
+    policyVersion: string
+    conflictDeclaration: { hasLinkedCustomerAccount: boolean; linkedCustomerEmail?: string; statement: string }
+  }) => $api<ApiEnvelope<StaffInviteAccepted>>("/auth/staff-invite/accept", { method: "POST", body: payload }),
+  verifyEnrollment: (enrollmentToken: string, code: string) =>
+    $api<ApiEnvelope<{ result: "authenticated" }>>("/auth/mfa/verify-enrollment", {
+      method: "POST",
+      body: { enrollmentToken, code },
+    }),
 }
 
 export const authApi = {
@@ -137,23 +170,6 @@ export const authApi = {
     $api<ApiEnvelope<{ reset: boolean }>>("/auth/password/reset", { method: "POST", body: payload }),
   resendVerification: (email: string) =>
     $api<ApiEnvelope<{ sent: boolean }>>("/auth/email/resend", { method: "POST", body: { email } }),
-  acceptInvite: (payload: { token: string; firstName: string; lastName: string; password: string }) =>
-    $api<ApiEnvelope<{ token: string; secret: string; otpauthUrl: string; email: string }>>("/auth/invite/accept", {
-      method: "POST",
-      body: payload,
-    }),
-  enrollMfa: async (code: string, enrollmentToken: string): Promise<ApiEnvelope<LoginResponse>> => {
-    const response = await $api<ApiEnvelope<LoginResponse>>("/auth/mfa/enroll", {
-      method: "POST",
-      body: { code },
-      headers: { Authorization: `Bearer ${enrollmentToken}` },
-    })
-
-    return {
-      ...response,
-      data: { ...response.data, user: await mapStaffPermissions(response.data.user, response.data.token) },
-    }
-  },
   me: async (): Promise<ApiEnvelope<User>> => {
     const response = await $api<ApiEnvelope<ServerAuthUser>>("/auth/me")
 
