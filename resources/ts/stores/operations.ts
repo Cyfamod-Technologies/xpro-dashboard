@@ -118,6 +118,7 @@ export const useOperationsStore = defineStore("operations", () => {
       phone: result.phone,
       trade: result.trade,
       city: result.city,
+      state: result.state ?? null,
       services: result.services as ProviderProfile["services"],
       serviceAreas: result.serviceAreas,
       skills: result.skills as ProviderProfile["skills"],

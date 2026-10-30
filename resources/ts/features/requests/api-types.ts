@@ -331,7 +331,6 @@ export interface LocationView {
   id: string
   kind: "city" | "district"
   name: string
-  aliases?: string[]
   parentId?: string | null
   active: boolean
 }

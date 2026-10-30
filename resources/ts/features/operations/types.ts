@@ -244,6 +244,7 @@ export interface ProviderProfile {
   phone: string
   trade: string
   city: string
+  state?: string | null
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills
@@ -360,8 +361,8 @@ export interface ProviderInput {
   phone: string
   trade: string
   city: string
-  /** Id of the active managed city. Live profiles are saved by this id; `city` is its display name. */
-  cityId?: string
+  /** Chosen with `city` from the built-in Nigeria list; sent for live profiles. */
+  state?: string
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills
