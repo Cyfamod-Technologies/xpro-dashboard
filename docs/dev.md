@@ -42,6 +42,7 @@ closed tab does not lose the work. The code lives in `resources/ts/features/draf
 - To clear drafts while testing, delete the `xpro:draft:*` keys and the
   `xpro-drafts` database in the browser's storage tools.
 - `pnpm exec tsx tests/form-drafts.mts` runs the draft envelope tests.
+- `pnpm exec tsx tests/review-cycles.mts` runs the tests for how the provider's review history is grouped into one card per review (`features/operations/review-cycles.ts`).
 
 ## Chat
 

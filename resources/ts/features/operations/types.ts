@@ -268,7 +268,7 @@ export interface ProviderProfile {
   verification: VerificationStatus
   documents: Attachment[]
   reviewNote: string
-  history: { status: VerificationStatus; note: string; createdAt: string }[]
+  history: { kind?: string; status: VerificationStatus; note: string; fields?: string[]; createdAt: string }[]
   photo: Attachment | null
   pendingChanges: PendingProfileChanges | null
   changesReview: Review | null

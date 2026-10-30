@@ -3,7 +3,7 @@ import { useOperationsStore } from "@/stores/operations"
 import { isDemoMode } from "@/utils/demo-mode"
 import type { BankInput, ProviderInput, ServiceLine } from "@/features/operations/types"
 import { serviceLines } from "@/features/workspace/config"
-import { serviceSkills, when } from "@/features/operations/types"
+import { serviceSkills } from "@/features/operations/types"
 import { prepareFiles } from "@/features/operations/files"
 import { checkFiles, fileAccept, fileHint } from "@/features/operations/file-rules"
 import { isNuban, maskAccount } from "@/features/operations/banks"
@@ -17,6 +17,7 @@ import Attachments from "@/features/operations/Attachments.vue"
 import ProfileSection from "@/features/operations/ProfileSection.vue"
 import FilePicker from "@/features/operations/FilePicker.vue"
 import BankForm from "@/features/operations/BankForm.vue"
+import ReviewHistory from "@/features/operations/ReviewHistory.vue"
 import PhoneVerificationField from "@/features/phone/PhoneVerificationField.vue"
 import { providersApi } from "@/services/providers-api"
 import { useAuthStore } from "@/stores/auth"
@@ -372,6 +373,14 @@ const locationReady = computed(
         cityOptions.value.some(city => city.toLowerCase() === form.city.trim().toLowerCase()))),
 )
 const submitting = ref(false)
+const pendingFieldLabels = computed(() => (ops.profile ? profileChangeRows(ops.profile).map(row => row.label) : []))
+const pendingBank = computed(() => {
+  const pending = ops.profile?.payout.pending
+
+  return pending
+    ? { label: `${pending.bankName} ending ${pending.accountNumber.slice(-4)}`, submittedAt: pending.submittedAt }
+    : null
+})
 const checklist = computed(() => [
   {
     label: "Profile details",
@@ -812,16 +821,12 @@ const submit = async () => {
       To submit, complete: {{ submitBlockers.join(", ") }}.
     </p>
 
-    <VCard v-if="ops.profile?.history.length">
-      <VCardText>
-        <h2 class="text-h5 mb-4">Review history</h2>
-        <p v-for="(entry, index) in ops.profile.history" :key="index">
-          {{ entry.status.replaceAll("_", " ") }} · {{ entry.note }}<br /><small class="text-medium-emphasis">{{
-            when(entry.createdAt)
-          }}</small>
-        </p>
-      </VCardText>
-    </VCard>
+    <ReviewHistory
+      v-if="ops.profile"
+      :history="ops.profile.history"
+      :pending-fields="pendingFieldLabels"
+      :pending-bank="pendingBank"
+    />
   </template>
 </template>
 
