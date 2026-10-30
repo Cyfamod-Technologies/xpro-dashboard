@@ -39,7 +39,7 @@ export interface ProviderProfileResponse {
     pending: (BankAccountResponse & { state: "pending" }) | null
   }
   bankReviewState?: "pending" | "verified" | "rejected" | "none"
-  history: { kind: string; decision: string; note?: string; createdAt: string }[]
+  history: { kind: string; decision: string; note?: string; fields?: string[]; createdAt: string }[]
 }
 
 export interface ProviderSignupResponse {

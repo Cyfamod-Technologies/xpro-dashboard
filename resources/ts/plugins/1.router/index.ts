@@ -90,8 +90,13 @@ router.beforeEach(async to => {
   const role = auth.user?.role
 
   if (to.path === "/admin" || to.path.startsWith("/admin/")) {
+    // Detail pages such as /admin/staff/:id name their sidebar section in route meta; list pages use the :section param.
     const section =
-      to.path === "/admin" ? "overview" : String(to.params && "section" in to.params ? to.params.section : "")
+      to.path === "/admin"
+        ? "overview"
+        : typeof to.meta.adminSection === "string"
+          ? to.meta.adminSection
+          : String(to.params && "section" in to.params ? to.params.section : "")
 
     const adminSection = workspaceSections.admin.find(item => item.id === section)
 

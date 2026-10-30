@@ -25,6 +25,7 @@ declare module 'vue-router/auto-routes' {
     'admin': RouteRecordInfo<'admin', '/admin', Record<never, never>, Record<never, never>>,
     'admin-section': RouteRecordInfo<'admin-section', '/admin/:section', { section: ParamValue<true> }, { section: ParamValue<false> }>,
     'admin-providers-id': RouteRecordInfo<'admin-providers-id', '/admin/providers/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    'admin-staff-id': RouteRecordInfo<'admin-staff-id', '/admin/staff/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'auth-accept-invite': RouteRecordInfo<'auth-accept-invite', '/auth/accept-invite', Record<never, never>, Record<never, never>>,
     'auth-forgot-password': RouteRecordInfo<'auth-forgot-password', '/auth/forgot-password', Record<never, never>, Record<never, never>>,
     'auth-mfa': RouteRecordInfo<'auth-mfa', '/auth/mfa', Record<never, never>, Record<never, never>>,

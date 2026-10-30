@@ -138,8 +138,10 @@ export const useOperationsStore = defineStore("operations", () => {
       documents: result.documents,
       reviewNote: result.reviewNote ?? "",
       history: result.history.map(item => ({
+        kind: item.kind,
         status: item.decision as ProviderProfile["verification"],
         note: item.note ?? "",
+        fields: item.fields ?? [],
         createdAt: item.createdAt,
       })),
       photo: result.photo,
