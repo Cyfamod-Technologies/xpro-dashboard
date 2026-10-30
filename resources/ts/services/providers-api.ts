@@ -14,6 +14,7 @@ export interface ProviderProfileResponse {
   phone: string
   trade: string
   city: string
+  state?: string | null
   services: string[]
   serviceIds: string[]
   serviceAreas: string[]
@@ -145,7 +146,7 @@ export const providersApi = {
     phone: string
     trade: string
     city: string
-    cityId?: string
+    state?: string
     serviceIds: string[]
     serviceAreas: string[]
     skillIds: Record<string, string[]>

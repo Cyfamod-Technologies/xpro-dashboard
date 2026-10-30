@@ -19,8 +19,6 @@ import FilePicker from "@/features/operations/FilePicker.vue"
 import BankForm from "@/features/operations/BankForm.vue"
 import PhoneVerificationField from "@/features/phone/PhoneVerificationField.vue"
 import { providersApi } from "@/services/providers-api"
-import { requestsApi } from "@/services/requests-api"
-import type { LocationView } from "@/features/requests/api-types"
 import { useAuthStore } from "@/stores/auth"
 import DraftBanner from "@/features/drafts/DraftBanner.vue"
 import { hashString } from "@/features/drafts/draft-envelope"
@@ -53,7 +51,6 @@ const form = reactive<ProviderInput>({
   phone: auth.user?.phone ?? profile?.phone ?? "",
   trade: proposed?.trade ?? "",
   city: profile?.city ?? "",
-  cityId: "",
   services: [...(proposed?.services ?? [])],
   serviceAreas: [...(proposed?.serviceAreas ?? [])],
   skills: structuredClone(toRaw(proposed?.skills ?? {})),
@@ -88,40 +85,6 @@ const changesRejected = computed(() =>
 )
 const approved = computed(() => ops.profile?.verification === "approved")
 const stateOptions = nigeriaStates.map(state => state.name)
-
-// Live profiles pick their city from the managed list the server validates against (the same list the request form
-// uses), and are saved by its id. The state/LGA list below is only for the demo prototype.
-const cities = ref<LocationView[]>([])
-const cityNotice = ref("")
-const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-const cityByName = (name: string) =>
-  cities.value.find(city => [city.name, ...(city.aliases ?? [])].some(candidate => sameName(candidate, name)))
-
-// Keep the id and name in step with the managed list after anything that sets the city (saved profile, draft). An id
-// that is no longer active is rebuilt from the name; a city that cannot be matched is cleared so the provider picks
-// again instead of hitting a server validation error on submit.
-function syncCity() {
-  if (isDemoMode) return
-  const match = cities.value.find(city => city.id === form.cityId) ?? cityByName(form.city)
-
-  if (match) {
-    form.cityId = match.id
-    form.city = match.name
-    cityNotice.value = ""
-
-    return
-  }
-  if (form.city.trim()) cityNotice.value = `${form.city.trim()} is not an active location. Choose your city from the list.`
-  form.cityId = ""
-  form.city = ""
-}
-const chooseCity = (id: string | null) => {
-  const match = cities.value.find(city => city.id === id)
-
-  form.cityId = match?.id ?? ""
-  form.city = match?.name ?? ""
-  cityNotice.value = ""
-}
 const cityOptions = computed(() => {
   const state = nigeriaStates.find(item => item.name === selectedState.value)
 
@@ -208,7 +171,6 @@ interface ProfileDraft {
   phone: string
   trade: string
   city: string
-  cityId?: string
   state: string
   services: string[]
   serviceAreas: string[]
@@ -245,7 +207,6 @@ const draft = useFormDraft<ProfileDraft>({
     phone: form.phone,
     trade: form.trade,
     city: form.city,
-    cityId: form.cityId,
     state: selectedState.value,
     services: form.services,
     serviceAreas: form.serviceAreas,
@@ -263,7 +224,6 @@ const draft = useFormDraft<ProfileDraft>({
       phone: data.phone,
       trade: data.trade,
       city: data.city,
-      cityId: data.cityId ?? "",
       services: [...data.services],
       serviceAreas: [...data.serviceAreas],
       skills: structuredClone(data.skills),
@@ -275,7 +235,6 @@ const draft = useFormDraft<ProfileDraft>({
     ids.serviceIds = [...data.serviceIds]
     ids.skillIds = structuredClone(data.skillIds)
     selectedState.value = data.state
-    syncCity()
     if (data.bankCode) {
       changingBank.value = Boolean(current.value)
       form.bank = { bankCode: data.bankCode, accountNumber: "", accountName: "" }
@@ -338,11 +297,6 @@ onMounted(async () => {
     ops.error = cause instanceof Error ? cause.message : "The service list could not be loaded."
   }
   try {
-    cities.value = (await requestsApi.locations()).filter(item => item.kind === "city")
-  } catch (cause) {
-    ops.error = cause instanceof Error ? cause.message : "The city list could not be loaded."
-  }
-  try {
     await ops.refreshProviderProfile()
     const saved = ops.profile
     if (!saved) return
@@ -350,7 +304,6 @@ onMounted(async () => {
       phone: auth.user?.phone ?? saved.phone,
       trade: saved.trade,
       city: saved.city,
-      cityId: "",
       services: [...saved.services],
       serviceAreas: [...saved.serviceAreas],
       skills: structuredClone(toRaw(saved.skills)),
@@ -371,8 +324,7 @@ onMounted(async () => {
 
     ids.serviceIds = [...(offered.serviceIds ?? fromNames?.serviceIds ?? [])]
     ids.skillIds = structuredClone(toRaw(offered.skillIds ?? fromNames?.skillIds ?? {}))
-    selectedState.value = stateForLocation(saved.city)?.name ?? ""
-    syncCity()
+    selectedState.value = saved.state ?? stateForLocation(saved.city)?.name ?? ""
     const payout = saved.payout.pending ?? saved.payout.current
     if (payout)
       form.bank = { bankCode: payout.bankCode, accountNumber: payout.accountNumber, accountName: payout.accountName }
@@ -510,7 +462,7 @@ const submit = async () => {
       type: "provider.submit",
       input: {
         ...toRaw(form),
-        cityId: form.cityId || undefined,
+        ...(isDemoMode ? {} : { state: selectedState.value }),
         bank:
           awaitingBank.value || (current.value && !changingBank.value)
             ? { bankCode: "", accountNumber: "", accountName: "" }
@@ -586,7 +538,7 @@ const submit = async () => {
         <VCol cols="12" sm="6">
           <VTextField v-model="form.trade" label="Trade / business specialism" />
         </VCol>
-        <VCol v-if="isDemoMode" cols="12" sm="6">
+        <VCol cols="12" sm="6">
           <VSelect
             :model-value="selectedState"
             :items="stateOptions"
@@ -595,7 +547,7 @@ const submit = async () => {
             @update:model-value="selectState"
           />
         </VCol>
-        <VCol v-if="isDemoMode" cols="12" sm="6">
+        <VCol cols="12" sm="6">
           <VSelect
             v-model="form.city"
             :items="cityOptions"
@@ -603,19 +555,6 @@ const submit = async () => {
             :disabled="!selectedState"
             :hint="selectedState ? `Select an LGA or the state capital in ${selectedState}.` : 'Choose a state first.'"
             persistent-hint
-          />
-        </VCol>
-        <VCol v-else cols="12" sm="6">
-          <VSelect
-            :model-value="form.cityId || null"
-            :items="cities"
-            item-title="name"
-            item-value="id"
-            label="City"
-            :hint="cityNotice || 'Choose from the cities XPro currently serves.'"
-            :error="Boolean(cityNotice)"
-            persistent-hint
-            @update:model-value="chooseCity"
           />
         </VCol>
         <VCol cols="12" sm="6">
