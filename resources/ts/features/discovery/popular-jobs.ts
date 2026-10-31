@@ -1,3 +1,4 @@
+import { staticServiceName } from "@/features/discovery/service-aliases"
 import type { ServiceLine } from "@/features/operations/types"
 
 export interface PopularJob {
@@ -197,4 +198,4 @@ export const popularJobs: Record<ServiceLine, PopularJob[]> = {
 
 /** Popular jobs for a service; a catalog service added by an admin has none yet. */
 export const popularJobsFor = (service: string): PopularJob[] =>
-  (popularJobs as Partial<Record<string, PopularJob[]>>)[service] ?? []
+  (popularJobs as Partial<Record<string, PopularJob[]>>)[staticServiceName(service)] ?? []

@@ -259,10 +259,10 @@ export const sectionPath = (role: WorkspaceRole, id: string): string =>
 export const homePathFor = (role: WorkspaceRole): string => (role === "admin" ? "/admin" : "/overview")
 
 export const serviceLines = [
-  { name: "Design", icon: "tabler-ruler-2", description: "Architectural, structural and interior plans." },
-  { name: "Construction", icon: "tabler-building", description: "Construction, finishes and renovation." },
-  { name: "Hire", icon: "tabler-tools", description: "Professionals, trades and heavy equipment." },
-  { name: "Procurement", icon: "tabler-package", description: "Materials and fittings for your site." },
-  { name: "Facility management", icon: "tabler-home-cog", description: "Maintenance and property support." },
-  { name: "Waste management", icon: "tabler-recycle", description: "Waste collection and site clearance." },
+  { name: "Design", description: "Architectural, structural and interior plans." },
+  { name: "Construction", description: "Construction, finishes and renovation." },
+  { name: "Hire", description: "Professionals, trades and heavy equipment." },
+  { name: "Procurement", description: "Materials and fittings for your site." },
+  { name: "Facility management", description: "Maintenance and property support." },
+  { name: "Waste management", description: "Waste collection and site clearance." },
 ]

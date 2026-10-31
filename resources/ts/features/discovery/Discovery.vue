@@ -114,9 +114,6 @@ const jobs = computed(() => popularJobsFor(activeService.value))
             />
           </div>
           <div class="service-intro__body">
-            <VAvatar color="primary" variant="tonal" size="48">
-              <VIcon :icon="line.icon" />
-            </VAvatar>
             <h2 class="text-h4">
               {{ line.name }}
             </h2>

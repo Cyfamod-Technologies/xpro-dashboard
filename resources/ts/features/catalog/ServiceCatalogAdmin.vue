@@ -50,7 +50,7 @@ const dialogError = ref("")
 const selectedId = ref<string | null>(null)
 const expanded = ref<string[]>([])
 const maxDepthDraft = ref("2")
-const draft = reactive({ name: "", description: "", icon: "", requiresStartDate: false, active: true })
+const draft = reactive({ name: "", description: "", requiresStartDate: false, active: true })
 
 const typeItems = (Object.keys(questionTypeLabels) as QuestionType[]).map(value => ({
   title: questionTypeLabels[value],
@@ -95,7 +95,6 @@ function resetDraft(node?: AdminServiceNode) {
   Object.assign(draft, {
     name: node?.name ?? "",
     description: node?.description ?? "",
-    icon: node?.icon ?? "",
     requiresStartDate: node?.requiresStartDate ?? false,
     active: node?.active ?? true,
   })
@@ -183,7 +182,6 @@ const saveService = () => {
         version: node.version,
         name: draft.name.trim(),
         description: draft.description.trim(),
-        icon: draft.icon.trim(),
         requiresStartDate: draft.requiresStartDate,
         active: draft.active,
       }),
@@ -203,11 +201,11 @@ async function move(row: TreeRow, direction: -1 | 1) {
 // New service dialog (top level, or a sub-service of the selected node).
 const createDialog = ref(false)
 const createParent = ref<AdminServiceNode | null>(null)
-const createForm = reactive({ name: "", description: "", icon: "", requiresStartDate: false })
+const createForm = reactive({ name: "", description: "", requiresStartDate: false })
 
 function openCreate(parent: AdminServiceNode | null) {
   createParent.value = parent
-  Object.assign(createForm, { name: "", description: "", icon: "", requiresStartDate: false })
+  Object.assign(createForm, { name: "", description: "", requiresStartDate: false })
   dialogError.value = ""
   createDialog.value = true
 }
@@ -222,7 +220,6 @@ async function createService() {
         ...(parent ? { parentId: parent.id } : {}),
         name: createForm.name.trim(),
         ...(createForm.description.trim() ? { description: createForm.description.trim() } : {}),
-        ...(createForm.icon.trim() ? { icon: createForm.icon.trim() } : {}),
         requiresStartDate: createForm.requiresStartDate,
       })
     },
@@ -532,17 +529,6 @@ onMounted(() => load(true))
             <VForm class="d-flex flex-column gap-4" @submit.prevent="saveService">
               <VTextField v-model="draft.name" label="Name *" :rules="[requiredText]" />
               <VTextarea v-model="draft.description" label="Description" rows="2" auto-grow />
-              <VTextField
-                v-model="draft.icon"
-                label="Icon"
-                placeholder="tabler-tools"
-                hint="A Tabler icon name, for example tabler-tools."
-                persistent-hint
-              >
-                <template v-if="draft.icon.trim()" #prepend-inner>
-                  <VIcon :icon="draft.icon.trim()" />
-                </template>
-              </VTextField>
               <VSwitch
                 v-model="draft.requiresStartDate"
                 label="Requires a start date"
@@ -673,13 +659,6 @@ onMounted(() => load(true))
             <VAlert v-if="dialogError" type="error" variant="tonal">{{ dialogError }}</VAlert>
             <VTextField v-model="createForm.name" label="Name *" :rules="[requiredText]" autofocus />
             <VTextarea v-model="createForm.description" label="Description" rows="2" auto-grow />
-            <VTextField
-              v-model="createForm.icon"
-              label="Icon"
-              placeholder="tabler-tools"
-              hint="A Tabler icon name, for example tabler-tools."
-              persistent-hint
-            />
             <VSwitch
               v-model="createForm.requiresStartDate"
               label="Requires a start date"

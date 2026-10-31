@@ -42,7 +42,6 @@ export interface PublicServiceNode {
   id: string
   name: string
   description: string | null
-  icon: string | null
   requiresStartDate: boolean
   questions: PublicQuestion[]
   children: PublicServiceNode[]
@@ -80,7 +79,6 @@ export interface AdminServiceNode {
   depth: number
   name: string
   description: string | null
-  icon: string | null
   sortOrder: number
   active: boolean
   requiresStartDate: boolean
@@ -99,7 +97,6 @@ export interface ServiceInput {
   parentId?: string
   name: string
   description?: string
-  icon?: string
   requiresStartDate?: boolean
 }
 
@@ -107,7 +104,6 @@ export interface ServicePatch {
   version: number
   name?: string
   description?: string
-  icon?: string
   active?: boolean
   requiresStartDate?: boolean
 }
