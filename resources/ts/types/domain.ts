@@ -10,7 +10,10 @@ export interface User {
   phone?: string | null
   phoneVerified?: boolean
   phoneVerifiedAt?: string | null
+  /** The workspace in use: `admin` for staff, otherwise the active of the roles below (ROLE-1). */
   role: UserRole
+  /** Customer and provider roles the account holds; several means it can switch workspace. */
+  workspaceRoles?: ("customer" | "provider")[]
   status: AccountStatus
   title: string
   initials: string

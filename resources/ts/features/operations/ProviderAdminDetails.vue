@@ -375,6 +375,9 @@ onMounted(load)
         <VCard class="mb-5">
           <VCardTitle>Coverage and capacity</VCardTitle>
           <VCardText>
+            <VAlert v-if="provider.outsideServedAreas" type="info" variant="tonal" density="comfortable" class="mb-4">
+              XPro doesn't offer jobs in these areas yet. The provider can still be approved and will get offers once XPro opens there.
+            </VAlert>
             <div class="text-caption text-medium-emphasis mb-1">Service areas</div>
             <VChip v-for="area in provider.serviceAreas" :key="area" size="small" variant="tonal" class="me-1 mb-3">{{
               area

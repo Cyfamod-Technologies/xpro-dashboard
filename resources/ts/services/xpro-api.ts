@@ -9,6 +9,7 @@ interface ServerAuthUser {
   email: string
   role: "user" | "admin" | "super_admin"
   platformRoles: ("customer" | "provider" | "staff")[]
+  activeRole?: "customer" | "provider" | null
   staffStatus: string | null
   emailVerified: boolean
   phone: string | null
@@ -29,7 +30,12 @@ interface ServerLoginResponse {
 
 const mapUser = (source: ServerAuthUser): User => {
   const staff = source.staffStatus === "active" || source.role === "admin" || source.role === "super_admin"
-  const role = staff ? "admin" : source.platformRoles.includes("provider") ? "provider" : "customer"
+  const workspaceRoles = source.platformRoles.filter(
+    (item): item is "customer" | "provider" => item === "customer" || item === "provider",
+  )
+  const role = staff
+    ? "admin"
+    : (source.activeRole ?? (source.platformRoles.includes("provider") ? "provider" : "customer"))
   const firstName = source.firstName ?? ""
   const lastName = source.lastName ?? ""
 
@@ -43,6 +49,7 @@ const mapUser = (source: ServerAuthUser): User => {
     phoneVerified: source.phoneVerified ?? false,
     phoneVerifiedAt: source.phoneVerifiedAt ?? null,
     role,
+    workspaceRoles: staff ? [] : workspaceRoles,
     status: "active",
     title: staff ? "XPro Staff" : role === "provider" ? "XPro Service Provider" : "XPro Customer",
     initials: `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase(),
@@ -154,6 +161,8 @@ export const authApi = {
     password: string
     role: "customer" | "provider"
     acceptedTerms?: { termsVersion?: string; privacyVersion?: string; providerAgreementVersion?: string }
+    /** Where to resume after verification and sign-in, e.g. `/request` for a guest draft. */
+    returnTo?: string
   }) =>
     $api<ApiEnvelope<{ email: string; status: string }>>("/auth/register", {
       method: "POST",
@@ -170,6 +179,23 @@ export const authApi = {
     $api<ApiEnvelope<{ reset: boolean }>>("/auth/password/reset", { method: "POST", body: payload }),
   resendVerification: (email: string) =>
     $api<ApiEnvelope<{ sent: boolean }>>("/auth/email/resend", { method: "POST", body: { email } }),
+  /** Adds the customer or provider role to this account and makes it the active workspace (01 §6.16). */
+  addRole: async (
+    role: "customer" | "provider",
+    acceptedTerms?: { providerAgreementVersion?: string },
+  ): Promise<ApiEnvelope<User>> => {
+    const response = await $api<ApiEnvelope<ServerAuthUser>>("/me/roles", {
+      method: "POST",
+      body: { role, ...(acceptedTerms ? { acceptedTerms } : {}) },
+    })
+
+    return { ...response, data: mapUser(response.data) }
+  },
+  setActiveRole: async (role: "customer" | "provider"): Promise<ApiEnvelope<User>> => {
+    const response = await $api<ApiEnvelope<ServerAuthUser>>("/me/active-role", { method: "PUT", body: { role } })
+
+    return { ...response, data: mapUser(response.data) }
+  },
   me: async (): Promise<ApiEnvelope<User>> => {
     const response = await $api<ApiEnvelope<ServerAuthUser>>("/auth/me")
 

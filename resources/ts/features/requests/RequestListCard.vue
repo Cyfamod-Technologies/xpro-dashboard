@@ -16,7 +16,7 @@ defineEmits<{ open: [id: string] }>()
       </div>
       <h3 class="text-h5 mb-2">{{ item.title || "Service request" }}</h3>
       <p class="text-medium-emphasis mb-4">
-        {{ [item.service, item.cityName, item.districtName].filter(Boolean).join(" · ") }}
+        {{ [item.service, item.locationLabel].filter(Boolean).join(" · ") }}
       </p>
       <p class="text-body-2">Next: {{ nextActorLabel(item.nextActor) }}</p>
       <VBtn variant="outlined" @click="$emit('open', item.id)">{{

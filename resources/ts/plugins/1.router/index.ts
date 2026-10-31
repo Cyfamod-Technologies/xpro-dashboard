@@ -113,6 +113,25 @@ router.beforeEach(async to => {
       }
     }
 
+    // A page of the account's other role (e.g. a provider `/jobs` link while in the customer workspace) switches
+    // workspace first (01 §6.5).
+    const other = auth.otherWorkspaceRole
+    if (
+      isWorkspaceRole(role) &&
+      role !== "admin" &&
+      !workspaceSections[role].some(item => item.id === section) &&
+      other &&
+      workspaceSections[other].some(item => item.id === section)
+    ) {
+      try {
+        await auth.switchRole(other)
+      } catch {
+        return "/access-denied"
+      }
+
+      return true
+    }
+
     if (!isWorkspaceRole(role) || role === "admin" || !workspaceSections[role].some(item => item.id === section))
       return "/access-denied"
   } else if (to.path !== "/access-denied") {

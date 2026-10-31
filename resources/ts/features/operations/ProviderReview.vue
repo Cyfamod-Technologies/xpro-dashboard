@@ -143,6 +143,9 @@ const pendingBank = computed(() =>
         <p>{{ selected.bio }}</p>
         <p>{{ selected.services.join(" · ") }}</p>
         <h3 class="text-h6 mt-5 mb-3">Coverage and capacity</h3>
+        <VAlert v-if="selected.outsideServedAreas" type="info" variant="tonal" density="comfortable" class="mb-3">
+          XPro doesn't offer jobs in these areas yet. The provider can still be approved and will get offers once XPro opens there.
+        </VAlert>
         <dl class="coverage">
           <dt>Service areas</dt>
           <dd>

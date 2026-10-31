@@ -132,8 +132,9 @@ export interface RequestAnswerView {
 export interface CreateRequestBody {
   title: string
   serviceId: string
-  cityId: string
-  districtId: string
+
+  /** A served `lga` or `area`. */
+  locationId: string
   address: string
   phone: string
   contactMethod?: string
@@ -161,8 +162,9 @@ export interface CreateRequestGroupService {
 /** `POST /request-groups` body (Spec 04 §11.2, MS-1). The top-level fields are shared by every service; there is no top-level `attachments` (MS-8). */
 export interface CreateRequestGroupBody {
   title: string
-  cityId: string
-  districtId: string
+
+  /** A served `lga` or `area`. */
+  locationId: string
   address: string
   phone: string
   contactMethod?: string
@@ -195,8 +197,13 @@ export interface RequestSummary {
   title?: string
   service?: string
   servicePath?: ServicePathItem[] | null
-  cityName?: string | null
-  districtName?: string | null
+  locationId: string
+
+  /** Root first, ending with the chosen place. */
+  locationPath: LocationPathItem[]
+
+  /** Most specific first, joined with ", " (for example `Life Camp, Abuja Municipal, FCT`). */
+  locationLabel: string
   createdAt?: string
   updatedAt?: string
   overlays?: { cancellation: string | null; flag: string | null; suspendedParties: string[] }
@@ -419,12 +426,31 @@ export interface ApprovalQueueView {
   counts: { open: number; overdue: number }
 }
 
+/** Locations are one list: `state` → `lga` → `area` (LOC-2). */
+export type LocationKind = "state" | "lga" | "area"
+
 export interface LocationView {
   id: string
-  kind: "city" | "district"
+  kind: LocationKind
   name: string
-  parentId?: string | null
+  parentId: string | null
+  aliases: string[]
+
+  /** Admin lists include inactive rows. */
   active: boolean
+
+  /** A place is served when it and every ancestor are active and serviceable. */
+  serviceable: boolean
+  sort: number
+
+  /** Counts children under the same filters as the list that returned this row. */
+  hasChildren: boolean
+}
+
+export interface LocationPathItem {
+  id: string
+  kind: LocationKind
+  name: string
 }
 
 /** `GET /requests/pending`: the customer's open-request allowance (Spec 04 §6.2, §11.2, MS-6). */

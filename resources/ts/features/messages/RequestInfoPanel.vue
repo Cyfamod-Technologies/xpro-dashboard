@@ -25,7 +25,7 @@ const emit = defineEmits<{ back: []; claim: []; retry: [] }>()
 
 const title = computed(() => props.request?.title || props.row?.title || "Service request")
 const customerName = computed(() => props.request?.customerName || props.row?.customer.name || "Customer")
-const location = computed(() => [props.request?.cityName, props.request?.districtName].filter(Boolean).join(", "))
+const location = computed(() => props.request?.locationLabel ?? "")
 const startDate = computed(() => formatDate(props.request?.effectiveStartDate ?? props.request?.startDate))
 const ownerName = computed(() => {
   if (props.row?.owner) return props.row.owner.name
@@ -96,7 +96,7 @@ const openTo = computed(() => ({
               <dd>{{ request.service }}</dd>
             </div>
             <div v-if="location">
-              <dt>City</dt>
+              <dt>Location</dt>
               <dd>{{ location }}</dd>
             </div>
             <div v-if="startDate">

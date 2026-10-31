@@ -42,6 +42,7 @@ closed tab does not lose the work. The code lives in `resources/ts/features/draf
 - To clear drafts while testing, delete the `xpro:draft:*` keys and the
   `xpro-drafts` database in the browser's storage tools.
 - `pnpm exec tsx tests/form-drafts.mts` runs the draft envelope tests.
+- `pnpm exec tsx tests/safe-redirect.mts` runs the tests for the post-sign-in redirect check (`utils/safe-redirect.ts`, shared by login, signup and the verify-email page).
 - `pnpm exec tsx tests/request-bundle.mts` runs the tests for the live request form's several-services logic (limit, duplicate service, single vs group request body, server error paths, draft migration; `features/discovery/request-bundle.ts`).
 - `pnpm exec tsx tests/request-groups.mts` runs the tests for the request list's project bundles (grouping, cancel-all and review-all selection, notes and briefs, sequential runner; `features/requests/request-groups.ts`).
 - `pnpm exec tsx tests/catalog-skills.mts` runs the tests for the provider's service tree helpers (leaf skills, search, renamed-service aliases; `features/catalog/types.ts`).
