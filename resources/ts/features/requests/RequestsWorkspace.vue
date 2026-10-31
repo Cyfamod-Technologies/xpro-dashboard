@@ -22,11 +22,20 @@ import RequestGroupSection from "@/features/requests/RequestGroupSection.vue"
 import RequestLifecycle from "@/features/requests/RequestLifecycle.vue"
 import RequestListCard from "@/features/requests/RequestListCard.vue"
 import ReviewAllDialog from "@/features/requests/ReviewAllDialog.vue"
+import { sectionEnabled } from "@/features/workspace/config"
+import type { V1Actor, V1Request, V1Staff, V1Status } from "@/features/v1/types"
+import { v1Actor } from "@/features/v1/access"
+import { toV1RequestSummary, toV1RequestView } from "@/features/v1/adapters"
+import { v1Api } from "@/services/v1-api"
 
-const props = defineProps<{ section: string }>()
+const props = defineProps<{ section: string; v1Mode?: boolean }>()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const v1Viewer = computed<V1Actor | null>(() => v1Actor(auth.user))
+const v1Request = ref<V1Request>()
+const v1Staff = ref<V1Staff[]>([])
+const v1Assignee = ref(typeof route.query.assignee === "string" ? route.query.assignee : "")
 const summaries = ref<RequestSummary[]>([])
 const request = ref<RequestView>()
 // Only `GET /requests/:id` carries `customerRequestLimit`; command responses do not. Keep the last fetched value
@@ -72,7 +81,7 @@ const expiryTimer = ref<ReturnType<typeof setInterval>>()
 const sectionTitle = computed(
   () =>
     ({ dispatch: "Dispatch", quotes: "Quotes", payments: "Payments", payouts: "Earnings" })[props.section] ??
-    "Requests",
+    (props.v1Mode && v1Viewer.value === "customer" ? "My requests" : "Requests"),
 )
 // Requests made together (Spec 04 §4.1a) are listed under their project; the rest stay single rows.
 const entries = computed(() => groupRequests(summaries.value))
@@ -97,6 +106,16 @@ const openBulk = (kind: "cancel" | "review", entry: GroupEntry<RequestSummary>) 
   bulkDialog.value = { kind, groupId: entry.groupId, title: entry.title }
 }
 const selectedId = computed(() => (typeof route.query.request === "string" ? route.query.request : undefined))
+const showQuotePanel = computed(
+  () => props.section === "quotes" || (props.section === "requests" && route.query.quote === "1"),
+)
+const openQuotePanel = () => router.push({ path: route.path, query: { ...route.query, quote: "1" } })
+const closeQuotePanel = () => {
+  const routeQuery = { ...route.query }
+
+  delete routeQuery.quote
+  router.push({ path: route.path, query: routeQuery })
+}
 const currentAssignments = computed<AssignmentView[]>(() => {
   const value = request.value?.assignment
 
@@ -146,6 +165,21 @@ async function loadList() {
   loading.value = true
   error.value = ""
   try {
+    if (props.v1Mode) {
+      const status = ["submitted", "approved", "denied", "cancelled"].includes(stageFilter.value)
+        ? (stageFilter.value as V1Status)
+        : ""
+      const result = await v1Api.listRequests({
+        q: query.value || undefined,
+        status,
+        assignee: v1Assignee.value || undefined,
+        page: 1,
+        itemsPerPage: 50,
+      })
+      summaries.value = result.items.map(toV1RequestSummary)
+
+      return
+    }
     const result = await requestsApi.list({
       q: query.value || undefined,
       stage: stageFilter.value || undefined,
@@ -168,6 +202,7 @@ async function loadDetail(id = selectedId.value) {
   }
   if (!id) {
     request.value = undefined
+    v1Request.value = undefined
     customerLimit.value = undefined
     payment.value = undefined
 
@@ -176,6 +211,12 @@ async function loadDetail(id = selectedId.value) {
   loading.value = true
   error.value = ""
   try {
+    if (props.v1Mode) {
+      v1Request.value = await v1Api.getRequest(id)
+      request.value = toV1RequestView(v1Request.value)
+
+      return
+    }
     request.value = await requestsApi.get(id)
     if (request.value.customerRequestLimit) customerLimit.value = request.value.customerRequestLimit
     else if (customerLimit.value && request.value.ownerId && customerLimit.value.userId !== request.value.ownerId)
@@ -325,7 +366,14 @@ async function beginCheckout() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  if (props.v1Mode && v1Viewer.value === "admin") {
+    try {
+      v1Staff.value = await v1Api.listStaff()
+    } catch {
+      v1Staff.value = []
+    }
+  }
   expiryTimer.value = setInterval(() => {
     expiryTick.value = Date.now()
   }, 30_000)
@@ -349,6 +397,9 @@ watch(query, () => {
 watch([stageFilter, nextActorOnly], () => {
   if (!selectedId.value) loadList()
 })
+watch(v1Assignee, () => {
+  if (!selectedId.value && props.v1Mode) loadList()
+})
 </script>
 
 <template>
@@ -358,7 +409,9 @@ watch([stageFilter, nextActorOnly], () => {
         ><VCardText class="d-flex flex-wrap align-center justify-space-between ga-4">
           <div>
             <h2 class="text-h5">{{ sectionTitle }}</h2>
-            <p class="text-medium-emphasis mb-0">Live requests from the XPro API.</p>
+            <p class="text-medium-emphasis mb-0">
+              {{ v1Mode ? "Requests from the V1 demo workspace." : "Live requests from the XPro API." }}
+            </p>
           </div>
           <div class="d-flex flex-wrap align-center ga-3">
             <VTextField
@@ -369,13 +422,39 @@ watch([stageFilter, nextActorOnly], () => {
               clearable
               class="search-field"
             /><VSelect
+              v-if="v1Mode"
+              v-model="stageFilter"
+              :items="[
+                { title: 'Any status', value: '' },
+                { title: 'Submitted', value: 'submitted' },
+                { title: 'Approved', value: 'approved' },
+                { title: 'Denied', value: 'denied' },
+              ]"
+              label="Status"
+              clearable
+              hide-details
+              class="stage-filter"
+            /><VSelect
+              v-if="v1Mode && v1Viewer === 'admin'"
+              v-model="v1Assignee"
+              :items="[
+                { title: 'All assignees', value: '' },
+                { title: 'Unassigned', value: 'unassigned' },
+                ...v1Staff.map(member => ({ title: member.name, value: member.id })),
+              ]"
+              label="Assignee"
+              clearable
+              hide-details
+              class="stage-filter"
+            /><VSelect
+              v-else-if="!v1Mode"
               v-model="stageFilter"
               :items="stageItems"
               label="Stage"
               clearable
               hide-details
               class="stage-filter"
-            /><VCheckbox v-model="nextActorOnly" label="Waiting on me" hide-details />
+            /><VCheckbox v-if="!v1Mode" v-model="nextActorOnly" label="Waiting on me" hide-details />
           </div> </VCardText
       ></VCard>
       <VAlert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</VAlert>
@@ -459,6 +538,15 @@ watch([stageFilter, nextActorOnly], () => {
       >
       <RequestGroupPanel v-if="request.group" :group="request.group" :siblings="request.siblings ?? []" />
       <CustomerRequestLimit v-if="customerLimit" :limit="customerLimit" @change="customerLimit = $event" />
+      <VBtn
+        v-if="props.section === 'requests' && !showQuotePanel && (currentQuote || can('quote.save'))"
+        class="mb-5"
+        variant="outlined"
+        prepend-icon="tabler-file-invoice"
+        @click="openQuotePanel"
+      >
+        {{ currentQuote ? "View quote" : "Create quote" }}
+      </VBtn>
 
       <template v-if="props.section === 'dispatch'">
         <VCard class="mb-5"
@@ -801,7 +889,10 @@ watch([stageFilter, nextActorOnly], () => {
         >
       </template>
 
-      <template v-else-if="props.section === 'quotes'">
+      <template v-else-if="showQuotePanel">
+        <VBtn v-if="props.section === 'requests'" class="mb-4" variant="text" @click="closeQuotePanel">
+          Back to request
+        </VBtn>
         <VCard class="mb-5"
           ><VCardText>
             <h3 class="text-h5 mb-4">Quote</h3>
@@ -812,7 +903,7 @@ watch([stageFilter, nextActorOnly], () => {
             <VAlert v-if="currentQuote?.blockedReason" variant="tonal" color="warning" class="mb-4">{{
               currentQuote.blockedReason
             }}</VAlert>
-            <div v-if="can('quote.contribute')" class="mb-5">
+            <div v-if="sectionEnabled('provider', 'quotes') && can('quote.contribute')" class="mb-5">
               <h4 class="text-subtitle-1">Provider costing</h4>
               <div v-for="(item, index) in quoteItems" :key="`cost-${index}`" class="d-flex flex-wrap ga-3 mb-3">
                 <VTextField v-model="item.description" label="Cost item" />
@@ -983,7 +1074,10 @@ watch([stageFilter, nextActorOnly], () => {
                 >Decline</VBtn
               >
             </div>
-            <div v-if="currentQuote && can('quote.setPayout')" class="d-flex align-center ga-3 mt-5">
+            <div
+              v-if="sectionEnabled('provider', 'payouts') && currentQuote && can('quote.setPayout')"
+              class="d-flex align-center ga-3 mt-5"
+            >
               <VTextField v-model.number="payoutAmount" label="Provider payout (kobo)" type="number" hide-details />
               <VBtn
                 :disabled="!payoutAmount"
@@ -1185,8 +1279,11 @@ watch([stageFilter, nextActorOnly], () => {
         >
       </template>
       <RequestLifecycle
-        v-if="['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(props.section)"
+        v-if="['requests', 'dispatch', 'quotes', 'payments'].includes(props.section)"
         :request="request"
+        :v1-request="v1Request"
+        :v1-viewer="v1Mode ? (v1Viewer ?? undefined) : undefined"
+        :viewer-id="auth.user?.id ?? ''"
         @refresh="refreshCurrent"
       />
     </template>
