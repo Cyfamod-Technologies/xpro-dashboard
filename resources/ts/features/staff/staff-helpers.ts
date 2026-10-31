@@ -1,5 +1,6 @@
 import type { StaffRole } from "@/features/operations/types"
 import { staffRoleLabels } from "@/features/operations/staff"
+import { v1Workspace } from "@/features/workspace/config"
 import type { IdentityCheck, StaffHistoryEntry, StaffMemberView, StaffStatus } from "@/services/staff-api"
 
 export const staffStatusLabels: Record<StaffStatus, string> = {
@@ -274,8 +275,10 @@ export const staffActions = (member: StaffMemberView, ctx: StaffActionContext): 
       ...(self ? { disabledReason: SELF_STATUS } : lastSuper ? { disabledReason: LAST_SUPER_ADMIN } : {}),
     })
     add({ key: "rename", label: "Rename", icon: "tabler-pencil" })
-    if (member.leave) add({ key: "clearLeave", label: "Clear leave", icon: "tabler-calendar-off" })
-    else add({ key: "leave", label: "Set leave", icon: "tabler-calendar-event" })
+    if (v1Workspace.admin.leaveAndCover) {
+      if (member.leave) add({ key: "clearLeave", label: "Clear leave", icon: "tabler-calendar-off" })
+      else add({ key: "leave", label: "Set leave", icon: "tabler-calendar-event" })
+    }
     if (ctx.canResetMfa)
       add({
         key: "mfa",

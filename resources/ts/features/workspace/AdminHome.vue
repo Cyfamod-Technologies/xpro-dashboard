@@ -10,16 +10,9 @@ const areas = [
   {
     title: "Provider review",
     icon: "tabler-shield-check",
-    description: "Review profiles and verification documents before dispatch.",
+    description: "Review profiles and verification documents before assigning providers.",
     to: "/admin/providers",
     action: "Open providers",
-  },
-  {
-    title: "Dispatch",
-    icon: "tabler-route",
-    description: "Coordinate assignments, provider responses and schedules.",
-    to: "/admin/dispatch",
-    action: "Open dispatch",
   },
 ]
 </script>
@@ -28,7 +21,7 @@ const areas = [
   <div>
     <div class="d-flex justify-space-between align-start flex-wrap gap-4 mb-6">
       <div>
-        <div class="text-overline text-primary mb-2">ADMIN / DISPATCH</div>
+        <div class="text-overline text-primary mb-2">ADMIN</div>
         <h1 class="text-h3 mb-2">Your operations workspace.</h1>
         <p class="text-body-1 text-medium-emphasis mb-0">Coordinate requests, verified providers and the work ahead.</p>
       </div>
@@ -61,23 +54,8 @@ const areas = [
           <h2 class="text-h5">Keep every handoff connected.</h2>
         </div>
         <p class="text-body-1 mb-0">
-          Intake, review, provider selection, quotes, scheduling and completion share one request history.
+          Request intake, provider assignment and customer conversations share one request record.
         </p>
-      </VCardText>
-    </VCard>
-    <VCard>
-      <VCardText class="pa-6 pa-sm-8">
-        <div class="d-flex justify-space-between align-center flex-wrap gap-3 mb-6">
-          <h2 class="text-h5">Recent activity</h2>
-          <VBtn to="/admin/audit" variant="text"> View history </VBtn>
-        </div>
-        <div class="text-center py-6">
-          <VIcon icon="tabler-history" color="secondary" size="40" class="mb-4" />
-          <h3 class="text-h6 mb-2">No activity yet</h3>
-          <p class="text-body-1 text-medium-emphasis mb-0">
-            Request reviews, quote decisions and dispatch actions will appear here.
-          </p>
-        </div>
       </VCardText>
     </VCard>
   </div>

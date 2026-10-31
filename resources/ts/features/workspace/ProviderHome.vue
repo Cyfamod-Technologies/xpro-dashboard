@@ -21,9 +21,11 @@ const firstName = computed(() => auth.user?.firstName ?? "there")
             <VChip color="secondary" size="small" class="mb-5"> Profile not submitted </VChip>
             <h2 class="text-h4 mb-3">Introduce your expertise.</h2>
             <p class="text-body-1 mb-6">
-              Tell us about your services and service area, then share your documents for XPro review.
+              Tell us about your services and service area, then complete your profile for XPro review.
             </p>
-            <VBtn to="/verification" prepend-icon="tabler-user-check"> View provider profile </VBtn>
+            <VBtn :to="{ path: '/settings', query: { tab: 'profile' } }" prepend-icon="tabler-user-check">
+              View provider profile
+            </VBtn>
           </VCardText>
         </VCard>
       </VCol>

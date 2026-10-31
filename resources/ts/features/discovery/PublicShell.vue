@@ -13,7 +13,7 @@ const year = new Date().getFullYear()
 const nav = computed(() => [
   { label: "Home", to: "/", active: route.path === "/" && !route.hash },
   { label: "Services", to: "/services", active: route.path.startsWith("/services") },
-  { label: "Providers", to: "/providers", active: route.path.startsWith("/providers") },
+  ...(!isDemoMode ? [{ label: "Providers", to: "/providers", active: route.path.startsWith("/providers") }] : []),
   { label: "How it works", to: "/#how-it-works", active: false },
 ])
 </script>

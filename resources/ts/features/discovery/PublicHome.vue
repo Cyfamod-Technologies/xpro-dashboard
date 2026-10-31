@@ -5,7 +5,7 @@ import { serviceCoverAlt, serviceCoverImage } from "@/features/discovery/images"
 import { usePublicServices } from "@/features/discovery/public-services"
 import { popularJobsFor } from "@/features/discovery/popular-jobs"
 import type { ServiceLine } from "@/features/operations/types"
-import { useOperationsStore } from "@/stores/operations"
+import { store } from "@/mocks/v1/handlers"
 import { isDemoMode } from "@/utils/demo-mode"
 
 /**
@@ -14,7 +14,6 @@ import { isDemoMode } from "@/utils/demo-mode"
  */
 const heroImage: string = "/images/generated/hero/home-hero.jpg"
 
-const ops = useOperationsStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -44,13 +43,13 @@ const trust = [
     icon: "tabler-shield-check",
   },
   {
-    title: "Payment held by XPro",
-    body: "Providers are paid only after you confirm the job is done.",
+    title: "Clear decisions",
+    body: "Review the provider, agreed price and start date before a request is approved.",
     icon: "tabler-credit-card",
   },
   {
     title: "One accountable team",
-    body: "XPro reviews every quote, schedule and update for you.",
+    body: "XPro reviews your request and coordinates next steps with you.",
     icon: "tabler-users-group",
   },
   { title: "No consultation fee", body: "Requesting and receiving a quote is free.", icon: "tabler-circle-check" },
@@ -84,29 +83,19 @@ const verification = [
   {
     icon: "tabler-building-bank",
     title: "Bank details verified",
-    body: "Payout details are verified so payment goes to the right account.",
+    body: "Service areas are confirmed so requests can be matched to available providers.",
   },
 ]
 
-// Anonymised view of the approved network: counts and top skills per service line, never names.
+// Anonymised view of verified V1 providers: counts per service line, never names.
 const network = computed(() => {
-  const approved = ops.state.providers.filter(item => item.verification === "approved")
+  const approved = store.publicProviders()
 
   return services.value.map(line => {
     const name = line.name as ServiceLine
     const offering = approved.filter(item => item.services.includes(name))
-    const tally = new Map<string, number>()
 
-    for (const provider of offering) {
-      for (const skill of provider.skills[name] ?? []) tally.set(skill, (tally.get(skill) ?? 0) + 1)
-    }
-
-    const skills = [...tally.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 3)
-      .map(([skill]) => skill)
-
-    return { name, count: offering.length, skills }
+    return { name, count: offering.length, skills: [] as string[] }
   })
 })
 
@@ -151,7 +140,8 @@ watch(() => route.hash, scrollToHash)
       <p v-if="heroEyebrow" class="hero__eyebrow mb-4">{{ heroEyebrow }}</p>
       <h1 class="hero__title mb-4">Book trusted professionals for any building job.</h1>
       <p class="hero__copy mb-0">
-        Request once. XPro assigns a verified provider, sends your quote and holds your payment until the job is done.
+        Request once. Xpro reviews the details with you, agrees a price and start date, then assigns a verified
+        provider.
       </p>
     </div>
   </section>

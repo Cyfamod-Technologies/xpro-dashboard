@@ -39,6 +39,8 @@ interface TreeRow {
   index: number
 }
 
+const props = withDefaults(defineProps<{ readOnly?: boolean }>(), { readOnly: false })
+
 const conflictMessage = "Someone else changed this. Reload and try again."
 const catalog = ref<AdminCatalog | null>(null)
 const loading = ref(false)
@@ -434,7 +436,11 @@ onMounted(() => load(true))
 
     <VCard>
       <VCardText class="d-flex flex-wrap align-start gap-4">
+        <VAlert v-if="props.readOnly" type="info" variant="tonal" class="mb-0">
+          The V1 demo service catalog is read-only.
+        </VAlert>
         <VTextField
+          v-else
           v-model="maxDepthDraft"
           type="number"
           min="2"
@@ -444,9 +450,11 @@ onMounted(() => load(true))
           persistent-hint
           class="depth-field"
         />
-        <VBtn variant="outlined" :loading="busy" class="mt-1" @click="saveMaxDepth"> Save </VBtn>
+        <VBtn v-if="!props.readOnly" variant="outlined" :loading="busy" class="mt-1" @click="saveMaxDepth"> Save </VBtn>
         <VSpacer />
-        <VBtn color="primary" prepend-icon="tabler-plus" class="mt-1" @click="openCreate(null)"> Add service </VBtn>
+        <VBtn v-if="!props.readOnly" color="primary" prepend-icon="tabler-plus" class="mt-1" @click="openCreate(null)">
+          Add service
+        </VBtn>
       </VCardText>
     </VCard>
 
@@ -487,6 +495,7 @@ onMounted(() => load(true))
                   Inactive
                 </VChip>
                 <VBtn
+                  v-if="!props.readOnly"
                   icon="tabler-arrow-up"
                   variant="text"
                   size="x-small"
@@ -518,10 +527,10 @@ onMounted(() => load(true))
               <div class="text-caption text-medium-emphasis">
                 {{ path.map(item => item.name).join(" › ") }}
               </div>
-              <h2 class="text-h6">Edit service</h2>
+              <h2 class="text-h6">{{ props.readOnly ? "Service details" : "Edit service" }}</h2>
             </div>
 
-            <VForm class="d-flex flex-column gap-4" @submit.prevent="saveService">
+            <VForm v-if="!props.readOnly" class="d-flex flex-column gap-4" @submit.prevent="saveService">
               <VTextField v-model="draft.name" label="Name *" :rules="[requiredText]" />
               <VTextarea v-model="draft.description" label="Description" rows="2" auto-grow />
               <VSwitch
@@ -543,10 +552,15 @@ onMounted(() => load(true))
                 <VBtn type="submit" :loading="busy" :disabled="!draft.name.trim()"> Save </VBtn>
               </div>
             </VForm>
+            <div v-else class="d-flex flex-column gap-2">
+              <div><strong>Description:</strong> {{ selected.description || "No description" }}</div>
+              <div><strong>Status:</strong> {{ selected.active ? "Active" : "Inactive" }}</div>
+              <div><strong>Requests using this service:</strong> {{ selected.usage.requests }}</div>
+            </div>
 
-            <VDivider />
+            <VDivider v-if="!props.readOnly" />
 
-            <div class="d-flex flex-wrap align-center gap-3">
+            <div v-if="!props.readOnly" class="d-flex flex-wrap align-center gap-3">
               <VBtn
                 variant="outlined"
                 prepend-icon="tabler-plus"
@@ -573,9 +587,9 @@ onMounted(() => load(true))
               </span>
             </div>
 
-            <VDivider />
+            <VDivider v-if="!props.readOnly" />
 
-            <section aria-label="Questions" class="d-flex flex-column gap-3">
+            <section v-if="!props.readOnly" aria-label="Questions" class="d-flex flex-column gap-3">
               <div class="d-flex align-center gap-3">
                 <h3 class="text-subtitle-1">Questions</h3>
                 <VSpacer />

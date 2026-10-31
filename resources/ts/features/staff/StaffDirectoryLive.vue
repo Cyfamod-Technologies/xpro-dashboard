@@ -20,6 +20,8 @@ import type { StaffMemberView, StaffSummary } from "@/services/staff-api"
 import { staffApi } from "@/services/staff-api"
 import { useOperationsStore } from "@/stores/operations"
 
+const props = withDefaults(defineProps<{ readOnly?: boolean }>(), { readOnly: false })
+
 type Filter = "current" | "active" | "invited" | "suspended" | "former"
 
 const { smAndDown } = useDisplay()
@@ -62,6 +64,7 @@ const headers = [
   { title: "Last sign-in", key: "lastSignInAt", sortable: false },
   { title: "", key: "actions", sortable: false, align: "end" as const },
 ]
+const visibleHeaders = computed(() => (props.readOnly ? headers.filter(item => item.key !== "actions") : headers))
 
 const pills = computed<Array<{ value: Filter; label: string; count?: number; hint?: string }>>(() => [
   { value: "current", label: "All current" },
@@ -133,7 +136,9 @@ useIntervalFn(() => {
   if (document.visibilityState === "visible" && !action.value) load(true)
 }, 30000)
 
-const open = (member: StaffMemberView) => router.push(`/admin/staff/${encodeURIComponent(member.id)}`)
+const open = (member: StaffMemberView) => {
+  if (!props.readOnly) router.push(`/admin/staff/${encodeURIComponent(member.id)}`)
+}
 
 const start = (member: StaffMemberView | null, key: StaffActionKey | "invite") => {
   target.value = member
@@ -166,7 +171,7 @@ const emptyText = computed(() => (filter.value === "former" ? "No former staff."
 
 <template>
   <div class="d-flex justify-end mb-4">
-    <VBtn prepend-icon="tabler-user-plus" @click="start(null, 'invite')">Invite staff</VBtn>
+    <VBtn v-if="!props.readOnly" prepend-icon="tabler-user-plus" @click="start(null, 'invite')">Invite staff</VBtn>
   </div>
 
   <VAlert
@@ -231,7 +236,7 @@ const emptyText = computed(() => (filter.value === "former" ? "No former staff."
     <template #append><VBtn size="small" variant="text" @click="load">Retry</VBtn></template>
   </VAlert>
 
-  <VAlert v-if="onlyYou" type="info" variant="tonal" class="mb-4">
+  <VAlert v-if="onlyYou && !props.readOnly" type="info" variant="tonal" class="mb-4">
     You're the only staff member. Invite your team to share the work.
   </VAlert>
 
@@ -239,7 +244,7 @@ const emptyText = computed(() => (filter.value === "former" ? "No former staff."
     <VDataTableServer
       v-model:page="page"
       v-model:items-per-page="itemsPerPage"
-      :headers="headers"
+      :headers="visibleHeaders"
       :items="rows"
       :items-length="total"
       :loading="loading"
@@ -287,7 +292,7 @@ const emptyText = computed(() => (filter.value === "former" ? "No former staff."
         </template>
       </template>
       <template #item.lastSignInAt="{ item }">{{ formatDateTime(item.lastSignInAt) }}</template>
-      <template #item.actions="{ item }">
+      <template v-if="!props.readOnly" #item.actions="{ item }">
         <StaffRowMenu :member="item" :context="actionContext" @open="open(item)" @action="start(item, $event)" />
       </template>
     </VDataTableServer>
@@ -298,7 +303,7 @@ const emptyText = computed(() => (filter.value === "former" ? "No former staff."
       <VProgressCircular indeterminate color="primary" aria-label="Loading staff" />
     </div>
     <p v-else-if="!rows.length" class="text-body-2 text-medium-emphasis text-center py-6">{{ emptyText }}</p>
-    <VCard v-for="item in rows" :key="item.id" class="mb-3" link @click="open(item)">
+    <VCard v-for="item in rows" :key="item.id" class="mb-3" :link="!props.readOnly" @click="open(item)">
       <VCardText class="d-flex align-start gap-3">
         <VAvatar size="40" color="primary" variant="tonal">{{ initials(item) }}</VAvatar>
         <div class="flex-grow-1" style="min-inline-size: 0">
@@ -327,7 +332,13 @@ const emptyText = computed(() => (filter.value === "former" ? "No former staff."
             >
           </div>
         </div>
-        <StaffRowMenu :member="item" :context="actionContext" @open="open(item)" @action="start(item, $event)" />
+        <StaffRowMenu
+          v-if="!props.readOnly"
+          :member="item"
+          :context="actionContext"
+          @open="open(item)"
+          @action="start(item, $event)"
+        />
       </VCardText>
     </VCard>
     <VPagination v-if="total > itemsPerPage" v-model="page" :length="Math.ceil(total / itemsPerPage)" class="mt-2" />

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { staffRoleLabels } from "@/features/operations/staff"
+import { v1Workspace } from "@/features/workspace/config"
 import StaffActionDialogs from "@/features/staff/StaffActionDialogs.vue"
 import type { StaffAction } from "@/features/staff/StaffActionDialogs.vue"
 import {
@@ -348,7 +349,7 @@ onMounted(load)
           </VCardText>
         </VCard>
 
-        <VCard v-if="member.status === 'active'" class="mb-5">
+        <VCard v-if="v1Workspace.admin.leaveAndCover && member.status === 'active'" class="mb-5">
           <VCardTitle>Leave</VCardTitle>
           <VCardText>
             <template v-if="member.leave">

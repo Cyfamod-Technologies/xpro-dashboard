@@ -17,6 +17,8 @@ export interface SignInEvent {
 
 /** The signed-in person's own security and leave settings. */
 export const accountApi = {
+  updatePersonalDetails: (body: { firstName: string; lastName: string }) =>
+    $api<ApiEnvelope<{ firstName: string; lastName: string }>>("/auth/me", { method: "PATCH", body }),
   /** Changing the password signs the person out everywhere, this device included. */
   changePassword: (currentPassword: string, password: string) =>
     $api<ApiEnvelope<{ message?: string }>>("/auth/change-password", {

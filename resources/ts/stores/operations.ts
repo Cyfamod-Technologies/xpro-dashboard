@@ -233,7 +233,6 @@ export const useOperationsStore = defineStore("operations", () => {
     "profileStarted" in item && item.profileStarted === false
 
   async function loadProvidersForReview(query: ProviderListQuery = {}) {
-    if (isDemoMode) return undefined
     const response = await providersApi.listForReview(query)
     state.value.providers = await Promise.all(
       response.data.items.map(item => (isProviderSignupResponse(item) ? mapProviderSignup(item) : mapProvider(item))),
@@ -243,7 +242,6 @@ export const useOperationsStore = defineStore("operations", () => {
   }
 
   async function runServerProviderCommand(command: Command) {
-    if (isDemoMode) return false
     switch (command.type) {
       case "provider.submit": {
         // Live profiles are saved by catalog id; the names in the form are only for display.
@@ -269,6 +267,7 @@ export const useOperationsStore = defineStore("operations", () => {
           serviceAreaIds: serviceAreaIds ?? [],
           serviceIds: serviceIds ?? [],
           skillIds: skillIds ?? {},
+          ...(isDemoMode ? { services: _, skills: __ } : {}),
           photo: input.photo!,
           ...(bankIsVerified ? { bankCode: bank.bankCode, accountNumber: bank.accountNumber } : {}),
         })

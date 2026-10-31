@@ -3,6 +3,7 @@ import { useDebounceFn } from "@vueuse/core"
 import type { ProviderReviewResponse, ProviderSignupResponse } from "@/services/providers-api"
 import { providersApi } from "@/services/providers-api"
 
+const props = withDefaults(defineProps<{ hidePayout?: boolean }>(), { hidePayout: false })
 const router = useRouter()
 const rows = ref<ProviderReviewResponse[]>([])
 const search = ref("")
@@ -23,6 +24,7 @@ const headers = [
   { title: "Availability", key: "available", sortable: false },
   { title: "Action", key: "actions", sortable: false, align: "end" as const },
 ]
+const visibleHeaders = computed(() => (props.hidePayout ? headers.filter(item => item.key !== "payout") : headers))
 
 const fullName = (provider: ProviderReviewResponse) =>
   [provider.firstName, provider.lastName].filter(Boolean).join(" ") || provider.email || "Provider"
@@ -93,7 +95,7 @@ const openProvider = (provider: ProviderReviewResponse) => {
             clearable
           />
         </VCol>
-        <VCol cols="12" sm="6" md="3">
+        <VCol v-if="!props.hidePayout" cols="12" sm="6" md="3">
           <VSelect
             v-model="verification"
             label="Profile status"
@@ -133,7 +135,7 @@ const openProvider = (provider: ProviderReviewResponse) => {
     <VDataTableServer
       v-model:page="page"
       v-model:items-per-page="itemsPerPage"
-      :headers="headers"
+      :headers="visibleHeaders"
       :items="rows"
       :items-length="total"
       :loading="loading"
