@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { getHorizontalNavItems } from "@/navigation/horizontal"
+import { v1Actor } from "@/features/v1/access"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
 
@@ -14,7 +15,7 @@ import { VNodeRenderer } from "@layouts/components/VNodeRenderer"
 
 const auth = useAuthStore()
 const ops = useOperationsStore()
-const navItems = computed(() => getHorizontalNavItems(auth.user?.role, ops.can))
+const navItems = computed(() => getHorizontalNavItems(auth.user?.role, ops.can, v1Actor(auth.user)))
 </script>
 
 <template>

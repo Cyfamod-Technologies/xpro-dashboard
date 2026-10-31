@@ -34,6 +34,21 @@ const useDemoAccount = (email: string, password: string) => {
   form.mfaCode = ""
 }
 
+const resetDemo = () => {
+  try {
+    window.localStorage.removeItem("xpro:v1-mock")
+    window.localStorage.removeItem("xpro:demo-accounts")
+    window.localStorage.removeItem("xpro:demo-user-state")
+    for (const key of Object.keys(window.localStorage))
+      if (key.startsWith("xpro:draft:")) window.localStorage.removeItem(key)
+    window.sessionStorage.removeItem("xpro-demo-workspace-v1")
+  } catch {
+    // Storage may be disabled by the browser.
+  }
+  auth.logout()
+  window.location.assign("/login")
+}
+
 const submit = async () => {
   errorMessage.value = ""
 
@@ -152,6 +167,9 @@ const submit = async () => {
           >
           <VIcon icon="tabler-arrow-up-right" />
         </button>
+        <div class="d-flex justify-end mt-3">
+          <VBtn size="small" variant="text" @click="resetDemo">Reset demo data</VBtn>
+        </div>
       </VCardText>
     </VCard>
   </AuthShell>

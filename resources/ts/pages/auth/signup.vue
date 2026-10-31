@@ -91,7 +91,7 @@ const submit = async () => {
     legalVersions.value = versions
     if (Object.keys(versions).length > 0 && !form.accepted)
       throw new Error("Accept the current legal documents to continue.")
-    await authApi.registerAccount({
+    const registered = await authApi.registerAccount({
       firstName: form.firstName,
       lastName: form.lastName,
       email: form.email,
@@ -102,7 +102,12 @@ const submit = async () => {
     })
     await router.push({
       path: "/auth/verify-email",
-      query: { email: form.email, role: accountRole.value, ...(redirect ? { redirect } : {}) },
+      query: {
+        email: form.email,
+        role: accountRole.value,
+        ...(redirect ? { redirect } : {}),
+        ...(registered.data.verificationToken ? { token: registered.data.verificationToken } : {}),
+      },
     })
   } catch (error) {
     errorMessage.value = getErrorMessage(error)

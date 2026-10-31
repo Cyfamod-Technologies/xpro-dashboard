@@ -67,7 +67,7 @@ const verify = async () => {
     const response = await authApi.verifyEmail(token || "prototype-verification-token")
 
     verifiedEmail.value = response.data.email ?? ""
-    returnTo.value = safeRedirectPath(response.data.returnTo)
+    returnTo.value = safeRedirectPath(response.data.returnTo) ?? queryRedirect
     verified.value = true
   } catch (error) {
     errorMessage.value = getErrorMessage(error)

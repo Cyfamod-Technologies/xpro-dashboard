@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { getVerticalNavItems } from "@/navigation/vertical"
+import { v1Actor, v1RoleLabel } from "@/features/v1/access"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
 import { staffRoleLabels } from "@/features/operations/staff"
@@ -16,10 +17,11 @@ import { VerticalNavLayout } from "@layouts"
 
 const auth = useAuthStore()
 const ops = useOperationsStore()
-const navItems = computed(() => getVerticalNavItems(auth.user?.role, ops.can))
+const navItems = computed(() => getVerticalNavItems(auth.user?.role, ops.can, v1Actor(auth.user)))
 
 const roleChipLabel = computed(() => {
   if (!auth.user) return "XPro workspace"
+  if (v1Actor(auth.user)) return v1RoleLabel(v1Actor(auth.user))
 
   const roles = auth.user.role === "admin" ? ops.staffMember?.roles : undefined
 
