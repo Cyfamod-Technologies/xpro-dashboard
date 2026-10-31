@@ -326,18 +326,20 @@ assert.equal(
 
 const adminMessages = workspaceSections.admin.find(item => item.id === "messages")!
 
-assert.ok(adminMessages.anyPermission?.length === 3)
-assert.match(adminMessages.description, /^Every request's conversation in one place\./)
-assert.equal(sectionAllowed(adminMessages, () => false), false)
-assert.equal(sectionAllowed(adminMessages, permission => permission === "message.internal"), true)
-assert.equal(sectionAllowed(adminMessages, permission => permission === "view.pricing"), false)
+// V1: the admin inbox is limited to the customer channel.
+assert.deepEqual(adminMessages.anyPermission, ["message.customer"])
+assert.match(adminMessages.description, /^Customer conversations about requests in one place\./)
+assert.equal(sectionAllowed("admin", adminMessages, () => false), false)
+assert.equal(sectionAllowed("admin", adminMessages, permission => permission === "message.customer"), true)
+assert.equal(sectionAllowed("admin", adminMessages, permission => permission === "message.internal"), false)
+assert.equal(sectionAllowed("admin", adminMessages, permission => permission === "message.provider"), false)
 // Customers and providers keep the shared Messages section.
 assert.notEqual(workspaceSections.customer.find(item => item.id === "messages")?.description, adminMessages.description)
 assert.equal(workspaceSections.provider.find(item => item.id === "messages")?.anyPermission, undefined)
 // Existing single-permission sections still work.
 const services = workspaceSections.admin.find(item => item.id === "services")!
 
-assert.equal(sectionAllowed(services, permission => permission === "catalog.manage"), true)
-assert.equal(sectionAllowed(services, () => false), false)
+assert.equal(sectionAllowed("admin", services, permission => permission === "catalog.manage"), true)
+assert.equal(sectionAllowed("admin", services, () => false), false)
 
 console.log("messages-helpers: all checks passed")

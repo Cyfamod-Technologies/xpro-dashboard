@@ -11,12 +11,37 @@ export interface WorkspaceSection {
   description: string
   emptyMessage: string
   permission?: StaffPermission
-  /** Shown when the staff member holds at least one of these (the Messages item needs any `message.*`). */
+  /** Shown when the staff member holds at least one of these. */
   anyPermission?: StaffPermission[]
 }
 
 export const isWorkspaceRole = (role?: UserRole): role is WorkspaceRole =>
   role === "customer" || role === "provider" || role === "admin"
+
+// Keep the section definitions and feature components in place for later releases.
+// V1 exposes only the smaller workspace through navigation and route checks. Who sees which section, per V1 actor
+// (customer, admin, staff, provider), is `v1Sections` in `features/v1/access.ts`; these lists switch whole sections off.
+// V1-ASSUMPTION A6: admin Payments (`finance`) and Service catalog (`services`) stay visible and untouched.
+export const v1Workspace = {
+  disabledSections: {
+    customer: ["quotes", "payments", "schedule", "notifications"],
+    provider: ["quotes", "payouts", "schedule", "messages", "notifications"],
+    admin: ["approvals", "dispatch", "quotes", "schedule", "audit", "notifications"],
+  },
+  admin: {
+    leaveAndCover: false,
+    advancedSettings: false,
+    changeReason: false,
+    settingsHistory: false,
+    emailPreferences: false,
+    customerMessagesOnly: true,
+    // V1 provider review is identity and services only; bank review and payout readiness are deferred.
+    bankReview: false,
+  },
+} as const
+
+export const sectionEnabled = (role: WorkspaceRole, id: string): boolean =>
+  !(v1Workspace.disabledSections[role] as readonly string[]).includes(id)
 
 const section = (
   id: string,
@@ -39,8 +64,8 @@ const settings = section(
   "settings",
   "Settings",
   "tabler-settings",
-  "Manage your account and workspace preferences.",
-  "Your preferences will appear here.",
+  "Manage your account, profile and verification details.",
+  "Your settings will appear here.",
 )
 
 const adminSettings: WorkspaceSection = {
@@ -56,19 +81,23 @@ const messages = section(
   "Your conversations with XPro will appear here.",
 )
 
-// Staff see every request's conversation in one inbox, so their Messages item has its own wording and is hidden from
-// staff who may not use any message channel.
+// The V1 admin inbox is limited to the customer channel.
 const adminMessages: WorkspaceSection = {
   ...messages,
-  description:
-    "Every request's conversation in one place. Reply to customers and providers, and keep notes for the team.",
-  emptyMessage: "No conversations yet. They start when a customer or provider writes to XPro.",
-  anyPermission: ["message.customer", "message.provider", "message.internal"],
+  description: "Customer conversations about requests in one place.",
+  emptyMessage: "No customer conversations yet.",
+  anyPermission: ["message.customer"],
 }
 
 /** True when the viewer may see a sidebar item or open its page. */
-export const sectionAllowed = (item: WorkspaceSection, can: (permission: StaffPermission) => boolean): boolean =>
-  (!item.permission || can(item.permission)) && (!item.anyPermission || item.anyPermission.some(can))
+export const sectionAllowed = (
+  role: WorkspaceRole,
+  item: WorkspaceSection,
+  can: (permission: StaffPermission) => boolean,
+): boolean =>
+  sectionEnabled(role, item.id) &&
+  (!item.permission || can(item.permission)) &&
+  (!item.anyPermission || item.anyPermission.some(can))
 
 const quotes = section(
   "quotes",
@@ -99,7 +128,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "requests",
       "My requests",
       "tabler-clipboard-list",
-      "Follow your requests from the initial brief to completion.",
+      "Follow your request and Xpro's decision in one place.",
       "Your service requests will appear here.",
     ),
     quotes,
@@ -107,7 +136,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "payments",
       "Payments",
       "tabler-credit-card",
-      "Check payment status and pay an accepted quote securely.",
+      "Payment tools will be available in a later release.",
       "Payment details will appear here when a quote is accepted.",
     ),
     schedule,
@@ -127,7 +156,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "overview",
       "Overview",
       "tabler-layout-dashboard",
-      "Your offers and jobs that need attention.",
+      "Requests assigned to you for review and customer coordination.",
       "Your activity will appear here.",
     ),
     section(
@@ -141,7 +170,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "jobs",
       "My jobs",
       "tabler-briefcase",
-      "Review offers and keep your assigned jobs moving.",
+      "Review assigned requests and coordinate with the customer.",
       "New assignments and accepted jobs will appear here.",
     ),
     section(
@@ -155,7 +184,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "availability",
       "Availability",
       "tabler-clock",
-      "Let dispatch know when you are ready to take on work.",
+      "Set your availability for new assignments.",
       "Your availability preferences will appear here.",
     ),
     section(
@@ -211,7 +240,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "Dispatch",
       "tabler-route",
       "Match verified providers to requests and follow their responses.",
-      "Assignment offers and dispatch decisions will appear here.",
+      "Xpro staff coordinate provider assignments for each request.",
     ),
     quotes,
     section(
