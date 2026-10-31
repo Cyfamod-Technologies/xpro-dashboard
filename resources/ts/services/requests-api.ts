@@ -3,6 +3,9 @@ import type { ApiEnvelope } from "@/types/domain"
 import type {
   ApprovalQueueView,
   ContributionView,
+  CreateRequestBody,
+  CreateRequestGroupBody,
+  CreateRequestGroupResult,
   EarningsView,
   EscalationView,
   LocationView,
@@ -12,6 +15,7 @@ import type {
   PayoutView,
   PendingRequestView,
   ProgressUpdateView,
+  PublicRequestConfigView,
   QuoteItemView,
   QuoteView,
   RankingRunView,
@@ -89,27 +93,21 @@ export interface RequestListParams {
 export const requestsApi = {
   list: (params: RequestListParams = {}) =>
     unwrap($api<ApiEnvelope<PaginatedResult<RequestSummary>>>("/requests", { query: params })),
+  publicConfig: () => unwrap($api<ApiEnvelope<PublicRequestConfigView>>("/request-config")),
   pending: () => unwrap($api<ApiEnvelope<PendingRequestView>>("/requests/pending")),
   get: (id: string) => unwrap($api<ApiEnvelope<RequestView>>(`/requests/${pathId(id)}`)),
-  create: (
-    body: {
-      title: string
-      serviceId: string
-      cityId: string
-      districtId: string
-      address: string
-      phone: string
-      contactMethod?: string
-      description: string
-      budget: number
-      startDate?: string
-      answers: Record<string, string | number | string[]>
-      attachments: Array<{ id: string }>
-    },
-    idempotencyKey = randomKey(),
-  ) =>
+  create: (body: CreateRequestBody, idempotencyKey = randomKey()) =>
     unwrap(
       $api<ApiEnvelope<RequestView & { warning?: string }>>("/requests", {
+        method: "POST",
+        body,
+        headers: { "Idempotency-Key": idempotencyKey },
+      }),
+    ),
+  // Several services in one submission (Spec 04 §6.2, §11.2). One key covers the whole submission; all or nothing.
+  createGroup: (body: CreateRequestGroupBody, idempotencyKey = randomKey()) =>
+    unwrap(
+      $api<ApiEnvelope<CreateRequestGroupResult>>("/request-groups", {
         method: "POST",
         body,
         headers: { "Idempotency-Key": idempotencyKey },

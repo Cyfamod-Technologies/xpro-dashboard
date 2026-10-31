@@ -42,6 +42,35 @@ export const readDraft = <T>(
   }
 }
 
+/** Older draft shapes a form can still read. `migrate` returns the current shape, or null to drop the draft. */
+export interface LegacyDrafts<T> {
+  versions: number[]
+  migrate: (data: unknown, fromVersion: number) => T | null
+}
+
+/** Like `readDraft`, but a draft saved with one of `legacy.versions` is migrated to the current shape instead of dropped. */
+export const readMigratedDraft = <T>(
+  raw: string | null,
+  version: number,
+  legacy?: LegacyDrafts<T>,
+  now = Date.now(),
+): DraftEnvelope<T> | null => {
+  const current = readDraft<T>(raw, version, now)
+
+  if (current || !legacy) return current
+  for (const from of legacy.versions) {
+    const old = readDraft<unknown>(raw, from, now)
+
+    if (!old) continue
+
+    const data = legacy.migrate(old.data, from)
+
+    return data === null ? null : { ...old, v: version, data }
+  }
+
+  return null
+}
+
 /** A draft that matches the form's starting state carries no work worth keeping. */
 export const sameDraftData = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 

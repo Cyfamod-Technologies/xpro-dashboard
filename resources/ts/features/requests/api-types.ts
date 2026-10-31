@@ -128,6 +128,62 @@ export interface RequestAnswerView {
   dateRole: "start" | "end" | null
 }
 
+/** `POST /requests` body (Spec 04 §11.2). `answers` is keyed by catalogue question id. */
+export interface CreateRequestBody {
+  title: string
+  serviceId: string
+  cityId: string
+  districtId: string
+  address: string
+  phone: string
+  contactMethod?: string
+  description: string
+
+  /** Kobo. */
+  budget: number
+  startDate?: string
+  answers: Record<string, string | number | string[]>
+  attachments: Array<{ id: string }>
+}
+
+/** One service inside `POST /request-groups`. Files belong to the service they are listed on (MS-8). */
+export interface CreateRequestGroupService {
+  serviceId: string
+  answers: Record<string, string | number | string[]>
+  description: string
+
+  /** Kobo. */
+  budget: number
+  startDate?: string
+  attachments?: Array<{ id: string }>
+}
+
+/** `POST /request-groups` body (Spec 04 §11.2, MS-1). The top-level fields are shared by every service; there is no top-level `attachments` (MS-8). */
+export interface CreateRequestGroupBody {
+  title: string
+  cityId: string
+  districtId: string
+  address: string
+  phone: string
+  contactMethod?: string
+  services: CreateRequestGroupService[]
+}
+
+export interface RequestGroupRef {
+  id: string
+
+  /** `XPG-nnnnn`. */
+  ref: string
+  title: string
+}
+
+/** `POST /request-groups` result. `group` is `null` for a one-service bundle. */
+export interface CreateRequestGroupResult {
+  group: RequestGroupRef | null
+  requests: RequestView[]
+  warnings?: Array<{ requestId: string; message: string }>
+}
+
 export interface RequestSummary {
   id: string
   version: number
@@ -335,9 +391,21 @@ export interface LocationView {
   active: boolean
 }
 
+/** `GET /requests/pending`: the customer's open-request allowance (Spec 04 §6.2, §11.2, MS-6). */
 export interface PendingRequestView {
+  /** `openCount > 0`. */
   hasPending: boolean
+
+  /** The most recent open request. */
   requestId?: string
+  openCount: number
+  limit: number
+  remaining: number
+}
+
+/** `GET /requests/config`: public limits used to configure the request form. */
+export interface PublicRequestConfigView {
+  maxServicesPerSubmission: number
 }
 
 export interface SettingView {
