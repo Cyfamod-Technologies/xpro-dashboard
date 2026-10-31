@@ -199,14 +199,37 @@ export interface RequestSummary {
   districtName?: string | null
   createdAt?: string
   updatedAt?: string
+  overlays?: { cancellation: string | null; flag: string | null; suspendedParties: string[] }
+
+  /** Customers and staff only; `null` for a request made on its own. Providers never get group data (Spec 04 §4.1a). */
+  groupId?: string | null
+
+  /** `XPG-nnnnn`. */
+  groupRef?: string | null
+
+  /** Card order on the form, from 0. */
+  groupPosition?: number | null
   /** Staff only. */
   dispatch?: DispatchView
   quote?: QuoteView | null
   assignment?: AssignmentView | AssignmentView[] | null
 }
 
+/** One other request from the same multi-service submission (`GET /requests/:id`, customers and staff only). */
+export interface RequestSibling {
+  id: string
+  title: string
+  serviceName: string
+  status: string
+  stage: RequestStage
+}
+
 export interface RequestView extends RequestSummary {
-  overlays?: { cancellation: string | null; flag: string | null; suspendedParties: string[] }
+  /** Customers and staff only; `null` when the request has no group. */
+  group?: RequestGroupRef | null
+
+  /** The other requests in the group. Command responses leave this out, so refetch the detail after a command. */
+  siblings?: RequestSibling[]
   description?: string
   address?: string
   phone?: string

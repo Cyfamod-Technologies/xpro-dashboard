@@ -80,6 +80,9 @@ const command = <T>(
 
 export interface RequestListParams {
   status?: string
+
+  /** A group id or `XPG-nnnnn`: only that bundle's requests. */
+  group?: string
   stage?: RequestStage
   service?: string
   q?: string
@@ -128,10 +131,11 @@ export const requestsApi = {
   ) => command<RequestView>(`/requests/${pathId(id)}/review`, "POST", body, version),
   rejectIntake: (id: string, reason: string, version: number) =>
     command<RequestView>(`/requests/${pathId(id)}/reject`, "POST", { reason }, version),
-  // Free cancellation, owner only, while the request is still in intake review with no offer out (`request.cancel`).
+  // `POST /requests/:id/cancel` is one route that picks by actor and state (Spec 04 §11.2): a customer's free cancel
+  // while in intake review, otherwise a pending cancellation request for staff to decide; staff cancel directly.
   cancel: (id: string, note: string, version: number) =>
     command<RequestView>(`/requests/${pathId(id)}/cancel`, "POST", { note }, version),
-  // Paid or active cancellation, owner only (`cancellation.request`). The server has no combined `/cancel` yet (FD-2).
+  // Stale: the server has no `/cancellations` route (a customer cancellation request goes through `cancel` above).
   requestCancellation: (id: string, body: { reasonCode: string; note: string }, version: number) =>
     command<RequestView>(`/requests/${pathId(id)}/cancellations`, "POST", body, version),
   withdrawCancellation: (id: string, cancellationId: string, note: string | undefined, version: number) =>
