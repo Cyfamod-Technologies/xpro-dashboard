@@ -33,11 +33,24 @@ defineProps<{
           Request a service, deliver your expertise or coordinate the work. Your XPro workspace brings it together.
         </p>
 
-        <div class="d-flex flex-wrap gap-3">
-          <VChip color="white" variant="outlined" prepend-icon="tabler-shield-check"> Operations workspace </VChip>
-          <VChip color="white" variant="outlined" prepend-icon="tabler-map-pin">
-            {{ XPRO_BRAND.location }}
-          </VChip>
+        <div class="d-flex flex-column gap-3">
+          <div class="d-flex flex-wrap gap-3">
+            <VChip color="white" variant="outlined" prepend-icon="tabler-shield-check"> Operations workspace </VChip>
+            <VChip color="white" variant="outlined" prepend-icon="tabler-map-pin">
+              {{ XPRO_BRAND.location }}
+            </VChip>
+          </div>
+          <VBtn
+            to="/"
+            target="_blank"
+            rel="noopener"
+            color="white"
+            variant="outlined"
+            prepend-icon="tabler-external-link"
+            class="align-self-start"
+          >
+            View public site
+          </VBtn>
         </div>
       </div>
     </VCol>

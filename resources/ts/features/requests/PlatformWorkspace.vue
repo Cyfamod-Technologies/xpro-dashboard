@@ -2,6 +2,7 @@
 import type { ApprovalView, NotificationView, SettingView } from "@/features/requests/api-types"
 import { requestsApi } from "@/services/requests-api"
 import { useAuthStore } from "@/stores/auth"
+import LocationManagement from "@/features/requests/LocationManagement.vue"
 
 const props = defineProps<{ section: "notifications" | "approvals" | "settings" }>()
 const router = useRouter()
@@ -15,6 +16,8 @@ const loading = ref(false)
 const saving = ref("")
 const error = ref("")
 const reason = ref("")
+const settingsTab = ref("platform")
+const settingSearch = ref("")
 const settingValue = reactive<Record<string, string>>({})
 const history = ref<Awaited<ReturnType<typeof requestsApi.settingsHistory>>>()
 const switchSettings = [
@@ -45,6 +48,30 @@ const switchCards = computed(() =>
   }),
 )
 const otherSettings = computed(() => settings.value.filter(setting => !switchKeys.includes(setting.key)))
+const settingGroups = computed(() => {
+  const titles: Record<string, string> = {
+    assignment: "Provider matching",
+    cancellation: "Cancellations",
+    payment: "Payments",
+    provider: "Provider onboarding",
+    request: "Request handling",
+    schedule: "Scheduling",
+  }
+  const groups = new Map<string, SettingView[]>()
+  const search = settingSearch.value.trim().toLowerCase()
+
+  for (const setting of otherSettings.value) {
+    if (search && !setting.key.toLowerCase().includes(search)) continue
+    const group = setting.key.split(".")[0]
+    groups.set(group, [...(groups.get(group) ?? []), setting])
+  }
+
+  return [...groups.entries()].map(([key, groupSettings]) => ({
+    key,
+    title: titles[key] ?? key.replaceAll("_", " ").replace(/\b\w/g, value => value.toUpperCase()),
+    settings: groupSettings,
+  }))
+})
 const canManageSettings = computed(() => auth.user?.scopes.includes("settings.manage") ?? false)
 const title = (kind: string) => kind.replaceAll("_", " ")
 const requestPath = computed(() =>
@@ -216,65 +243,180 @@ onBeforeUnmount(() => {
     </template>
 
     <template v-else>
-      <VTextField v-model="reason" label="Required reason for changes" class="mb-4" />
-      <VCard v-for="card in switchCards" :key="card.key" class="mb-4">
-        <VCardText>
-          <h3 class="text-h6 mb-2">{{ card.title }}</h3>
-          <p class="text-body-2 text-medium-emphasis">{{ card.description }}</p>
-          <VSwitch
-            v-model="switchDraft[card.key]"
-            :label="card.label"
-            color="primary"
-            :disabled="!canManageSettings || !!saving"
-            hide-details
-            class="mb-3"
-          />
-          <p class="text-body-2 text-medium-emphasis mb-4">{{ card.note }}</p>
-          <div class="d-flex flex-wrap gap-2">
-            <VBtn
-              :disabled="
-                !canManageSettings ||
-                reason.trim().length < 5 ||
-                switchDraft[card.key] === card.setting.value ||
-                !!saving
-              "
-              :loading="saving === card.key"
-              @click="save(card.setting)"
-              >Save requirement</VBtn
-            >
-            <VBtn variant="outlined" @click="loadHistory(card.key)">History</VBtn>
+      <VCard class="settings-hub mb-5">
+        <VCardText class="d-flex flex-wrap align-center justify-space-between ga-4 pa-5">
+          <div>
+            <div class="text-overline text-primary">ADMIN CONTROLS</div>
+            <h2 class="text-h5 mb-1">Platform settings</h2>
+            <p class="text-body-2 text-medium-emphasis mb-0">
+              Manage request rules and the places where customers can request work.
+            </p>
           </div>
+          <VChip color="primary" variant="tonal" prepend-icon="tabler-adjustments">
+            {{ settings.length }} settings
+          </VChip>
         </VCardText>
+        <VTabs v-model="settingsTab" color="primary" class="px-4">
+          <VTab value="platform" prepend-icon="tabler-adjustments">Platform settings</VTab>
+          <VTab value="locations" prepend-icon="tabler-map-pin">Locations</VTab>
+        </VTabs>
       </VCard>
-      <VCard v-for="setting in otherSettings" :key="setting.key" class="mb-4"
-        ><VCardText>
-          <div class="d-flex justify-space-between align-center flex-wrap ga-2 mb-2">
-            <h3 class="text-h6">{{ setting.key }}</h3>
-            <VChip size="small" variant="tonal">{{ setting.riskClass }} · v{{ setting.version }}</VChip>
+
+      <LocationManagement v-if="settingsTab === 'locations'" :can-manage="canManageSettings" />
+
+      <template v-else>
+        <VCard class="mb-5">
+          <VCardText class="d-flex flex-column flex-sm-row align-sm-center ga-4 pa-5">
+            <VIcon icon="tabler-notes" color="primary" size="28" />
+            <div class="flex-grow-1">
+              <h3 class="text-subtitle-1 mb-1">Change reason</h3>
+              <p class="text-body-2 text-medium-emphasis mb-0">
+                Every platform change is recorded in the settings history.
+              </p>
+            </div>
+            <VTextField
+              v-model="reason"
+              label="Required reason"
+              placeholder="Why are you changing this?"
+              hide-details
+              :disabled="!canManageSettings || !!saving"
+              class="reason-field"
+            />
+          </VCardText>
+        </VCard>
+
+        <div class="d-flex align-center ga-3 mb-3">
+          <VIcon icon="tabler-shield-lock" color="primary" />
+          <h3 class="text-h6 mb-0">Provider requirements</h3>
+        </div>
+        <VRow class="mb-3">
+          <VCol v-for="card in switchCards" :key="card.key" cols="12" md="6">
+            <VCard class="setting-card h-100">
+              <VCardText class="pa-5">
+                <div class="d-flex align-start justify-space-between ga-3 mb-2">
+                  <h4 class="text-subtitle-1">{{ card.title }}</h4>
+                  <VChip size="small" variant="tonal">v{{ card.setting.version }}</VChip>
+                </div>
+                <p class="text-body-2 text-medium-emphasis">{{ card.description }}</p>
+                <VSwitch
+                  v-model="switchDraft[card.key]"
+                  :label="card.label"
+                  color="primary"
+                  :disabled="!canManageSettings || !!saving"
+                  hide-details
+                  class="mb-3"
+                />
+                <p class="text-body-2 text-medium-emphasis mb-4">{{ card.note }}</p>
+                <div class="d-flex flex-wrap gap-2">
+                  <VBtn
+                    :disabled="
+                      !canManageSettings ||
+                      reason.trim().length < 5 ||
+                      switchDraft[card.key] === card.setting.value ||
+                      !!saving
+                    "
+                    :loading="saving === card.key"
+                    @click="save(card.setting)"
+                  >
+                    Save requirement
+                  </VBtn>
+                  <VBtn variant="outlined" @click="loadHistory(card.key)">History</VBtn>
+                </div>
+              </VCardText>
+            </VCard>
+          </VCol>
+        </VRow>
+
+        <div class="d-flex flex-wrap align-center justify-space-between ga-3 mb-3">
+          <div>
+            <h3 class="text-h6 mb-1">Advanced settings</h3>
+            <p class="text-body-2 text-medium-emphasis mb-0">Review operational limits and workflow values.</p>
           </div>
-          <VTextarea v-model="settingValue[setting.key]" label="Value (JSON)" rows="3" auto-grow />
-          <div class="d-flex ga-2">
-            <VBtn :disabled="!reason.trim()" :loading="saving === setting.key" @click="save(setting)">Save setting</VBtn
-            ><VBtn variant="outlined" @click="loadHistory(setting.key)">History</VBtn>
-          </div>
-        </VCardText></VCard
-      >
-      <VList v-if="history?.items.length" class="mt-5"
-        ><VListItem
-          v-for="(entry, index) in history.items"
-          :key="index"
-          :title="String(entry.key || 'Setting change')"
-          :subtitle="JSON.stringify(entry) ?? ''"
-      /></VList>
-      <VCard v-else-if="!settings.length"
-        ><VCardText class="text-medium-emphasis">No request-flow settings were returned.</VCardText></VCard
-      >
+          <VTextField
+            v-model="settingSearch"
+            prepend-inner-icon="tabler-search"
+            label="Find a setting"
+            clearable
+            hide-details
+            density="comfortable"
+            class="filter"
+          />
+        </div>
+        <VExpansionPanels v-if="settingGroups.length" multiple class="settings-groups">
+          <VExpansionPanel v-for="group in settingGroups" :key="group.key" :value="group.key">
+            <VExpansionPanelTitle>
+              <span class="d-flex align-center ga-3">
+                <strong>{{ group.title }}</strong>
+                <VChip size="x-small" variant="tonal">{{ group.settings.length }}</VChip>
+              </span>
+            </VExpansionPanelTitle>
+            <VExpansionPanelText>
+              <VCard v-for="setting in group.settings" :key="setting.key" variant="outlined" class="mb-3">
+                <VCardText class="pa-4">
+                  <div class="d-flex justify-space-between align-center flex-wrap ga-2 mb-2">
+                    <h4 class="text-subtitle-2">{{ setting.key }}</h4>
+                    <VChip size="small" variant="tonal">{{ setting.riskClass }} · v{{ setting.version }}</VChip>
+                  </div>
+                  <VTextarea
+                    v-model="settingValue[setting.key]"
+                    label="Value (JSON)"
+                    rows="2"
+                    auto-grow
+                    :disabled="!canManageSettings || !!saving"
+                  />
+                  <div class="d-flex flex-wrap ga-2">
+                    <VBtn
+                      :disabled="!canManageSettings || reason.trim().length < 5 || !!saving"
+                      :loading="saving === setting.key"
+                      @click="save(setting)"
+                    >
+                      Save setting
+                    </VBtn>
+                    <VBtn variant="outlined" @click="loadHistory(setting.key)">History</VBtn>
+                  </div>
+                </VCardText>
+              </VCard>
+            </VExpansionPanelText>
+          </VExpansionPanel>
+        </VExpansionPanels>
+        <VCard v-else class="mb-4">
+          <VCardText class="text-medium-emphasis">
+            {{ settingSearch ? "No settings match that search." : "No advanced settings were returned." }}
+          </VCardText>
+        </VCard>
+
+        <VCard v-if="history?.items.length" class="mt-5">
+          <VCardTitle class="text-subtitle-1">Recent setting history</VCardTitle>
+          <VList lines="two">
+            <VListItem
+              v-for="(entry, index) in history.items"
+              :key="index"
+              :title="String(entry.key || 'Setting change')"
+              :subtitle="JSON.stringify(entry) ?? ''"
+            />
+          </VList>
+        </VCard>
+      </template>
     </template>
   </div>
 </template>
 
 <style scoped>
 .filter {
-  max-inline-size: 15rem;
+  max-inline-size: 22rem;
+  min-inline-size: min(100%, 16rem);
+}
+
+.reason-field {
+  max-inline-size: 30rem;
+  min-inline-size: min(100%, 20rem);
+}
+
+.setting-card {
+  border-block-start: 3px solid rgb(var(--v-theme-primary));
+}
+
+.settings-groups {
+  border-radius: 12px;
 }
 </style>

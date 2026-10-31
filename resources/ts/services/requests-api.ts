@@ -273,7 +273,8 @@ export const requestsApi = {
         query: { parentId, serviceable: opts?.serviceable ? "true" : undefined },
       }),
     ),
-  adminLocations: () => unwrap($api<ApiEnvelope<LocationView[]>>("/admin/locations")),
+  adminLocations: (parentId?: string) =>
+    unwrap($api<ApiEnvelope<LocationView[]>>("/admin/locations", { query: { parentId } })),
   createLocation: (body: {
     kind: LocationKind
     name: string
