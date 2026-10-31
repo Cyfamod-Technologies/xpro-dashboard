@@ -75,10 +75,12 @@ watch(
 )
 const serviceErrors = ref<Record<string, string>>({})
 const bundle = ref<{ projectRef: string; requestIds: string[]; warnings: string[] } | null>(null)
-const cities = ref<LocationView[]>([])
-const districts = ref<LocationView[]>([])
-const cityId = ref("")
-const districtId = ref("")
+const states = ref<LocationView[]>([])
+const lgas = ref<LocationView[]>([])
+const areas = ref<LocationView[]>([])
+const stateId = ref("")
+const lgaId = ref("")
+const areaId = ref("")
 const loadingCatalog = ref(false)
 const allowance = ref<Allowance | null>(null)
 const submitting = ref(false)
@@ -119,7 +121,7 @@ if (isDemoMode && queryService in intakeFields) {
   form.service = queryService as RequestInput["service"]
 }
 if (queryText("title")) form.title = queryText("title")
-if (queryText("city")) form.city = queryText("city")
+if (isDemoMode && queryText("city")) form.city = queryText("city")
 if (isDemoMode && queryStart()) form.startDate = queryStart()
 if (isDemoMode) {
   for (const field of intakeFields[form.service]) {
@@ -279,7 +281,7 @@ const stepDone = computed(() =>
       ]
     : [
         form.title.trim().length >= 3 &&
-          Boolean(cityId.value && districtId.value && form.phone.trim() && form.address.trim()),
+          Boolean(stateId.value && lgaId.value && form.phone.trim() && form.address.trim()),
         cards.value.every(card => isCardComplete(card, tree.value)),
         Boolean(submitted.value),
       ],
@@ -323,13 +325,25 @@ const summary = computed(() => [
     : []),
 ])
 
+// The chosen place, most specific first (for example `Life Camp, Abuja Municipal, FCT`).
+const locationSummary = computed(() =>
+  [
+    areas.value.find(item => item.id === areaId.value),
+    lgas.value.find(item => item.id === lgaId.value),
+    states.value.find(item => item.id === stateId.value),
+  ]
+    .filter(Boolean)
+    .map(item => item!.name)
+    .join(", "),
+)
+
 // Live summary: the shared project rows, then every service with its path and start date.
 const liveSummary = computed(() => {
   const fileCount = cards.value.reduce((total, card) => total + card.files.length, 0)
 
   return [
     ...(form.title.trim() ? [{ key: "Title", value: form.title.trim() }] : []),
-    { key: "Location", value: form.city.trim() || "Not set" },
+    { key: "Location", value: locationSummary.value || "Not set" },
     { key: "Contact", value: contactMethods.find(item => item.value === form.contactMethod)?.title ?? "Phone" },
     ...(fileCount ? [{ key: "Files", value: String(fileCount) }] : []),
   ]
@@ -384,18 +398,37 @@ const goBack = () => {
   else router.push("/")
 }
 
-async function loadLocations(parentId?: string) {
-  const result = await requestsApi.locations(parentId)
-  if (parentId) districts.value = result
-  else cities.value = result.filter(item => item.kind === "city")
+// Customers can only choose served places. Choosing a level clears and reloads the ones below it, and a level with
+// exactly one option is chosen for the customer.
+const loadServed = (parentId?: string) => requestsApi.locations(parentId, { serviceable: true })
+
+async function chooseState(id: string | null) {
+  stateId.value = id || ""
+  lgaId.value = ""
+  areaId.value = ""
+  lgas.value = []
+  areas.value = []
+  if (!id) return
+
+  const result = await loadServed(id)
+
+  if (stateId.value !== id) return
+  lgas.value = result
+  if (result.length === 1) await chooseLga(result[0].id)
 }
 
-watch(cityId, async value => {
-  districtId.value = ""
-  districts.value = []
-  if (value) await loadLocations(value)
-  form.city = cities.value.find(item => item.id === value)?.name ?? ""
-})
+async function chooseLga(id: string | null) {
+  lgaId.value = id || ""
+  areaId.value = ""
+  areas.value = []
+  if (!id || !lgas.value.find(item => item.id === id)?.hasChildren) return
+
+  const result = await loadServed(id)
+
+  if (lgaId.value !== id) return
+  areas.value = result
+  if (result.length === 1) areaId.value = result[0].id
+}
 
 // Autosaved draft: text in localStorage, queued files in IndexedDB. A guest's draft follows them through sign-in.
 const draft = useFormDraft<RequestDraft>({
@@ -410,8 +443,9 @@ const draft = useFormDraft<RequestDraft>({
     phone: form.phone,
     contactMethod: form.contactMethod,
     city: form.city,
-    cityId: cityId.value,
-    districtId: districtId.value,
+    stateId: stateId.value,
+    lgaId: lgaId.value,
+    areaId: areaId.value,
     submitKey: submitKey.value,
     services: isDemoMode ? [] : cards.value.map(toServiceDraft),
     service: form.service,
@@ -444,12 +478,13 @@ const draft = useFormDraft<RequestDraft>({
       }
     } else {
       cards.value = cardsFromDraft(data.services, tree.value)
-      if (cities.value.some(item => item.id === data.cityId)) {
-        cityId.value = data.cityId
-        // The city watcher resets the district and loads its list; wait for the list before choosing one.
-        await nextTick()
-        await loadLocations(data.cityId)
-        if (districts.value.some(item => item.id === data.districtId)) districtId.value = data.districtId
+      // Walk down the levels, waiting for each list before choosing from it.
+      if (states.value.some(item => item.id === data.stateId)) {
+        await chooseState(data.stateId)
+        if (lgas.value.some(item => item.id === data.lgaId)) {
+          await chooseLga(data.lgaId)
+          if (areas.value.some(item => item.id === data.areaId)) areaId.value = data.areaId
+        }
       }
     }
     // Links that pre-fill the form (popular jobs, service pages) win over a saved draft.
@@ -477,13 +512,14 @@ onMounted(async () => {
   try {
     const [services, locations, config] = await Promise.all([
       catalogApi.publicTree(),
-      requestsApi.locations(),
+      loadServed(),
       requestsApi.publicConfig(),
     ])
     tree.value = services
-    cities.value = locations.filter(item => item.kind === "city")
+    states.value = locations
     maxServicesPerSubmission.value = config.maxServicesPerSubmission
     applyQueryPrefill()
+    if (locations.length === 1) await chooseState(locations[0].id)
   } catch (cause) {
     liveError.value = cause instanceof Error ? cause.message : "The request form could not be loaded."
   } finally {
@@ -513,7 +549,7 @@ async function uploadRequestFiles(queued: File[]) {
 
 // One service uses `POST /requests`; several use `POST /request-groups` with the same Idempotency-Key for the whole submission.
 async function submitLive() {
-  if (!cityId.value || !districtId.value) throw new Error("Choose a city and district from the available locations.")
+  if (!stateId.value || !lgaId.value) throw new Error("Choose your location from the list.")
 
   const services: ResolvedService[] = []
 
@@ -532,8 +568,7 @@ async function submitLive() {
   const submission = buildSubmission(
     {
       title: form.title,
-      cityId: cityId.value,
-      districtId: districtId.value,
+      locationId: areaId.value || lgaId.value,
       address: form.address,
       phone: form.phone,
       contactMethod: form.contactMethod,
@@ -835,13 +870,18 @@ const submit = async () => {
           <template v-else>
             <RequestProjectDetails
               v-model:title="form.title"
-              v-model:city-id="cityId"
-              v-model:district-id="districtId"
               v-model:address="form.address"
               v-model:phone="form.phone"
               v-model:contact-method="form.contactMethod"
-              :cities="cities"
-              :districts="districts"
+              :state-id="stateId"
+              :lga-id="lgaId"
+              :area-id="areaId"
+              :states="states"
+              :lgas="lgas"
+              :areas="areas"
+              @update:state-id="chooseState"
+              @update:lga-id="chooseLga"
+              @update:area-id="areaId = $event || ''"
             />
             <VCard class="service-accordion-list pa-0" role="group" aria-label="Services">
               <RequestServiceCard

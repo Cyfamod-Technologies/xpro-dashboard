@@ -213,8 +213,9 @@ export const duplicateCardKeys = (cards: ServiceCardState[], tree: PublicService
 /** Fields every service in the submission shares. `contactMethod` is optional in the API. */
 export interface SharedFields {
   title: string
-  cityId: string
-  districtId: string
+
+  /** The area when one is chosen, otherwise the LGA. */
+  locationId: string
   address: string
   phone: string
   contactMethod?: string
@@ -351,9 +352,13 @@ export interface RequestDraft {
   address: string
   phone: string
   contactMethod: RequestInput["contactMethod"]
+  /** Demo mode only (free-text city of the frozen reducer form). */
   city: string
-  cityId: string
-  districtId: string
+
+  /** Live mode: the place picked at each level. `lgaId` and `areaId` are empty until chosen. */
+  stateId: string
+  lgaId: string
+  areaId: string
   submitKey: string
 
   /** Live mode: one entry per Service card. */
@@ -408,8 +413,10 @@ export const readRequestDraft = (data: unknown): RequestDraft | null => {
     phone: text(data.phone),
     contactMethod: (text(data.contactMethod) || "phone") as RequestDraft["contactMethod"],
     city: text(data.city),
-    cityId: text(data.cityId),
-    districtId: text(data.districtId),
+    // A draft saved before LOC-2 kept the FCT root (now the state) as `cityId`.
+    stateId: text(data.stateId) || text(data.cityId),
+    lgaId: text(data.lgaId),
+    areaId: text(data.areaId),
     submitKey: text(data.submitKey),
     services: services.length ? services : [readServiceDraft(undefined)],
     service: text(data.service),

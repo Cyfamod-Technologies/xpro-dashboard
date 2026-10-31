@@ -432,7 +432,7 @@ watch([stageFilter, nextActorOnly], () => {
           </div>
           <h2 class="text-h4 mb-2">{{ request.title || "Service request" }}</h2>
           <p class="text-medium-emphasis mb-3">
-            {{ [request.service, request.cityName, request.districtName].filter(Boolean).join(" · ") }}
+            {{ [request.service, request.locationLabel].filter(Boolean).join(" · ") }}
           </p>
           <p v-if="request.servicePath?.length" class="text-body-2 mb-3">
             <span class="text-medium-emphasis">Service:</span>

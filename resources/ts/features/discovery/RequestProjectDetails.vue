@@ -9,12 +9,16 @@ import { required, titleRules, validNigerianPhone } from "@/features/discovery/r
  * (title, site and contact). Files belong to each Service card, never to the project (MS-8).
  */
 defineProps<{
-  cities: LocationView[]
-  districts: LocationView[]
+  states: LocationView[]
+  lgas: LocationView[]
+
+  /** Only the areas of the chosen LGA that are served; the Area select shows when there are any. */
+  areas: LocationView[]
 }>()
 const title = defineModel<string>("title", { required: true })
-const cityId = defineModel<string>("cityId", { required: true })
-const districtId = defineModel<string>("districtId", { required: true })
+const stateId = defineModel<string>("stateId", { required: true })
+const lgaId = defineModel<string>("lgaId", { required: true })
+const areaId = defineModel<string>("areaId", { required: true })
 const address = defineModel<string>("address", { required: true })
 const phone = defineModel<string>("phone", { required: true })
 const contactMethod = defineModel<RequestInput["contactMethod"]>("contactMethod")
@@ -32,17 +36,24 @@ const contactMethod = defineModel<RequestInput["contactMethod"]>("contactMethod"
       />
       <div class="field-grid">
         <VSelect
-          v-model="cityId"
-          :items="cities.map(item => ({ title: item.name, value: item.id }))"
-          label="City *"
+          v-model="stateId"
+          :items="states.map(item => ({ title: item.name, value: item.id }))"
+          label="State *"
           :rules="[required]"
         />
         <VSelect
-          v-model="districtId"
-          :items="districts.map(item => ({ title: item.name, value: item.id }))"
-          label="District *"
-          :disabled="!cityId"
+          v-model="lgaId"
+          :items="lgas.map(item => ({ title: item.name, value: item.id }))"
+          label="LGA *"
+          :disabled="!stateId"
           :rules="[required]"
+        />
+        <VSelect
+          v-if="areas.length"
+          v-model="areaId"
+          :items="areas.map(item => ({ title: item.name, value: item.id }))"
+          label="Area"
+          clearable
         />
         <VTextField v-model="phone" label="Contact phone *" type="tel" :rules="[required, validNigerianPhone]" />
         <VSelect v-model="contactMethod" :items="contactMethods" label="Preferred contact method" />

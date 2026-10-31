@@ -62,7 +62,7 @@ const card = (key: string, selectedIds: string[], extra: Partial<ServiceCardStat
   ...extra,
 })
 
-const shared = { title: 'Lekki site', cityId: 'c1', districtId: 'd1', address: '1 Admiralty Way', phone: '08031234567', contactMethod: 'phone' }
+const shared = { title: 'Lekki site', locationId: 'l1', address: '1 Admiralty Way', phone: '08031234567', contactMethod: 'phone' }
 
 // Limit: five services at most, never fewer than one card
 assert.equal(MAX_SERVICES_PER_SUBMISSION, 5)
@@ -275,7 +275,7 @@ assert.deepEqual(migrated.services, [
 ])
 assert.equal(migrated.title, 'Fix the roof')
 assert.equal(migrated.contactMethod, 'email')
-assert.equal(migrated.cityId, 'c1')
+assert.equal(migrated.stateId, 'c1', 'A pre-LOC-2 city id is the state now')
 assert.equal(migrated.submitKey, 'key-1')
 assert.deepEqual(migrated.details, { size: '3 bed' })
 assert.equal(migrateRequestDraft(oldDraft, 3), null, 'Unknown versions are dropped')

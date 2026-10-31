@@ -9,6 +9,7 @@ import type {
   CustomerRequestLimitView,
   EarningsView,
   EscalationView,
+  LocationKind,
   LocationView,
   NotificationInboxView,
   PaginatedResult,
@@ -265,24 +266,32 @@ export const requestsApi = {
       { note },
       version,
     ),
-  locations: (parentId?: string) => unwrap($api<ApiEnvelope<LocationView[]>>("/locations", { query: { parentId } })),
+  // States when `parentId` is omitted. `serviceable` limits the list to places XPro serves.
+  locations: (parentId?: string, opts?: { serviceable?: boolean }) =>
+    unwrap(
+      $api<ApiEnvelope<LocationView[]>>("/locations", {
+        query: { parentId, serviceable: opts?.serviceable ? "true" : undefined },
+      }),
+    ),
   adminLocations: () => unwrap($api<ApiEnvelope<LocationView[]>>("/admin/locations")),
   createLocation: (body: {
-    kind: "city" | "district"
+    kind: LocationKind
     name: string
     parentId?: string
     aliases: string[]
     active: boolean
+    serviceable: boolean
     sort: number
   }) => command<LocationView>("/admin/locations", "POST", body),
   updateLocation: (
     id: string,
     body: {
-      kind: "city" | "district"
+      kind: LocationKind
       name: string
       parentId?: string
       aliases: string[]
       active: boolean
+      serviceable: boolean
       sort: number
     },
   ) => command<LocationView>(`/admin/locations/${pathId(id)}`, "PUT", body),
