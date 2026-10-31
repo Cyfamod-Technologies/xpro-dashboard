@@ -9,8 +9,7 @@ import { checkFiles, fileAccept, fileHint } from "@/features/operations/file-rul
 import { isNuban, maskAccount } from "@/features/operations/banks"
 import { payoutReady, profileChangeRows } from "@/features/operations/workflow"
 import { defaultWorkingHours, workingHoursProblem } from "@/features/operations/hours"
-import { abujaDistricts } from "@/features/operations/dispatch"
-import { nigeriaStates, stateForLocation } from "@/utils/nigeria-locations"
+import { demoLocations, demoPlaceNamed } from "@/features/operations/demo-locations"
 import AvailabilityPanel from "@/features/operations/AvailabilityPanel.vue"
 import WorkingHoursEditor from "@/features/operations/WorkingHoursEditor.vue"
 import Attachments from "@/features/operations/Attachments.vue"
@@ -20,6 +19,8 @@ import BankForm from "@/features/operations/BankForm.vue"
 import ReviewHistory from "@/features/operations/ReviewHistory.vue"
 import PhoneVerificationField from "@/features/phone/PhoneVerificationField.vue"
 import { providersApi } from "@/services/providers-api"
+import { requestsApi } from "@/services/requests-api"
+import type { LocationView } from "@/features/requests/api-types"
 import { useAuthStore } from "@/stores/auth"
 import DraftBanner from "@/features/drafts/DraftBanner.vue"
 import { hashString } from "@/features/drafts/draft-envelope"
@@ -48,13 +49,42 @@ const known: BankInput | undefined = profile?.payout.pending ?? profile?.payout.
 
 // Changes already waiting for XPro review are shown (and resubmitted) as the form's proposed values.
 const proposed = profile?.pendingChanges ?? profile
-const selectedState = ref(stateForLocation(profile?.city ?? "")?.name ?? "")
+
+// Places are chosen by id. A saved profile brings the names for its ids (same order), so their chips show before any list loads.
+const placeNames = ref<Record<string, string>>({})
+const savedAreas = (source?: { serviceAreaIds?: string[]; serviceAreas: string[] }) => {
+  const saved = new Set<string>()
+
+  if (!isDemoMode) {
+    for (const [index, id] of (source?.serviceAreaIds ?? []).entries()) {
+      placeNames.value[id] ??= source?.serviceAreas[index] ?? id
+      saved.add(id)
+    }
+
+    return [...saved]
+  }
+  // Demo profiles hold names only: a name the demo list knows becomes its id, any other keeps the name as its id.
+  for (const name of source?.serviceAreas ?? []) {
+    const id = demoPlaceNamed(name)?.id ?? name
+
+    placeNames.value[id] ??= name
+    saved.add(id)
+  }
+
+  return [...saved]
+}
+const states = ref<LocationView[]>([])
+const lgas = ref<LocationView[]>([])
+
+// Areas under the chosen LGA.
+const areaList = ref<LocationView[]>([])
+const stateId = ref("")
 const form = reactive<ProviderInput>({
   phone: auth.user?.phone ?? profile?.phone ?? "",
   trade: proposed?.trade ?? "",
   city: profile?.city ?? "",
   services: [...(proposed?.services ?? [])],
-  serviceAreas: [...(proposed?.serviceAreas ?? [])],
+  serviceAreas: [],
   skills: structuredClone(toRaw(proposed?.skills ?? {})),
   capacity: proposed?.capacity ?? 3,
   workingHours: structuredClone(toRaw(profile?.workingHours ?? defaultWorkingHours())),
@@ -70,7 +100,10 @@ const form = reactive<ProviderInput>({
   },
 })
 // Live mode keeps what the provider offers as catalog ids (renames then change nothing); demo mode keeps names in `form`.
+// Where they work is always ids: the LGA and the places they cover (demo mode reads them from its own small list).
 const ids = reactive({
+  locationId: profile?.locationId ?? "",
+  serviceAreaIds: savedAreas(proposed),
   serviceIds: [...(proposed?.serviceIds ?? [])],
   skillIds: structuredClone(toRaw(proposed?.skillIds ?? {})) as Record<string, string[]>,
 })
@@ -86,24 +119,40 @@ const changesRejected = computed(() =>
   ops.profile?.changesReview?.state === "rejected" ? ops.profile.changesReview.note : "",
 )
 const approved = computed(() => ops.profile?.verification === "approved")
-const stateOptions = nigeriaStates.map(state => state.name)
-const cityOptions = computed(() => {
-  const state = nigeriaStates.find(item => item.name === selectedState.value)
+const fetchPlaces = (parentId?: string): Promise<LocationView[]> =>
+  isDemoMode ? Promise.resolve(demoLocations(parentId)) : requestsApi.locations(parentId)
+const remember = (list: LocationView[]) => {
+  for (const item of list) placeNames.value[item.id] ??= item.name
+}
+const stateItems = computed(() => states.value.map(item => ({ title: item.name, value: item.id })))
+const stateName = computed(() => states.value.find(item => item.id === stateId.value)?.name ?? "")
+const lgaItems = computed(() => lgas.value.map(item => ({ title: item.name, value: item.id })))
+const lgaName = computed(() => lgas.value.find(item => item.id === ids.locationId)?.name ?? form.city.trim())
+const kindLabels: Record<LocationView["kind"], string> = { state: "State", lga: "LGA", area: "Area" }
 
-  if (state) return [...state.lgas, state.capital].filter((city, index, all) => all.indexOf(city) === index)
+// Real places only: the chosen state, its LGAs and the areas under the chosen LGA. Saved places outside that set still show as chips.
+const serviceAreaItems = computed(() => {
+  const state = states.value.find(item => item.id === stateId.value)
+  const offered = [...(state ? [state] : []), ...lgas.value, ...areaList.value]
+  const shown = new Set(offered.map(item => item.id))
 
-  // Preserve an existing city from older profiles until the provider selects a state.
-  return form.city.trim() ? [form.city.trim()] : []
+  return [
+    ...offered.map(item => ({ title: item.name, value: item.id, props: { subtitle: kindLabels[item.kind] } })),
+    ...ids.serviceAreaIds
+      .filter(id => !shown.has(id))
+      .map(id => ({ title: placeNames.value[id] ?? id, value: id })),
+  ]
 })
-const areaSuggestions = computed(() => [...new Set([form.city.trim(), "Abuja", ...abujaDistricts].filter(Boolean))])
-const coversCity = computed(() =>
-  form.serviceAreas.some(area => area.trim().toLowerCase() === form.city.trim().toLowerCase()),
+
+// A place covers everything under it, so the LGA is covered by listing it or its state.
+const coversLocation = computed(
+  () => ids.serviceAreaIds.includes(ids.locationId) || (Boolean(stateId.value) && ids.serviceAreaIds.includes(stateId.value)),
 )
 const areaProblem = computed(() =>
-  !form.serviceAreas.length
+  !ids.serviceAreaIds.length
     ? "Add at least one service area."
-    : form.city.trim() && !coversCity.value
-      ? `Include ${form.city.trim()} in your service areas.`
+    : ids.locationId && !coversLocation.value
+      ? `Include ${lgaName.value} in your service areas.`
       : "",
 )
 // Live mode offers the catalog's top-level services and their skills; demo mode keeps the static lists.
@@ -211,20 +260,66 @@ const coverageReady = computed(
     !capacityProblem.value &&
     !hoursProblem.value,
 )
-const selectState = (stateName: string | null) => {
-  selectedState.value = stateName ?? ""
-  if (!stateName || !cityOptions.value.some(city => city.toLowerCase() === form.city.trim().toLowerCase()))
-    form.city = ""
+
+// Shows a state's LGAs, then an LGA's areas. A later choice replaces an earlier one that is still loading.
+async function showState(id: string) {
+  stateId.value = id
+  lgas.value = []
+  areaList.value = []
+  if (!id) return
+
+  const result = await fetchPlaces(id)
+
+  if (stateId.value !== id) return
+  remember(result)
+  lgas.value = result
+}
+
+async function showLga(id: string) {
+  ids.locationId = id
+  areaList.value = []
+  if (!lgas.value.find(item => item.id === id)?.hasChildren) return
+
+  const result = await fetchPlaces(id)
+
+  if (ids.locationId !== id) return
+  remember(result)
+  areaList.value = result
+}
+
+// Puts the form on a saved place: the state's LGAs first, then the LGA once it is in the list.
+async function showPlace(state: LocationView | undefined, lgaId: string) {
+  ids.locationId = ""
+  await showState(state?.id ?? "")
+  if (lgas.value.some(item => item.id === lgaId)) await showLga(lgaId)
+}
+
+// The provider picks a state or an LGA; `city` keeps the LGA name for demo mode.
+async function chooseState(id: string | null) {
+  ids.locationId = ""
+  form.city = ""
+  await showState(id ?? "")
+}
+
+async function chooseLga(id: string | null) {
+  form.city = lgas.value.find(item => item.id === id)?.name ?? ""
+  await showLga(id ?? "")
 }
 
 // Autosaved draft: text fields in localStorage, queued files in IndexedDB. The bank account number is never kept.
 interface ProfileDraft {
   phone: string
   trade: string
+
+  /** Demo mode: the LGA name. */
   city: string
-  state: string
+  stateId: string
+  locationId: string
+  serviceAreaIds: string[]
+
+  /** Names for `serviceAreaIds`, so their chips show before any list loads. */
+  areaNames: Record<string, string>
   services: string[]
-  serviceAreas: string[]
   skills: ProviderInput["skills"]
   serviceIds: string[]
   skillIds: Record<string, string[]>
@@ -252,15 +347,17 @@ const resetBank = () => {
 }
 const draft = useFormDraft<ProfileDraft>({
   formId: "provider-profile",
-  version: 2,
+  version: 3,
   owner: () => auth.user?.id ?? "guest",
   snapshot: () => ({
     phone: form.phone,
     trade: form.trade,
     city: form.city,
-    state: selectedState.value,
+    stateId: stateId.value,
+    locationId: ids.locationId,
+    serviceAreaIds: ids.serviceAreaIds,
+    areaNames: Object.fromEntries(ids.serviceAreaIds.map(id => [id, placeNames.value[id] ?? id])),
     services: form.services,
-    serviceAreas: form.serviceAreas,
     skills: form.skills,
     serviceIds: ids.serviceIds,
     skillIds: ids.skillIds,
@@ -270,13 +367,12 @@ const draft = useFormDraft<ProfileDraft>({
     bio: form.bio,
     bankCode: keepCurrent.value || awaitingBank.value ? "" : form.bank.bankCode,
   }),
-  restore: data => {
+  restore: async data => {
     Object.assign(form, {
       phone: data.phone,
       trade: data.trade,
       city: data.city,
       services: [...data.services],
-      serviceAreas: [...data.serviceAreas],
       skills: structuredClone(data.skills),
       capacity: data.capacity,
       workingHours: structuredClone(data.workingHours),
@@ -285,17 +381,16 @@ const draft = useFormDraft<ProfileDraft>({
     })
     ids.serviceIds = [...data.serviceIds]
     ids.skillIds = structuredClone(data.skillIds)
-    // A draft saved without a state, or with one that does not contain its city, gets it from the city when only one state fits.
-    const savedState = nigeriaStates.find(item => item.name === data.state)
-    const stateHasCity = savedState
-      ? [...savedState.lgas, savedState.capital].some(city => city.toLowerCase() === data.city.trim().toLowerCase())
-      : false
-
-    selectedState.value = stateHasCity ? data.state : (stateForLocation(data.city)?.name ?? data.state ?? "")
+    placeNames.value = { ...data.areaNames, ...placeNames.value }
+    ids.serviceAreaIds = [...data.serviceAreaIds]
     if (data.bankCode) {
       changingBank.value = Boolean(current.value)
       form.bank = { bankCode: data.bankCode, accountNumber: "", accountName: "" }
     }
+    await showPlace(
+      states.value.find(item => item.id === data.stateId),
+      data.locationId,
+    )
   },
   files: { documents: files, portfolio: portfolioFiles, photo: photoFile },
   onFilesRestored: restored => {
@@ -343,7 +438,18 @@ async function loadPhonePolicy() {
 
 onMounted(async () => {
   if (isDemoMode) {
-    if (!props.availability) await draft.start()
+    if (!props.availability) {
+      // The demo profile names its city; find that LGA (it may be an alias, such as Abuja) and its state.
+      const lga = demoPlaceNamed(profile?.city ?? "")
+
+      states.value = demoLocations()
+      remember(states.value)
+      await showPlace(
+        states.value.find(item => item.id === lga?.parentId),
+        lga?.id ?? "",
+      )
+      await draft.start()
+    }
 
     return
   }
@@ -354,6 +460,13 @@ onMounted(async () => {
     ops.error = cause instanceof Error ? cause.message : "The service list could not be loaded."
   }
   try {
+    // Every active state, not only the served ones: providers may cover places XPro does not serve yet.
+    states.value = await fetchPlaces()
+    remember(states.value)
+  } catch (cause) {
+    ops.error = cause instanceof Error ? cause.message : "The list of states could not be loaded."
+  }
+  try {
     await ops.refreshProviderProfile()
     const saved = ops.profile
     if (!saved) return
@@ -362,7 +475,6 @@ onMounted(async () => {
       trade: saved.trade,
       city: saved.city,
       services: [...saved.services],
-      serviceAreas: [...saved.serviceAreas],
       skills: structuredClone(toRaw(saved.skills)),
       capacity: saved.capacity,
       workingHours: structuredClone(toRaw(saved.workingHours)),
@@ -381,7 +493,12 @@ onMounted(async () => {
 
     ids.serviceIds = [...(offered.serviceIds ?? fromNames?.serviceIds ?? [])]
     ids.skillIds = structuredClone(toRaw(offered.skillIds ?? fromNames?.skillIds ?? {}))
-    selectedState.value = saved.state ?? stateForLocation(saved.city)?.name ?? ""
+    ids.serviceAreaIds = savedAreas(offered)
+    // The profile names its state; find it in the list, then pick the saved LGA once that state's LGAs are in.
+    await showPlace(
+      states.value.find(item => item.name.toLowerCase() === (saved.state ?? "").toLowerCase()),
+      saved.locationId ?? "",
+    )
     const payout = saved.payout.pending ?? saved.payout.current
     if (payout)
       form.bank = { bankCode: payout.bankCode, accountNumber: payout.accountNumber, accountName: payout.accountName }
@@ -401,10 +518,8 @@ const setSkill = (service: string, skill: string, on: boolean | null) => {
   skills[service] = on ? [...rest, skill] : rest
 }
 
-const addCity = () => {
-  const city = form.city.trim()
-
-  if (city && !coversCity.value) form.serviceAreas = [city, ...form.serviceAreas]
+const addLocation = () => {
+  if (ids.locationId && !coversLocation.value) ids.serviceAreaIds = [ids.locationId, ...ids.serviceAreaIds]
 }
 
 const bankReady = computed(
@@ -414,13 +529,11 @@ const bankReady = computed(
     (Boolean(form.bank.bankCode) && isNuban(form.bank.accountNumber) && form.bank.accountName.trim().length >= 3),
 )
 
-// Live profiles need a state and a city that belongs to it, the pair the server validates; the demo only needs a city.
-const locationReady = computed(
-  () =>
-    Boolean(form.city.trim()) &&
-    (isDemoMode ||
-      (Boolean(selectedState.value) &&
-        cityOptions.value.some(city => city.toLowerCase() === form.city.trim().toLowerCase()))),
+// Live profiles need an LGA that belongs to the chosen state, which the server checks again; the demo only needs a city.
+const locationReady = computed(() =>
+  isDemoMode
+    ? Boolean(form.city.trim())
+    : Boolean(stateId.value) && lgas.value.some(item => item.id === ids.locationId),
 )
 const submitting = ref(false)
 const pendingFieldLabels = computed(() => (ops.profile ? profileChangeRows(ops.profile).map(row => row.label) : []))
@@ -435,10 +548,10 @@ const checklist = computed(() => [
   {
     label: "Profile details",
     done: Boolean(
-      form.trade.trim() && form.city.trim() && form.phone.trim() && chosenServices.value.length && bioReady.value,
+      form.trade.trim() && locationReady.value && form.phone.trim() && chosenServices.value.length && bioReady.value,
     ),
   },
-  { label: "State and city", done: locationReady.value },
+  { label: "State and LGA", done: locationReady.value },
   { label: "Service areas", done: !areaProblem.value },
   ...(!isDemoMode && emailVerificationRequired.value
     ? [{ label: "Email verified", done: Boolean(auth.user?.emailVerified) }]
@@ -546,7 +659,8 @@ const runSubmit = async () => {
       type: "provider.submit",
       input: {
         ...toRaw(form),
-        ...(isDemoMode ? {} : { state: selectedState.value || stateForLocation(form.city)?.name || undefined }),
+        locationId: ids.locationId,
+        serviceAreaIds: [...ids.serviceAreaIds],
         bank:
           awaitingBank.value || (current.value && !changingBank.value)
             ? { bankCode: "", accountNumber: "", accountName: "" }
@@ -558,7 +672,8 @@ const runSubmit = async () => {
               serviceIds: [...ids.serviceIds],
               skillIds: Object.fromEntries(ids.serviceIds.map(id => [id, ids.skillIds[id] ?? []])),
             }),
-        serviceAreas: form.serviceAreas.map(area => area.trim()).filter(Boolean),
+        // Names for the demo's rules; live profiles are saved by location id.
+        serviceAreas: ids.serviceAreaIds.map(id => placeNames.value[id] ?? id),
       },
     })
     if (!isDemoMode) await ops.refreshProviderProfile()
@@ -635,21 +750,22 @@ const submit = async () => {
         </VCol>
         <VCol cols="12" sm="6">
           <VSelect
-            :model-value="selectedState"
-            :items="stateOptions"
+            :model-value="stateId"
+            :items="stateItems"
             label="State"
             clearable
-            @update:model-value="selectState"
+            @update:model-value="chooseState"
           />
         </VCol>
         <VCol cols="12" sm="6">
           <VSelect
-            v-model="form.city"
-            :items="cityOptions"
-            label="City / LGA"
-            :disabled="!selectedState"
-            :hint="selectedState ? `Select an LGA or the state capital in ${selectedState}.` : 'Choose a state first.'"
+            :model-value="ids.locationId"
+            :items="lgaItems"
+            label="LGA"
+            :disabled="!stateId"
+            :hint="stateId ? `Select your LGA in ${stateName}.` : 'Choose a state first.'"
             persistent-hint
+            @update:model-value="chooseLga"
           />
         </VCol>
         <VCol cols="12" sm="6">
@@ -879,19 +995,28 @@ const submit = async () => {
       </VAlert>
       <VRow>
         <VCol cols="12">
-          <VCombobox
-            v-model="form.serviceAreas"
-            :items="areaSuggestions"
+          <VAlert
+            v-if="ops.profile?.outsideServedAreas"
+            type="info"
+            variant="tonal"
+            density="comfortable"
+            class="mb-4"
+          >
+            XPro doesn't offer jobs in your areas yet. You can still submit; you'll get offers once XPro opens there.
+          </VAlert>
+          <VAutocomplete
+            v-model="ids.serviceAreaIds"
+            :items="serviceAreaItems"
             label="Service areas"
-            hint="Pick from the list, or type an area and press Enter."
+            hint="Pick the state, LGAs or areas you cover. A state or LGA covers everything inside it."
             persistent-hint
             multiple
             chips
             closable-chips
             :error-messages="areaProblem"
           />
-          <VBtn v-if="form.city.trim() && !coversCity" variant="text" size="small" class="mt-1" @click="addCity">
-            Add {{ form.city.trim() }}
+          <VBtn v-if="ids.locationId && !coversLocation" variant="text" size="small" class="mt-1" @click="addLocation">
+            Add {{ lgaName }}
           </VBtn>
         </VCol>
         <VCol cols="12" sm="6">

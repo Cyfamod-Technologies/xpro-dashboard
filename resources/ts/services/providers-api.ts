@@ -13,11 +13,22 @@ export interface ProviderProfileResponse {
   email?: string
   phone: string
   trade: string
-  city: string
+
+  /** The provider's LGA (an `lga` location). */
+  locationId: string | null
+
+  /** Any active place; a place covers everything under it. */
+  serviceAreaIds: string[]
+
+  /** Read-only names for `locationId` and `serviceAreaIds`; `serviceAreas` is in the order of `serviceAreaIds`. */
   state?: string | null
+  city: string
+  serviceAreas: string[]
+
+  /** No chosen area is served yet, so the provider gets no offers until XPro opens there. */
+  outsideServedAreas: boolean
   services: string[]
   serviceIds: string[]
-  serviceAreas: string[]
   skills: Record<string, string[]>
   skillIds: Record<string, string[]>
   capacity: number
@@ -146,10 +157,9 @@ export const providersApi = {
   submit: (payload: {
     phone: string
     trade: string
-    city: string
-    state?: string
+    locationId: string
+    serviceAreaIds: string[]
     serviceIds: string[]
-    serviceAreas: string[]
     skillIds: Record<string, string[]>
     capacity: number
     workingHours: WorkingHours

@@ -224,6 +224,9 @@ export interface PendingProfileChanges {
   trade: string
   services: ServiceLine[]
   serviceAreas: string[]
+
+  /** Live mode only: the places behind `serviceAreas` (same order). */
+  serviceAreaIds?: string[]
   skills: ProviderSkills
 
   /** Catalog ids behind `services` and `skills`. Live mode only; the names above are what gets shown. */
@@ -247,6 +250,11 @@ export interface ProviderProfile {
   trade: string
   city: string
   state?: string | null
+
+  /** Live mode: the provider's LGA, the ids behind `serviceAreas` (same order), and whether none of them is served yet. */
+  locationId?: string | null
+  serviceAreaIds?: string[]
+  outsideServedAreas?: boolean
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills
@@ -362,9 +370,12 @@ export interface RequestInput {
 export interface ProviderInput {
   phone: string
   trade: string
+  /** Demo mode: the city name. Live mode sends `locationId` instead. */
   city: string
-  /** Chosen with `city` from the built-in Nigeria list; sent for live profiles. */
-  state?: string
+
+  /** Live mode: the LGA and the places covered. Demo mode keeps names in `city` and `serviceAreas`. */
+  locationId?: string
+  serviceAreaIds?: string[]
   services: ServiceLine[]
   serviceAreas: string[]
   skills: ProviderSkills

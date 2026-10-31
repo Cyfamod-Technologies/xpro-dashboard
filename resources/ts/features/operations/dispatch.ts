@@ -72,21 +72,3 @@ export const offerExpiry = (expiresAt: string, nowMs: number): { expired: boolea
 
 /** Tidy score for display: one decimal, no trailing zero. */
 export const scoreText = (total: number) => String(Number(total.toFixed(1)))
-
-/** Abuja districts offered as suggestions when a provider lists the areas they cover. Free entry is still allowed. */
-export const abujaDistricts = [
-  "Asokoro",
-  "Maitama",
-  "Wuse",
-  "Wuse II",
-  "Garki",
-  "Jabi",
-  "Gwarimpa",
-  "Kubwa",
-  "Lugbe",
-  "Utako",
-  "Lokogoma",
-  "Katampe",
-  "Life Camp",
-  "Apo",
-]
