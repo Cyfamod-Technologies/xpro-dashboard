@@ -26,7 +26,8 @@ import { hashString } from "@/features/drafts/draft-envelope"
 import { useFormDraft } from "@/features/drafts/use-form-draft"
 import { catalogApi } from "@/services/catalog-api"
 import type { PublicServiceNode } from "@/features/catalog/types"
-import { catalogIdsFromNames, skillOptionsForRoot } from "@/features/catalog/types"
+import { catalogIdsFromNames, skillOptionsForRoot, visibleNodeIds } from "@/features/catalog/types"
+import CatalogSkillTree from "@/features/catalog/CatalogSkillTree.vue"
 
 const props = defineProps<{ availability?: boolean }>()
 const ops = useOperationsStore()
@@ -108,11 +109,10 @@ const areaProblem = computed(() =>
 // Live mode offers the catalog's top-level services and their skills; demo mode keeps the static lists.
 // A service is its name in demo mode and its id in live mode, and so is a skill.
 const catalogRoots = ref<PublicServiceNode[]>([])
-const serviceOptions = computed(() =>
-  isDemoMode
-    ? serviceLines.map(item => item.name)
-    : catalogRoots.value.map(item => ({ title: item.name, value: item.id })),
-)
+const catalogMenuOpen = ref(false)
+const catalogSearch = ref("")
+const expandedCatalogs = ref<string[]>([])
+const expandedSkillLists = ref<string[]>([])
 const chosenServices = computed<string[]>({
   get: () => (isDemoMode ? form.services : ids.serviceIds),
   set: value => {
@@ -129,6 +129,58 @@ const skillsFor = (service: string): { id: string; label: string }[] => {
   const root = catalogRoots.value.find(item => item.id === service)
 
   return root ? skillOptionsForRoot(root) : []
+}
+// Live search matches names at any level of the tree and keeps a match's ancestors; demo mode matches flat skills.
+const liveVisible = computed(() => (isDemoMode ? null : visibleNodeIds(catalogRoots.value, catalogSearch.value)))
+const visibleCatalogs = computed(() => {
+  const query = catalogSearch.value.trim().toLowerCase()
+  const services = isDemoMode ? serviceLines.map(item => item.name) : catalogRoots.value.map(item => item.id)
+
+  return services
+    .map(service => ({
+      service,
+      name: serviceName(service),
+      skills: skillsFor(service),
+      root: isDemoMode ? undefined : catalogRoots.value.find(root => root.id === service),
+    }))
+    .filter(item =>
+      isDemoMode
+        ? !query ||
+          item.name.toLowerCase().includes(query) ||
+          item.skills.some(skill => skill.label.toLowerCase().includes(query))
+        : !liveVisible.value || liveVisible.value.has(item.service),
+    )
+})
+// A live top-level service with no sub-services is chosen on its own and has no skills to pick.
+const hasSkillChoices = (service: string) => isDemoMode || skillsFor(service).length > 0
+const hasSkill = (service: string, skill: string) => chosenSkills()[service]?.includes(skill) ?? false
+const selectedSkillLabels = (service: string) => skillsFor(service).filter(skill => hasSkill(service, skill.id))
+const setSkills = (service: string, leafIds: string[], on: boolean) => {
+  const skills = chosenSkills()
+  const rest = (skills[service] ?? []).filter(item => !leafIds.includes(item))
+
+  skills[service] = on ? [...rest, ...leafIds] : rest
+}
+const toggleService = (service: string) => {
+  const selected = chosenServices.value.includes(service)
+
+  chosenServices.value = selected
+    ? chosenServices.value.filter(item => item !== service)
+    : [...chosenServices.value, service]
+  if (!selected && !expandedCatalogs.value.includes(service)) expandedCatalogs.value.push(service)
+}
+const toggleCatalog = (service: string) => {
+  expandedCatalogs.value = expandedCatalogs.value.includes(service)
+    ? expandedCatalogs.value.filter(item => item !== service)
+    : [...expandedCatalogs.value, service]
+}
+const toggleSkillList = (service: string) => {
+  expandedSkillLists.value = expandedSkillLists.value.includes(service)
+    ? expandedSkillLists.value.filter(item => item !== service)
+    : [...expandedSkillLists.value, service]
+}
+const removeService = (service: string) => {
+  chosenServices.value = chosenServices.value.filter(item => item !== service)
 }
 // A top-level service with no sub-services has no skills to choose, so it cannot be missing one.
 const missingSkills = computed(() =>
@@ -159,8 +211,6 @@ const coverageReady = computed(
     !capacityProblem.value &&
     !hoursProblem.value,
 )
-const hasSkill = (service: string, skill: string) => chosenSkills()[service]?.includes(skill) ?? false
-
 const selectState = (stateName: string | null) => {
   selectedState.value = stateName ?? ""
   if (!stateName || !cityOptions.value.some(city => city.toLowerCase() === form.city.trim().toLowerCase()))
@@ -638,32 +688,186 @@ const submit = async () => {
       title="Services & skills"
       subtitle="Choose at least one skill for each service you offer. XPro uses these to match you to the right jobs."
     >
-      <VRow>
-        <VCol cols="12">
-          <VSelect v-model="chosenServices" :items="serviceOptions" label="Services offered" multiple chips />
-        </VCol>
-        <VCol v-if="chosenServices.length" cols="12">
-          <fieldset v-for="service in chosenServices" :key="service" class="skills-group">
-            <legend class="text-subtitle-1">
-              {{ serviceName(service) }}
-            </legend>
-            <div class="skills-grid">
-              <VCheckbox
-                v-for="skill in skillsFor(service)"
-                :key="skill.id"
-                :model-value="hasSkill(service, skill.id)"
-                :label="skill.label"
-                density="compact"
-                hide-details
-                @update:model-value="setSkill(service, skill.id, $event)"
-              />
+      <VMenu
+        v-model="catalogMenuOpen"
+        :close-on-content-click="false"
+        location="bottom"
+        :offset="8"
+        content-class="service-catalog-menu"
+      >
+        <template #activator="{ props: menuProps }">
+          <button
+            v-bind="menuProps"
+            type="button"
+            class="service-picker-trigger"
+            :class="{ 'service-picker-trigger--active': catalogMenuOpen }"
+            role="combobox"
+            aria-label="Services offered"
+            aria-controls="service-catalog-options"
+            :aria-expanded="catalogMenuOpen"
+          >
+            <span class="service-picker-label">Services offered</span>
+            <span v-if="chosenServices.length" class="service-picker-values">
+              <VChip v-for="service in chosenServices" :key="service" size="small" color="primary" variant="tonal">
+                {{ serviceName(service) }}
+                <button
+                  type="button"
+                  class="service-chip-remove"
+                  :aria-label="`Remove ${serviceName(service)}`"
+                  @click.stop="removeService(service)"
+                >
+                  <VIcon icon="tabler-x" size="14" />
+                </button>
+              </VChip>
+            </span>
+            <span v-else class="text-medium-emphasis">Select services</span>
+            <VIcon
+              :icon="catalogMenuOpen ? 'tabler-chevron-up' : 'tabler-chevron-down'"
+              size="20"
+              class="service-picker-chevron"
+            />
+          </button>
+        </template>
+
+        <VCard id="service-catalog-options" class="service-catalog-popover" rounded="lg">
+          <VCardText class="pa-3">
+            <VTextField
+              v-model="catalogSearch"
+              label="Search catalogs"
+              prepend-inner-icon="tabler-search"
+              density="comfortable"
+              hide-details
+              clearable
+              class="mb-3"
+            />
+            <div class="catalog-option-list">
+              <section
+                v-for="item in visibleCatalogs"
+                :key="item.service"
+                class="catalog-option"
+                :class="{ 'catalog-option--selected': chosenServices.includes(item.service) }"
+              >
+                <div class="catalog-option-header">
+                  <VCheckbox
+                    :model-value="chosenServices.includes(item.service)"
+                    :label="item.name"
+                    density="comfortable"
+                    hide-details
+                    @update:model-value="toggleService(item.service)"
+                  />
+                  <span
+                    v-if="chosenServices.includes(item.service) && (isDemoMode || item.skills.length)"
+                    class="catalog-selected-count"
+                  >
+                    {{ selectedSkillLabels(item.service).length }} selected
+                  </span>
+                  <VBtn
+                    v-if="isDemoMode || item.skills.length"
+                    :icon="expandedCatalogs.includes(item.service) ? 'tabler-chevron-up' : 'tabler-chevron-down'"
+                    :aria-label="`${expandedCatalogs.includes(item.service) ? 'Collapse' : 'Expand'} ${item.name} skills`"
+                    :aria-expanded="expandedCatalogs.includes(item.service)"
+                    :aria-controls="`catalog-skills-${item.service}`"
+                    variant="text"
+                    size="small"
+                    density="comfortable"
+                    @click="toggleCatalog(item.service)"
+                  />
+                </div>
+                <template v-if="chosenServices.includes(item.service) && expandedCatalogs.includes(item.service)">
+                  <div
+                    v-if="!isDemoMode && item.root && item.root.children.length"
+                    :id="`catalog-skills-${item.service}`"
+                    class="catalog-skill-tree"
+                  >
+                    <CatalogSkillTree
+                      :nodes="item.root.children"
+                      :selected="ids.skillIds[item.service] ?? []"
+                      :visible="liveVisible"
+                      @toggle="(leafIds, on) => setSkills(item.service, leafIds, on)"
+                    />
+                  </div>
+                  <div v-else-if="item.skills.length" :id="`catalog-skills-${item.service}`" class="catalog-skill-grid">
+                    <VCheckbox
+                      v-for="skill in item.skills.slice(0, expandedSkillLists.includes(item.service) ? undefined : 8)"
+                      :key="skill.id"
+                      :model-value="hasSkill(item.service, skill.id)"
+                      :label="skill.label"
+                      density="compact"
+                      hide-details
+                      @update:model-value="setSkill(item.service, skill.id, $event)"
+                    />
+                    <VBtn
+                      v-if="item.skills.length > 8"
+                      variant="text"
+                      size="small"
+                      color="primary"
+                      class="catalog-more-skills"
+                      @click="toggleSkillList(item.service)"
+                    >
+                      {{
+                        expandedSkillLists.includes(item.service)
+                          ? "Show fewer skills"
+                          : `+ ${item.skills.length - 8} more skills`
+                      }}
+                      <VIcon
+                        :icon="expandedSkillLists.includes(item.service) ? 'tabler-chevron-up' : 'tabler-chevron-down'"
+                        end
+                      />
+                    </VBtn>
+                  </div>
+                  <p v-else-if="isDemoMode" class="text-body-2 text-medium-emphasis mb-2">
+                    No sub-catalog skills are available.
+                  </p>
+                  <p v-if="missingSkills.includes(item.service)" class="text-body-2 text-error mt-2 mb-1" role="alert">
+                    Choose at least one {{ item.name }} skill.
+                  </p>
+                </template>
+              </section>
+              <p v-if="visibleCatalogs.length === 0" class="text-body-2 text-medium-emphasis text-center my-4">
+                No catalogs match your search.
+              </p>
             </div>
-            <p v-if="missingSkills.includes(service)" class="text-body-2 text-error mt-1 mb-0" role="alert">
-              Choose at least one {{ serviceName(service) }} skill.
-            </p>
-          </fieldset>
-        </VCol>
-      </VRow>
+          </VCardText>
+        </VCard>
+      </VMenu>
+
+      <fieldset v-if="chosenServices.length" class="selected-skills-panel mt-4">
+        <legend>Selected skills</legend>
+        <div v-for="service in chosenServices" :key="service" class="selected-skills-row">
+          <div class="selected-skills-service">
+            <span class="font-weight-medium">{{ serviceName(service) }}</span>
+            <span v-if="hasSkillChoices(service)" class="text-caption text-medium-emphasis"
+              >{{ selectedSkillLabels(service).length }} skills selected</span
+            >
+          </div>
+          <VDivider vertical class="selected-skills-divider" />
+          <div class="selected-skill-chips">
+            <VChip
+              v-for="skill in selectedSkillLabels(service)"
+              :key="skill.id"
+              closable
+              color="primary"
+              variant="tonal"
+              @click:close="setSkill(service, skill.id, false)"
+            >
+              {{ skill.label }}
+            </VChip>
+            <span v-if="!hasSkillChoices(service)" class="text-body-2 text-medium-emphasis">
+              No sub-services to choose for this service.
+            </span>
+            <span v-else-if="!selectedSkillLabels(service).length" class="text-body-2 text-medium-emphasis">
+              Choose at least one skill in the catalog menu.
+            </span>
+          </div>
+          <VBtn
+            icon="tabler-trash"
+            :aria-label="`Remove ${serviceName(service)} and its skills`"
+            variant="text"
+            color="medium-emphasis"
+            @click="removeService(service)"
+          />
+        </div>
+      </fieldset>
     </ProfileSection>
 
     <ProfileSection
@@ -831,6 +1035,139 @@ const submit = async () => {
 </template>
 
 <style scoped>
+.service-picker-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+  background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  text-align: start;
+  transition: border-color 120ms ease;
+}
+.service-picker-trigger:hover,
+.service-picker-trigger--active {
+  border-color: rgb(var(--v-theme-primary));
+}
+.service-picker-label {
+  position: absolute;
+  transform: translateY(-1.45rem);
+  padding-inline: 0.25rem;
+  background: rgb(var(--v-theme-surface));
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  font-size: 0.75rem;
+}
+.service-picker-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding-block-start: 0.2rem;
+}
+.service-picker-chevron {
+  margin-inline-start: auto;
+}
+.service-chip-remove {
+  display: inline-flex;
+  margin-inline-start: 0.35rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.catalog-option-list {
+  display: grid;
+  max-height: min(62vh, 520px);
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+.catalog-option {
+  padding: 0.25rem 0.75rem 0.5rem;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+}
+.catalog-option--selected {
+  border-color: rgba(var(--v-theme-primary), 0.2);
+  background: rgba(var(--v-theme-primary), 0.035);
+}
+.catalog-option-header {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 0.5rem;
+}
+.catalog-option-header :deep(.v-checkbox) {
+  flex: 1;
+}
+.catalog-selected-count {
+  flex-shrink: 0;
+  padding: 0.2rem 0.625rem;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-primary), 0.1);
+  color: rgb(var(--v-theme-primary));
+  font-size: 0.75rem;
+}
+.catalog-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.125rem 0.75rem;
+  padding-inline-start: 2.5rem;
+}
+.catalog-skill-tree {
+  padding-inline-start: 2.5rem;
+}
+.catalog-more-skills {
+  justify-self: start;
+}
+.selected-skills-panel {
+  min-width: 0;
+  padding: 0 1rem 0.5rem;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 8px;
+}
+.selected-skills-panel legend {
+  padding-inline: 0.5rem;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+.selected-skills-row {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 0.75rem;
+}
+.selected-skills-row + .selected-skills-row {
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+.selected-skills-service {
+  display: grid;
+  min-width: 9rem;
+}
+.selected-skills-divider {
+  align-self: stretch;
+}
+.selected-skill-chips {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+@media (max-width: 600px) {
+  .selected-skills-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .selected-skills-divider {
+    display: none;
+  }
+  .selected-skill-chips {
+    flex-basis: 100%;
+  }
+}
 .skills-group {
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-radius: 8px;

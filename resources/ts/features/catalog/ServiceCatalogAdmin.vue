@@ -31,7 +31,6 @@ interface QuestionDraft {
   maxLength: string
   dateRole: "" | DateRole
   sensitive: boolean
-  matchesSkill: boolean
 }
 
 interface TreeRow {
@@ -274,7 +273,6 @@ function blankQuestion(): QuestionDraft {
     maxLength: "",
     dateRole: "",
     sensitive: false,
-    matchesSkill: false,
   }
 }
 
@@ -299,7 +297,6 @@ function openQuestion(question: AdminQuestion | null) {
           maxLength: text(question.config.maxLength),
           dateRole: question.dateRole ?? "",
           sensitive: question.sensitive,
-          matchesSkill: question.matchesSkill,
         }
       : blankQuestion(),
   )
@@ -309,7 +306,6 @@ function openQuestion(question: AdminQuestion | null) {
 watch(
   () => questionForm.type,
   type => {
-    if (type !== "single_choice") questionForm.matchesSkill = false
     if (type !== "date") questionForm.dateRole = ""
   },
 )
@@ -359,7 +355,6 @@ const questionPayload = (): QuestionInput => {
     config,
     dateRole: form.type === "date" ? form.dateRole || null : null,
     sensitive: form.sensitive,
-    matchesSkill: form.type === "single_choice" && form.matchesSkill,
   }
 }
 
@@ -599,7 +594,6 @@ onMounted(() => load(true))
                     <VChip size="x-small" variant="tonal">{{ questionTypeLabels[question.type] }}</VChip>
                     <VChip v-if="question.required" size="x-small" color="primary" variant="tonal">Required</VChip>
                     <VChip v-if="question.sensitive" size="x-small" color="warning" variant="tonal">Sensitive</VChip>
-                    <VChip v-if="question.matchesSkill" size="x-small" color="info" variant="tonal">Skill</VChip>
                     <VChip v-if="!question.active" size="x-small" color="warning" variant="tonal">Inactive</VChip>
                   </div>
                   <template #append>
@@ -789,15 +783,6 @@ onMounted(() => load(true))
               label="Sensitive"
               color="primary"
               hint="Hidden from providers until XPro shares it."
-              persistent-hint
-              density="compact"
-            />
-            <VSwitch
-              v-if="questionForm.type === 'single_choice'"
-              v-model="questionForm.matchesSkill"
-              label="Matches provider skill"
-              color="primary"
-              hint="Providers are matched on the option the customer picks."
               persistent-hint
               density="compact"
             />
