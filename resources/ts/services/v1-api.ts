@@ -15,9 +15,8 @@ import type {
   V1Staff,
 } from "@/features/v1/types"
 
-// The V1 request-flow client. Its contract is the one `xpro-server` will implement in the server phase
-// (v1/README.md §6, adjusted by plans/v1-ui-implementation.md). With `VITE_ENABLE_MOCKS=true` MSW answers it from
-// `mocks/v1`; otherwise it calls the real server, which does not support V1 yet.
+// The V1 request-flow client uses the shared contract in `v1/README.md` and the dashboard implementation plan.
+// With `VITE_ENABLE_MOCKS=true` MSW answers it from `mocks/v1`; otherwise it calls the V1 server routes.
 
 type HttpMethod = "POST" | "PUT"
 
@@ -30,6 +29,63 @@ export class V1ApiError extends ApiError {
 
 const randomKey = () => globalThis.crypto.randomUUID()
 const pathId = (value: string) => encodeURIComponent(value)
+const pendingKeys = new Map<string, string>()
+
+const canonical = (value: unknown): string => {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
+      .join(",")}}`
+  }
+
+  return JSON.stringify(value) ?? "null"
+}
+
+const commandFingerprint = async (path: string, method: HttpMethod, body: unknown) => {
+  const payload = new TextEncoder().encode(`${method}\n${path}\n${canonical(body)}`)
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", payload)
+
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("")
+}
+
+const commandKeyFor = async (fingerprint: string) => {
+  const cached = pendingKeys.get(fingerprint)
+  if (cached) return cached
+
+  const storageKey = `xpro:v1:pending-command:${fingerprint}`
+  try {
+    const saved = globalThis.sessionStorage.getItem(storageKey)
+    if (saved) {
+      pendingKeys.set(fingerprint, saved)
+
+      return saved
+    }
+  } catch {
+    // Storage may be unavailable in restricted browser contexts; keep retries stable in memory.
+  }
+
+  const key = randomKey()
+  pendingKeys.set(fingerprint, key)
+  try {
+    globalThis.sessionStorage.setItem(storageKey, key)
+  } catch {
+    // The in-memory copy still covers retries in the current page.
+  }
+
+  return key
+}
+
+const clearCommandKey = (fingerprint: string) => {
+  pendingKeys.delete(fingerprint)
+  try {
+    globalThis.sessionStorage.removeItem(`xpro:v1:pending-command:${fingerprint}`)
+  } catch {
+    // No cleanup is needed when browser storage is unavailable.
+  }
+}
 
 const unwrap = async <T>(request: Promise<ApiEnvelope<T>>): Promise<T> => {
   try {
@@ -47,12 +103,18 @@ const unwrap = async <T>(request: Promise<ApiEnvelope<T>>): Promise<T> => {
 
 // Commands send `If-Match` (the request version the page loaded) and an idempotency key. A stale version is a 409.
 const command = <T>(path: string, method: HttpMethod, body: unknown, version?: number) => {
-  const headers = new Headers()
+  return (async () => {
+    const fingerprint = await commandFingerprint(path, method, body)
+    const headers = new Headers()
 
-  if (version !== undefined) headers.set("If-Match", `W/"${version}"`)
-  headers.set("Idempotency-Key", randomKey())
+    if (version !== undefined) headers.set("If-Match", `W/"${version}"`)
+    headers.set("Idempotency-Key", await commandKeyFor(fingerprint))
 
-  return unwrap($api<ApiEnvelope<T>>(path, { method, body: body as Record<string, unknown>, headers }))
+    const result = await unwrap($api<ApiEnvelope<T>>(path, { method, body: body as Record<string, unknown>, headers }))
+    clearCommandKey(fingerprint)
+
+    return result
+  })()
 }
 
 const query = (filters: V1RequestFilters) => ({
