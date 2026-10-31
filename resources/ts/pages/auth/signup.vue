@@ -5,13 +5,22 @@ import AuthShell from "@/features/auth/AuthShell.vue"
 import { emailRules, matches, passwordRules, required } from "@/features/auth/validation"
 import { authApi } from "@/services/xpro-api"
 import { getErrorMessage } from "@/utils/errors"
+import { safeRedirectPath } from "@/utils/safe-redirect"
 
 definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } })
 
 const router = useRouter()
 const route = useRoute()
 const formRef = ref<VForm>()
-const form = reactive({ firstName: "", lastName: "", email: "", password: "", confirmPassword: "", accepted: false })
+const redirect = safeRedirectPath(route.query.redirect)
+const form = reactive({
+  firstName: "",
+  lastName: "",
+  email: typeof route.query.email === "string" ? route.query.email : "",
+  password: "",
+  confirmPassword: "",
+  accepted: false,
+})
 const accountRole = ref<"customer" | "provider">(route.query.role === "provider" ? "provider" : "customer")
 const accountTypes = [
   { title: "Customer", value: "customer" },
@@ -89,8 +98,12 @@ const submit = async () => {
       password: form.password,
       role: accountRole.value,
       ...(Object.keys(versions).length > 0 ? { acceptedTerms: versions } : {}),
+      ...(redirect ? { returnTo: redirect } : {}),
     })
-    await router.push({ path: "/auth/verify-email", query: { email: form.email } })
+    await router.push({
+      path: "/auth/verify-email",
+      query: { email: form.email, role: accountRole.value, ...(redirect ? { redirect } : {}) },
+    })
   } catch (error) {
     errorMessage.value = getErrorMessage(error)
   } finally {
@@ -179,7 +192,12 @@ const submit = async () => {
     </VForm>
     <p class="text-center mt-6 mb-0">
       Already registered?
-      <RouterLink to="/login" class="text-primary font-weight-semibold text-decoration-none"> Sign in </RouterLink>
+      <RouterLink
+        :to="{ path: '/login', query: redirect ? { redirect } : {} }"
+        class="text-primary font-weight-semibold text-decoration-none"
+      >
+        Sign in
+      </RouterLink>
     </p>
   </AuthShell>
 </template>

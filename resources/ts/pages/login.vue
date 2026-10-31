@@ -7,6 +7,7 @@ import { demoCredentials } from "@/mocks/fixtures"
 import { useAuthStore } from "@/stores/auth"
 import { getErrorMessage } from "@/utils/errors"
 import { isDemoMode } from "@/utils/demo-mode"
+import { safeRedirectPath } from "@/utils/safe-redirect"
 
 definePage({ meta: { layout: "blank", public: true, unauthenticatedOnly: true } })
 
@@ -14,7 +15,13 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const formRef = ref<VForm>()
-const form = reactive({ email: "", password: "", remember: false, mfaCode: "" })
+const redirect = safeRedirectPath(route.query.redirect)
+const form = reactive({
+  email: typeof route.query.email === "string" ? route.query.email : "",
+  password: "",
+  remember: false,
+  mfaCode: "",
+})
 const isPasswordVisible = ref(false)
 const loading = ref(false)
 const errorMessage = ref("")
@@ -42,16 +49,7 @@ const submit = async () => {
       return
     }
 
-    const redirect =
-      typeof route.query.redirect === "string" &&
-      route.query.redirect.startsWith("/") &&
-      !route.query.redirect.startsWith("//") &&
-      !route.query.redirect.startsWith("/login") &&
-      !route.query.redirect.startsWith("/auth/")
-        ? route.query.redirect
-        : auth.homePath
-
-    await router.push(redirect)
+    await router.push(redirect ?? auth.homePath)
   } catch (error) {
     const message = getErrorMessage(error, "We could not sign you in. Check your details and try again.")
     if (message.toLowerCase().includes("mfa code required")) {
@@ -130,7 +128,10 @@ const submit = async () => {
 
     <p class="text-center text-body-2 mt-6 mb-6">
       New to XPro?
-      <RouterLink to="/auth/signup" class="text-primary font-weight-semibold text-decoration-none">
+      <RouterLink
+        :to="{ path: '/auth/signup', query: redirect ? { redirect } : {} }"
+        class="text-primary font-weight-semibold text-decoration-none"
+      >
         Create a customer or provider account
       </RouterLink>
     </p>
