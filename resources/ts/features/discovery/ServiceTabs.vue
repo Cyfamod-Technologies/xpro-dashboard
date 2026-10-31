@@ -12,8 +12,8 @@ const model = computed({
 })
 
 const tabs = computed(() => [
-  ...(props.all ? [{ name: "", label: "All services", icon: "tabler-layout-grid" }] : []),
-  ...services.value.map(item => ({ name: item.name, label: item.name, icon: item.icon })),
+  ...(props.all ? [{ name: "", label: "All services" }] : []),
+  ...services.value.map(item => ({ name: item.name, label: item.name })),
 ])
 </script>
 
@@ -25,10 +25,7 @@ const tabs = computed(() => [
     color="primary-darken-1"
     :mandatory="all ? false : 'force'"
   >
-    <VTab v-for="item in tabs" :key="item.name" :value="item.name" class="service-tab" stacked>
-      <span class="service-tab__badge">
-        <VIcon :icon="item.icon" size="24" />
-      </span>
+    <VTab v-for="item in tabs" :key="item.name" :value="item.name" class="service-tab">
       {{ item.label }}
     </VTab>
   </VTabs>
@@ -46,7 +43,7 @@ const tabs = computed(() => [
     letter-spacing: normal;
     min-inline-size: 120px;
     white-space: nowrap;
-    padding-block: 6px 14px;
+    padding-block: 14px;
     text-transform: none;
   }
 
@@ -57,16 +54,5 @@ const tabs = computed(() => [
   :deep(.v-tab:not(.v-tab--selected)) {
     color: rgb(var(--v-theme-secondary));
   }
-}
-
-.service-tab__badge {
-  align-items: center;
-  background: rgb(var(--v-theme-surface));
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 50%;
-  block-size: 48px;
-  display: flex;
-  inline-size: 48px;
-  justify-content: center;
 }
 </style>

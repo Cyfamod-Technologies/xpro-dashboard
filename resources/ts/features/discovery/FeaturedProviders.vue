@@ -87,7 +87,12 @@ const metaLine = (provider: FeaturedProviderCard) => {
           <VCardText class="d-flex flex-column gap-3 flex-grow-1">
             <div class="d-flex align-center gap-4">
               <VAvatar color="primary" variant="tonal" size="72" class="flex-shrink-0">
-                <VImg v-if="provider.photoUrl" :src="provider.photoUrl" :alt="`Photo of ${provider.displayName}`" cover />
+                <VImg
+                  v-if="provider.photoUrl"
+                  :src="provider.photoUrl"
+                  :alt="`Photo of ${provider.displayName}`"
+                  cover
+                />
                 <span v-else class="text-h5" aria-hidden="true">{{ initialsOf(provider.displayName) }}</span>
               </VAvatar>
               <div class="min-w-0">
@@ -97,7 +102,13 @@ const metaLine = (provider: FeaturedProviderCard) => {
                 <div class="text-body-2 text-medium-emphasis">
                   {{ provider.trade }}
                 </div>
-                <VChip size="small" color="success" variant="tonal" prepend-icon="tabler-rosette-discount-check" class="mt-1">
+                <VChip
+                  size="small"
+                  color="success"
+                  variant="tonal"
+                  prepend-icon="tabler-rosette-discount-check"
+                  class="mt-1"
+                >
                   Verified by XPro
                 </VChip>
               </div>
@@ -113,7 +124,12 @@ const metaLine = (provider: FeaturedProviderCard) => {
               {{ metaLine(provider) }}
             </div>
             <div v-if="provider.services.length" class="d-flex flex-wrap gap-1">
-              <VChip v-for="service in provider.services.slice(0, maxServices)" :key="service" size="small" variant="outlined">
+              <VChip
+                v-for="service in provider.services.slice(0, maxServices)"
+                :key="service"
+                size="small"
+                variant="outlined"
+              >
                 {{ service }}
               </VChip>
               <VChip v-if="provider.services.length > maxServices" size="small" variant="outlined">
@@ -132,7 +148,9 @@ const metaLine = (provider: FeaturedProviderCard) => {
   <section class="xp-container pt-8 pb-12">
     <VCard color="primary" variant="tonal">
       <VCardText class="on-tonal d-flex flex-wrap justify-space-between align-center gap-3">
-        <span class="cta-copy">Need something done? Request a service and XPro will match you with a verified provider.</span>
+        <span class="cta-copy"
+          >Need something done? Request a service and XPro will match you with a verified provider.</span
+        >
         <VBtn to="/request" size="large"> Request a service </VBtn>
       </VCardText>
     </VCard>

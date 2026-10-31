@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   AssignmentView,
+  CustomerRequestLimitView,
   QuoteItemView,
   QuoteLineView,
   QuoteView,
@@ -9,16 +10,28 @@ import type {
   RequestView,
 } from "@/features/requests/api-types"
 import { REQUEST_STAGES } from "@/features/requests/api-types"
-import { nextActorLabel } from "@/features/requests/next-actor"
+import type { GroupEntry } from "@/features/requests/request-groups"
+import { groupRequests } from "@/features/requests/request-groups"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { providersApi } from "@/services/providers-api"
+import { useAuthStore } from "@/stores/auth"
+import CancelAllDialog from "@/features/requests/CancelAllDialog.vue"
+import CustomerRequestLimit from "@/features/requests/CustomerRequestLimit.vue"
+import RequestGroupPanel from "@/features/requests/RequestGroupPanel.vue"
+import RequestGroupSection from "@/features/requests/RequestGroupSection.vue"
 import RequestLifecycle from "@/features/requests/RequestLifecycle.vue"
+import RequestListCard from "@/features/requests/RequestListCard.vue"
+import ReviewAllDialog from "@/features/requests/ReviewAllDialog.vue"
 
 const props = defineProps<{ section: string }>()
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const summaries = ref<RequestSummary[]>([])
 const request = ref<RequestView>()
+// Only `GET /requests/:id` carries `customerRequestLimit`; command responses do not. Keep the last fetched value
+// here, and replace it only from that fetch or from the limit endpoint's own response.
+const customerLimit = ref<CustomerRequestLimitView>()
 const loading = ref(false)
 const saving = ref(false)
 const error = ref("")
@@ -61,6 +74,28 @@ const sectionTitle = computed(
     ({ dispatch: "Dispatch", quotes: "Quotes", payments: "Payments", payouts: "Earnings" })[props.section] ??
     "Requests",
 )
+// Requests made together (Spec 04 §4.1a) are listed under their project; the rest stay single rows.
+const entries = computed(() => groupRequests(summaries.value))
+const canCancelAll = computed(() => auth.user?.role === "customer")
+const canReviewAll = computed(
+  () => props.section === "requests" && auth.user?.role === "admin" && auth.user.scopes.includes("request.review"),
+)
+const bulkDialog = ref<{ kind: "cancel" | "review"; groupId: string; title: string }>()
+const cancelAllOpen = computed({
+  get: () => bulkDialog.value?.kind === "cancel",
+  set: open => {
+    if (!open) bulkDialog.value = undefined
+  },
+})
+const reviewAllOpen = computed({
+  get: () => bulkDialog.value?.kind === "review",
+  set: open => {
+    if (!open) bulkDialog.value = undefined
+  },
+})
+const openBulk = (kind: "cancel" | "review", entry: GroupEntry<RequestSummary>) => {
+  bulkDialog.value = { kind, groupId: entry.groupId, title: entry.title }
+}
 const selectedId = computed(() => (typeof route.query.request === "string" ? route.query.request : undefined))
 const currentAssignments = computed<AssignmentView[]>(() => {
   const value = request.value?.assignment
@@ -133,6 +168,7 @@ async function loadDetail(id = selectedId.value) {
   }
   if (!id) {
     request.value = undefined
+    customerLimit.value = undefined
     payment.value = undefined
 
     return
@@ -141,6 +177,9 @@ async function loadDetail(id = selectedId.value) {
   error.value = ""
   try {
     request.value = await requestsApi.get(id)
+    if (request.value.customerRequestLimit) customerLimit.value = request.value.customerRequestLimit
+    else if (customerLimit.value && request.value.ownerId && customerLimit.value.userId !== request.value.ownerId)
+      customerLimit.value = undefined
     dispatchMode.value = request.value.dispatch?.mode ?? "auto"
     if (request.value.quote) {
       const lines = request.value.quote.items ?? []
@@ -342,28 +381,40 @@ watch([stageFilter, nextActorOnly], () => {
       <VAlert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</VAlert>
       <VProgressLinear v-if="loading" indeterminate class="mb-4" />
       <VRow v-else>
-        <VCol v-for="item in summaries" :key="item.id" cols="12" md="6">
-          <VCard class="h-100"
-            ><VCardText>
-              <div class="d-flex justify-space-between ga-3 mb-3">
-                <span class="text-medium-emphasis">{{ item.id }}</span
-                ><VChip color="primary" variant="tonal">{{ item.statusLabel ?? item.stage }}</VChip>
-              </div>
-              <h3 class="text-h5 mb-2">{{ item.title || "Service request" }}</h3>
-              <p class="text-medium-emphasis mb-4">
-                {{ [item.service, item.cityName, item.districtName].filter(Boolean).join(" · ") }}
-              </p>
-              <p class="text-body-2">Next: {{ nextActorLabel(item.nextActor) }}</p>
-              <VBtn variant="outlined" @click="select(item.id)">{{
-                props.section === "quotes" ? "View quote" : props.section === "dispatch" ? "Dispatch" : "View request"
-              }}</VBtn>
-            </VCardText></VCard
-          >
-        </VCol>
+        <template v-for="entry in entries" :key="entry.kind === 'group' ? entry.groupId : entry.item.id">
+          <VCol v-if="entry.kind === 'group'" cols="12">
+            <RequestGroupSection
+              :entry="entry"
+              :section="props.section"
+              :can-cancel-all="canCancelAll"
+              :can-review-all="canReviewAll"
+              @open="select"
+              @cancel-all="openBulk('cancel', entry)"
+              @review-all="openBulk('review', entry)"
+            />
+          </VCol>
+          <VCol v-else cols="12" md="6">
+            <RequestListCard :item="entry.item" :section="props.section" @open="select" />
+          </VCol>
+        </template>
         <VCol v-if="!summaries.length" cols="12"
           ><VCard><VCardText class="text-center text-medium-emphasis py-10">No requests found.</VCardText></VCard></VCol
         >
       </VRow>
+      <CancelAllDialog
+        v-if="bulkDialog?.kind === 'cancel'"
+        v-model="cancelAllOpen"
+        :group-id="bulkDialog.groupId"
+        :title="bulkDialog.title"
+        @finished="loadList"
+      />
+      <ReviewAllDialog
+        v-if="bulkDialog?.kind === 'review'"
+        v-model="reviewAllOpen"
+        :group-id="bulkDialog.groupId"
+        :title="bulkDialog.title"
+        @finished="loadList"
+      />
     </template>
 
     <template v-else>
@@ -384,7 +435,8 @@ watch([stageFilter, nextActorOnly], () => {
             {{ [request.service, request.cityName, request.districtName].filter(Boolean).join(" · ") }}
           </p>
           <p v-if="request.servicePath?.length" class="text-body-2 mb-3">
-            <span class="text-medium-emphasis">Service:</span> {{ request.servicePath.map(step => step.name).join(" › ") }}
+            <span class="text-medium-emphasis">Service:</span>
+            {{ request.servicePath.map(step => step.name).join(" › ") }}
           </p>
           <dl v-if="request.answers?.length" class="answers mb-3">
             <template v-for="answer in request.answers" :key="answer.questionId">
@@ -405,6 +457,8 @@ watch([stageFilter, nextActorOnly], () => {
           </div>
         </VCardText></VCard
       >
+      <RequestGroupPanel v-if="request.group" :group="request.group" :siblings="request.siblings ?? []" />
+      <CustomerRequestLimit v-if="customerLimit" :limit="customerLimit" @change="customerLimit = $event" />
 
       <template v-if="props.section === 'dispatch'">
         <VCard class="mb-5"

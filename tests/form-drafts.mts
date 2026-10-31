@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { draftKeyPrefix, draftStorageKey, draftTtlMs, hashString, isDraftKeyFor, readDraft, sameDraftData, wrapDraft } from '@/features/drafts/draft-envelope.ts'
+import { draftKeyPrefix, draftStorageKey, draftTtlMs, hashString, isDraftKeyFor, readDraft, readMigratedDraft, sameDraftData, wrapDraft } from '@/features/drafts/draft-envelope.ts'
 
 const now = Date.UTC(2026, 9, 29, 12)
 const data = { title: 'Fix the roof', details: { size: '3 bed' } }
@@ -24,6 +24,15 @@ assert.equal(readDraft(JSON.stringify({ v: 2, savedAt: now }), 2, now), null, 'M
 
 // A new form shape discards older drafts
 assert.equal(readDraft(raw, 3, now), null)
+
+// A form can migrate an older shape instead of discarding it
+const legacy = { versions: [2], migrate: (old: unknown, from: number) => (from === 2 ? { ...(old as object), migrated: true } : null) }
+
+assert.deepEqual(readMigratedDraft(raw, 3, legacy, now + 1000)?.data, { ...data, migrated: true })
+assert.equal(readMigratedDraft(raw, 3, legacy, now + 1000)?.v, 3)
+assert.equal(readMigratedDraft(raw, 3, undefined, now), null)
+assert.equal(readMigratedDraft(JSON.stringify(wrapDraft(data, 1, now)), 3, legacy, now), null, 'Only the listed versions migrate')
+assert.deepEqual(readMigratedDraft(raw, 2, legacy, now)?.data, data, 'A current draft is not migrated')
 
 // Expiry after the TTL, but not before
 assert.ok(readDraft(raw, 2, now + draftTtlMs))

@@ -3,6 +3,10 @@ import type { ApiEnvelope } from "@/types/domain"
 import type {
   ApprovalQueueView,
   ContributionView,
+  CreateRequestBody,
+  CreateRequestGroupBody,
+  CreateRequestGroupResult,
+  CustomerRequestLimitView,
   EarningsView,
   EscalationView,
   LocationView,
@@ -12,6 +16,7 @@ import type {
   PayoutView,
   PendingRequestView,
   ProgressUpdateView,
+  PublicRequestConfigView,
   QuoteItemView,
   QuoteView,
   RankingRunView,
@@ -76,6 +81,9 @@ const command = <T>(
 
 export interface RequestListParams {
   status?: string
+
+  /** A group id or `XPG-nnnnn`: only that bundle's requests. */
+  group?: string
   stage?: RequestStage
   service?: string
   q?: string
@@ -89,27 +97,21 @@ export interface RequestListParams {
 export const requestsApi = {
   list: (params: RequestListParams = {}) =>
     unwrap($api<ApiEnvelope<PaginatedResult<RequestSummary>>>("/requests", { query: params })),
+  publicConfig: () => unwrap($api<ApiEnvelope<PublicRequestConfigView>>("/request-config")),
   pending: () => unwrap($api<ApiEnvelope<PendingRequestView>>("/requests/pending")),
   get: (id: string) => unwrap($api<ApiEnvelope<RequestView>>(`/requests/${pathId(id)}`)),
-  create: (
-    body: {
-      title: string
-      serviceId: string
-      cityId: string
-      districtId: string
-      address: string
-      phone: string
-      contactMethod?: string
-      description: string
-      budget: number
-      startDate?: string
-      answers: Record<string, string | number | string[]>
-      attachments: Array<{ id: string }>
-    },
-    idempotencyKey = randomKey(),
-  ) =>
+  create: (body: CreateRequestBody, idempotencyKey = randomKey()) =>
     unwrap(
       $api<ApiEnvelope<RequestView & { warning?: string }>>("/requests", {
+        method: "POST",
+        body,
+        headers: { "Idempotency-Key": idempotencyKey },
+      }),
+    ),
+  // Several services in one submission (Spec 04 §6.2, §11.2). One key covers the whole submission; all or nothing.
+  createGroup: (body: CreateRequestGroupBody, idempotencyKey = randomKey()) =>
+    unwrap(
+      $api<ApiEnvelope<CreateRequestGroupResult>>("/request-groups", {
         method: "POST",
         body,
         headers: { "Idempotency-Key": idempotencyKey },
@@ -130,10 +132,11 @@ export const requestsApi = {
   ) => command<RequestView>(`/requests/${pathId(id)}/review`, "POST", body, version),
   rejectIntake: (id: string, reason: string, version: number) =>
     command<RequestView>(`/requests/${pathId(id)}/reject`, "POST", { reason }, version),
-  // Free cancellation, owner only, while the request is still in intake review with no offer out (`request.cancel`).
+  // `POST /requests/:id/cancel` is one route that picks by actor and state (Spec 04 §11.2): a customer's free cancel
+  // while in intake review, otherwise a pending cancellation request for staff to decide; staff cancel directly.
   cancel: (id: string, note: string, version: number) =>
     command<RequestView>(`/requests/${pathId(id)}/cancel`, "POST", { note }, version),
-  // Paid or active cancellation, owner only (`cancellation.request`). The server has no combined `/cancel` yet (FD-2).
+  // Stale: the server has no `/cancellations` route (a customer cancellation request goes through `cancel` above).
   requestCancellation: (id: string, body: { reasonCode: string; note: string }, version: number) =>
     command<RequestView>(`/requests/${pathId(id)}/cancellations`, "POST", body, version),
   withdrawCancellation: (id: string, cancellationId: string, note: string | undefined, version: number) =>
@@ -303,6 +306,9 @@ export const requestsApi = {
   approvals: (params: { filter?: "can_act" | "mine" | "all" | "overdue"; kind?: string; page?: number } = {}) =>
     unwrap($api<ApiEnvelope<ApprovalQueueView>>("/admin/approvals", { query: params })),
   approvalCounts: () => unwrap($api<ApiEnvelope<{ open: number; overdue: number }>>("/admin/approvals/counts")),
+  // Staff with `account.limit` (Spec 04 §11.2, MS-7). `limit: null` returns the customer to the platform default.
+  setCustomerRequestLimit: (userId: string, body: { limit: number | null; note: string }) =>
+    command<CustomerRequestLimitView>(`/admin/customers/${pathId(userId)}/request-limit`, "PUT", body),
   settings: () => unwrap($api<ApiEnvelope<SettingView[]>>("/admin/settings")),
   // High-risk keys need `reauthToken` (from `POST /auth/reauthenticate`), sent as `X-Reauth-Token`.
   saveSettings: (

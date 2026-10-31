@@ -22,9 +22,6 @@ const firstName = computed(() => auth.user?.firstName ?? "there")
       <VCol v-for="service in serviceLines" :key="service.name" cols="12" sm="6" lg="4">
         <VCard :to="{ path: '/requests', query: { service: service.name } }" class="h-100">
           <VCardText>
-            <VAvatar color="primary" variant="tonal" class="mb-4">
-              <VIcon :icon="service.icon" />
-            </VAvatar>
             <h3 class="text-h6 mb-2">
               {{ service.name }}
             </h3>

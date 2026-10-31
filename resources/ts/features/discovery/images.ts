@@ -1,3 +1,4 @@
+import { staticServiceName } from "@/features/discovery/service-aliases"
 import type { ServiceLine } from "@/features/operations/types"
 
 /** Demo-only AI-generated scenes in /public/images/generated. Replace with real XPro project photos before launch. */
@@ -16,7 +17,7 @@ const SERVICE_COVERS: Record<ServiceLine, { file: string; alt: string }> = {
 }
 
 const serviceCover = (service: string) =>
-  (SERVICE_COVERS as Partial<Record<string, { file: string; alt: string }>>)[service]
+  (SERVICE_COVERS as Partial<Record<string, { file: string; alt: string }>>)[staticServiceName(service)]
 
 export const serviceCoverImage = (service: string): string => {
   const cover = serviceCover(service)
@@ -119,11 +120,11 @@ const JOB_COVERS: Record<ServiceLine, Record<string, JobCover>> = {
 }
 
 export const jobCoverImage = (service: string, jobName: string): string => {
-  const cover = (JOB_COVERS as Partial<Record<string, Record<string, JobCover>>>)[service]?.[jobName]
+  const cover = (JOB_COVERS as Partial<Record<string, Record<string, JobCover>>>)[staticServiceName(service)]?.[jobName]
 
   return cover ? `${BASE}/${cover.path}` : serviceCoverImage(service)
 }
 
 export const jobCoverAlt = (service: string, jobName: string): string =>
-  (JOB_COVERS as Partial<Record<string, Record<string, JobCover>>>)[service]?.[jobName]?.alt ??
+  (JOB_COVERS as Partial<Record<string, Record<string, JobCover>>>)[staticServiceName(service)]?.[jobName]?.alt ??
   `${serviceCoverAlt(service)} — ${jobName}`

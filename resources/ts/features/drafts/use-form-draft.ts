@@ -1,6 +1,6 @@
 import type { Ref } from "vue"
-import type { DraftEnvelope } from "@/features/drafts/draft-envelope"
-import { draftStorageKey, readDraft, wrapDraft } from "@/features/drafts/draft-envelope"
+import type { DraftEnvelope, LegacyDrafts } from "@/features/drafts/draft-envelope"
+import { draftStorageKey, readMigratedDraft, wrapDraft } from "@/features/drafts/draft-envelope"
 import { clearDraftFiles, loadDraftFiles, saveDraftFiles } from "@/features/drafts/draft-files"
 
 export type DraftStatus = "idle" | "saving" | "saved" | "unavailable"
@@ -10,6 +10,8 @@ export interface FormDraftOptions<T> {
   formId: string
   /** Bump when the shape of `snapshot()` changes; older drafts are then discarded. */
   version: number
+  /** Older shapes to migrate on load instead of discarding. Without it, a draft from another version is dropped. */
+  legacy?: LegacyDrafts<T>
   /** Who the draft belongs to: a user id, or "guest" when signed out. */
   owner: () => string
   /** The serialisable form state. Read inside a watcher, so every field it touches is tracked. */
@@ -78,7 +80,11 @@ export function useFormDraft<T>(options: FormDraftOptions<T>) {
 
     try {
       if (untouched) store.removeItem(key)
-      else store.setItem(key, JSON.stringify(wrapDraft(JSON.parse(json) as T, options.version, Date.now(), options.base?.())))
+      else
+        store.setItem(
+          key,
+          JSON.stringify(wrapDraft(JSON.parse(json) as T, options.version, Date.now(), options.base?.())),
+        )
     } catch {
       status.value = "unavailable"
 
@@ -172,11 +178,11 @@ export function useFormDraft<T>(options: FormDraftOptions<T>) {
     }
 
     let fromKey = key
-    let envelope = readDraft<T>(store.getItem(key), options.version)
+    let envelope = readMigratedDraft<T>(store.getItem(key), options.version, options.legacy)
 
     if (!envelope && options.adoptGuest && options.owner() !== "guest") {
       fromKey = draftStorageKey(options.formId, "guest")
-      envelope = readDraft<T>(store.getItem(fromKey), options.version)
+      envelope = readMigratedDraft<T>(store.getItem(fromKey), options.version, options.legacy)
     }
     if (!envelope) {
       // Unreadable, expired or outdated drafts are dropped rather than left behind.

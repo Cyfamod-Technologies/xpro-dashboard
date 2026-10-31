@@ -249,12 +249,17 @@ const ownerName = computed(() => {
 const title = computed(() => detail.value?.title || row.value?.title || selectedId.value || "")
 const customerName = computed(() => detail.value?.customerName || row.value?.customer.name || "Customer")
 const subtitle = computed(() => {
-  const stage = detail.value?.statusLabel || row.value?.statusLabel || (detail.value ? statusLabel(detail.value.status) : "")
+  const stage =
+    detail.value?.statusLabel || row.value?.statusLabel || (detail.value ? statusLabel(detail.value.status) : "")
 
   return [stage, ownerName.value ? `Owner: ${ownerName.value}` : "Unclaimed"].filter(Boolean).join(" · ")
 })
 const canClaim = computed(
-  () => !!detail.value && !detail.value.staffOwnerId && !finished.value && detail.value.allowedActions.includes("request.claim"),
+  () =>
+    !!detail.value &&
+    !detail.value.staffOwnerId &&
+    !finished.value &&
+    detail.value.allowedActions.includes("request.claim"),
 )
 const openTo = computed(() => ({ path: "/admin/requests", query: { request: selectedId.value ?? "" } }))
 
@@ -319,11 +324,7 @@ function retryChat() {
       />
     </div>
 
-    <section
-      v-show="mode !== 'phone' || phoneScreen === 'chat'"
-      class="inbox__chat"
-      aria-label="Conversation"
-    >
+    <section v-show="mode !== 'phone' || phoneScreen === 'chat'" class="inbox__chat" aria-label="Conversation">
       <div v-if="!selectedId" class="inbox__placeholder">
         <VIcon icon="tabler-message-circle" size="48" />
         <p class="inbox__placeholder-title">Select a conversation</p>
@@ -368,7 +369,12 @@ function retryChat() {
           />
         </div>
         <div class="inbox__chat-loading" role="status" aria-label="Loading messages">
-          <div v-for="n in 4" :key="n" class="inbox__bubble-skeleton" :class="{ 'inbox__bubble-skeleton--own': n % 2 === 0 }" />
+          <div
+            v-for="n in 4"
+            :key="n"
+            class="inbox__bubble-skeleton"
+            :class="{ 'inbox__bubble-skeleton--own': n % 2 === 0 }"
+          />
         </div>
       </template>
 

@@ -31,7 +31,6 @@ interface QuestionDraft {
   maxLength: string
   dateRole: "" | DateRole
   sensitive: boolean
-  matchesSkill: boolean
 }
 
 interface TreeRow {
@@ -50,7 +49,7 @@ const dialogError = ref("")
 const selectedId = ref<string | null>(null)
 const expanded = ref<string[]>([])
 const maxDepthDraft = ref("2")
-const draft = reactive({ name: "", description: "", icon: "", requiresStartDate: false, active: true })
+const draft = reactive({ name: "", description: "", requiresStartDate: false, active: true })
 
 const typeItems = (Object.keys(questionTypeLabels) as QuestionType[]).map(value => ({
   title: questionTypeLabels[value],
@@ -95,7 +94,6 @@ function resetDraft(node?: AdminServiceNode) {
   Object.assign(draft, {
     name: node?.name ?? "",
     description: node?.description ?? "",
-    icon: node?.icon ?? "",
     requiresStartDate: node?.requiresStartDate ?? false,
     active: node?.active ?? true,
   })
@@ -183,7 +181,6 @@ const saveService = () => {
         version: node.version,
         name: draft.name.trim(),
         description: draft.description.trim(),
-        icon: draft.icon.trim(),
         requiresStartDate: draft.requiresStartDate,
         active: draft.active,
       }),
@@ -203,11 +200,11 @@ async function move(row: TreeRow, direction: -1 | 1) {
 // New service dialog (top level, or a sub-service of the selected node).
 const createDialog = ref(false)
 const createParent = ref<AdminServiceNode | null>(null)
-const createForm = reactive({ name: "", description: "", icon: "", requiresStartDate: false })
+const createForm = reactive({ name: "", description: "", requiresStartDate: false })
 
 function openCreate(parent: AdminServiceNode | null) {
   createParent.value = parent
-  Object.assign(createForm, { name: "", description: "", icon: "", requiresStartDate: false })
+  Object.assign(createForm, { name: "", description: "", requiresStartDate: false })
   dialogError.value = ""
   createDialog.value = true
 }
@@ -222,7 +219,6 @@ async function createService() {
         ...(parent ? { parentId: parent.id } : {}),
         name: createForm.name.trim(),
         ...(createForm.description.trim() ? { description: createForm.description.trim() } : {}),
-        ...(createForm.icon.trim() ? { icon: createForm.icon.trim() } : {}),
         requiresStartDate: createForm.requiresStartDate,
       })
     },
@@ -252,9 +248,13 @@ function askDeleteService() {
   const node = selected.value
 
   if (!node) return
-  askConfirm("Delete service?", `"${node.name}" and its questions will be removed. This cannot be undone.`, async () => {
-    await run(() => catalogApi.deleteService(node.id), "Service deleted.")
-  })
+  askConfirm(
+    "Delete service?",
+    `"${node.name}" and its questions will be removed. This cannot be undone.`,
+    async () => {
+      await run(() => catalogApi.deleteService(node.id), "Service deleted.")
+    },
+  )
 }
 
 // Questions.
@@ -277,7 +277,6 @@ function blankQuestion(): QuestionDraft {
     maxLength: "",
     dateRole: "",
     sensitive: false,
-    matchesSkill: false,
   }
 }
 
@@ -302,7 +301,6 @@ function openQuestion(question: AdminQuestion | null) {
           maxLength: text(question.config.maxLength),
           dateRole: question.dateRole ?? "",
           sensitive: question.sensitive,
-          matchesSkill: question.matchesSkill,
         }
       : blankQuestion(),
   )
@@ -312,7 +310,6 @@ function openQuestion(question: AdminQuestion | null) {
 watch(
   () => questionForm.type,
   type => {
-    if (type !== "single_choice") questionForm.matchesSkill = false
     if (type !== "date") questionForm.dateRole = ""
   },
 )
@@ -362,7 +359,6 @@ const questionPayload = (): QuestionInput => {
     config,
     dateRole: form.type === "date" ? form.dateRole || null : null,
     sensitive: form.sensitive,
-    matchesSkill: form.type === "single_choice" && form.matchesSkill,
   }
 }
 
@@ -375,11 +371,7 @@ async function saveQuestion() {
 
     return
   }
-  if (
-    questionForm.min.trim() &&
-    questionForm.max.trim() &&
-    Number(questionForm.min) > Number(questionForm.max)
-  ) {
+  if (questionForm.min.trim() && questionForm.max.trim() && Number(questionForm.min) > Number(questionForm.max)) {
     dialogError.value = "The minimum cannot be above the maximum."
 
     return
@@ -532,17 +524,6 @@ onMounted(() => load(true))
             <VForm class="d-flex flex-column gap-4" @submit.prevent="saveService">
               <VTextField v-model="draft.name" label="Name *" :rules="[requiredText]" />
               <VTextarea v-model="draft.description" label="Description" rows="2" auto-grow />
-              <VTextField
-                v-model="draft.icon"
-                label="Icon"
-                placeholder="tabler-tools"
-                hint="A Tabler icon name, for example tabler-tools."
-                persistent-hint
-              >
-                <template v-if="draft.icon.trim()" #prepend-inner>
-                  <VIcon :icon="draft.icon.trim()" />
-                </template>
-              </VTextField>
               <VSwitch
                 v-model="draft.requiresStartDate"
                 label="Requires a start date"
@@ -578,7 +559,13 @@ onMounted(() => load(true))
                 Raise the maximum depth to add another level.
               </span>
               <VSpacer />
-              <VBtn v-if="canDelete" color="error" variant="outlined" prepend-icon="tabler-trash" @click="askDeleteService">
+              <VBtn
+                v-if="canDelete"
+                color="error"
+                variant="outlined"
+                prepend-icon="tabler-trash"
+                @click="askDeleteService"
+              >
                 Delete
               </VBtn>
               <span v-else class="text-body-2 text-medium-emphasis">
@@ -595,7 +582,13 @@ onMounted(() => load(true))
                 <VBtn size="small" prepend-icon="tabler-plus" @click="openQuestion(null)"> Add question </VBtn>
               </div>
 
-              <VList v-if="inherited.length" density="compact" lines="two" class="py-0" aria-label="Inherited questions">
+              <VList
+                v-if="inherited.length"
+                density="compact"
+                lines="two"
+                class="py-0"
+                aria-label="Inherited questions"
+              >
                 <VListItem v-for="item in inherited" :key="item.question.id">
                   <VListItemTitle>{{ item.question.label }}</VListItemTitle>
                   <VListItemSubtitle>
@@ -606,14 +599,18 @@ onMounted(() => load(true))
                 </VListItem>
               </VList>
 
-              <VList v-if="selected.questions.length" density="compact" class="py-0" aria-label="Questions on this service">
+              <VList
+                v-if="selected.questions.length"
+                density="compact"
+                class="py-0"
+                aria-label="Questions on this service"
+              >
                 <VListItem v-for="(question, index) in selected.questions" :key="question.id">
                   <VListItemTitle class="text-wrap">{{ question.label }}</VListItemTitle>
                   <div class="d-flex flex-wrap gap-1 mt-1">
                     <VChip size="x-small" variant="tonal">{{ questionTypeLabels[question.type] }}</VChip>
                     <VChip v-if="question.required" size="x-small" color="primary" variant="tonal">Required</VChip>
                     <VChip v-if="question.sensitive" size="x-small" color="warning" variant="tonal">Sensitive</VChip>
-                    <VChip v-if="question.matchesSkill" size="x-small" color="info" variant="tonal">Skill</VChip>
                     <VChip v-if="!question.active" size="x-small" color="warning" variant="tonal">Inactive</VChip>
                   </div>
                   <template #append>
@@ -668,18 +665,13 @@ onMounted(() => load(true))
     <VDialog v-model="createDialog" max-width="520">
       <VCard>
         <VForm @submit.prevent="createService">
-          <VCardTitle class="pt-4">{{ createParent ? `Add a sub-service to ${createParent.name}` : "Add service" }}</VCardTitle>
+          <VCardTitle class="pt-4">{{
+            createParent ? `Add a sub-service to ${createParent.name}` : "Add service"
+          }}</VCardTitle>
           <VCardText class="d-flex flex-column gap-4">
             <VAlert v-if="dialogError" type="error" variant="tonal">{{ dialogError }}</VAlert>
             <VTextField v-model="createForm.name" label="Name *" :rules="[requiredText]" autofocus />
             <VTextarea v-model="createForm.description" label="Description" rows="2" auto-grow />
-            <VTextField
-              v-model="createForm.icon"
-              label="Icon"
-              placeholder="tabler-tools"
-              hint="A Tabler icon name, for example tabler-tools."
-              persistent-hint
-            />
             <VSwitch
               v-model="createForm.requiresStartDate"
               label="Requires a start date"
@@ -782,18 +774,8 @@ onMounted(() => load(true))
             </div>
 
             <div v-if="questionForm.type === 'short_text' || questionForm.type === 'long_text'" class="limits">
-              <VTextField
-                v-model="questionForm.minLength"
-                type="number"
-                label="Minimum length"
-                :rules="[wholeText]"
-              />
-              <VTextField
-                v-model="questionForm.maxLength"
-                type="number"
-                label="Maximum length"
-                :rules="[wholeText]"
-              />
+              <VTextField v-model="questionForm.minLength" type="number" label="Minimum length" :rules="[wholeText]" />
+              <VTextField v-model="questionForm.maxLength" type="number" label="Maximum length" :rules="[wholeText]" />
             </div>
 
             <VSelect
@@ -810,15 +792,6 @@ onMounted(() => load(true))
               label="Sensitive"
               color="primary"
               hint="Hidden from providers until XPro shares it."
-              persistent-hint
-              density="compact"
-            />
-            <VSwitch
-              v-if="questionForm.type === 'single_choice'"
-              v-model="questionForm.matchesSkill"
-              label="Matches provider skill"
-              color="primary"
-              hint="Providers are matched on the option the customer picks."
               persistent-hint
               density="compact"
             />

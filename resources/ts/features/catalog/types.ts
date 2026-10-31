@@ -1,11 +1,7 @@
+import { serviceNameCandidates } from "@/features/discovery/service-aliases"
+
 export type QuestionType =
-  | "yes_no"
-  | "single_choice"
-  | "multiple_choice"
-  | "short_text"
-  | "long_text"
-  | "number"
-  | "date"
+  "yes_no" | "single_choice" | "multiple_choice" | "short_text" | "long_text" | "number" | "date"
 
 export type DateRole = "start" | "end"
 
@@ -34,7 +30,6 @@ export interface PublicQuestion {
   config: QuestionConfig
   dateRole: DateRole | null
   sensitive: boolean
-  matchesSkill: boolean
 }
 
 /** `GET /services`: only active nodes, questions and options, already sorted. */
@@ -42,7 +37,6 @@ export interface PublicServiceNode {
   id: string
   name: string
   description: string | null
-  icon: string | null
   requiresStartDate: boolean
   questions: PublicQuestion[]
   children: PublicServiceNode[]
@@ -80,7 +74,6 @@ export interface AdminServiceNode {
   depth: number
   name: string
   description: string | null
-  icon: string | null
   sortOrder: number
   active: boolean
   requiresStartDate: boolean
@@ -99,7 +92,6 @@ export interface ServiceInput {
   parentId?: string
   name: string
   description?: string
-  icon?: string
   requiresStartDate?: boolean
 }
 
@@ -107,7 +99,6 @@ export interface ServicePatch {
   version: number
   name?: string
   description?: string
-  icon?: string
   active?: boolean
   requiresStartDate?: boolean
 }
@@ -121,7 +112,6 @@ export interface QuestionInput {
   config?: QuestionConfig
   dateRole?: DateRole | null
   sensitive?: boolean
-  matchesSkill?: boolean
 }
 
 export type QuestionPatch = Partial<QuestionInput> & { version: number }
@@ -176,58 +166,84 @@ export const questionsAlongPath = <Q, N extends { questions: Q[] }>(path: N[]): 
 
 interface SkillEntry {
   id: string
-  label: string
+  name: string
 
-  /** The node that owns the skill question, or the leaf's parent for a leaf skill. Used to tell equal labels apart. */
-  context: string
+  /** The leaf's name, followed by its parent's when that parent is not the top-level service ("Tiling · Floor Finishing"). */
+  label: string
 }
 
+/** Ids of every leaf at or below `node`; a leaf is its own single id. */
+export const leafIdsOf = <T extends TreeNode<T>>(node: T): string[] =>
+  node.children.length ? node.children.flatMap(leafIdsOf) : [node.id]
+
+/**
+ * Ids to show while searching the service tree by name: the nodes whose name matches, their ancestors (so a match is
+ * never orphaned) and everything below a match. Null for an empty search, meaning show everything.
+ */
+export const visibleNodeIds = (roots: PublicServiceNode[], query: string): Set<string> | null => {
+  const needle = query.trim().toLowerCase()
+
+  if (!needle) return null
+
+  const ids = new Set<string>()
+  const visit = (node: PublicServiceNode, trail: string[], parentHit: boolean) => {
+    const hit = parentHit || node.name.toLowerCase().includes(needle)
+
+    if (hit) {
+      ids.add(node.id)
+      for (const id of trail) ids.add(id)
+    }
+    for (const child of node.children) visit(child, [...trail, node.id], hit)
+  }
+
+  for (const root of roots) visit(root, [], false)
+
+  return ids
+}
+
+/** The leaves a provider can pick under a top-level service: every leaf at depth 1 or deeper. Questions play no part. */
 const skillEntriesForRoot = (root: PublicServiceNode): SkillEntry[] => {
   const entries: SkillEntry[] = []
-  const visit = (node: PublicServiceNode, depth: number, parent?: PublicServiceNode, inherited?: { question: PublicQuestion; owner: PublicServiceNode }) => {
-    const own = node.questions.find(question => question.matchesSkill)
-    const skillQuestion = inherited ?? (own ? { question: own, owner: node } : undefined)
-
-    if (isLeaf(node)) {
-      if (skillQuestion)
-        entries.push(
-          ...skillQuestion.question.options.map(option => ({
-            id: option.id,
-            label: option.label,
-            context: skillQuestion.owner.name,
-          })),
-        )
-      else if (depth > 0) entries.push({ id: node.id, label: node.name, context: parent?.name ?? "" })
+  const visit = (node: PublicServiceNode, parent?: PublicServiceNode) => {
+    if (node.children.length) {
+      for (const child of node.children) visit(child, node)
 
       return
     }
-    for (const child of node.children) visit(child, depth + 1, node, skillQuestion)
+    if (parent)
+      entries.push({
+        id: node.id,
+        name: node.name,
+        label: parent.id === root.id ? node.name : `${node.name} · ${parent.name}`,
+      })
   }
 
-  visit(root, 0)
+  visit(root)
 
-  return entries.filter((entry, index) => entries.findIndex(other => other.id === entry.id) === index)
+  return entries
 }
 
 /**
- * The skills a provider can list under a top-level service, taken from the public tree, as `{ id, label }`.
- * This mirrors the server's skill rule: a path's skill is the answer to its `matchesSkill` question (on the leaf or
- * any ancestor), or, with none, a leaf that sits below the top level. The id is the option's or the leaf's id.
- * Labels can repeat across branches, so equal labels under one root get their context in brackets.
+ * The skills a provider can list under a top-level service, as `{ id, label }`: the leaves of its sub-service tree,
+ * exactly as the admin built it. A top-level service with no sub-services has none, and is selectable on its own.
  */
-export const skillOptionsForRoot = (root: PublicServiceNode): { id: string; label: string }[] => {
-  const entries = skillEntriesForRoot(root)
-  const shared = (label: string) => entries.filter(entry => entry.label === label).length > 1
-
-  return entries.map(entry => ({
-    id: entry.id,
-    label: shared(entry.label) && entry.context ? `${entry.label} (${entry.context})` : entry.label,
-  }))
-}
+export const skillOptionsForRoot = (root: PublicServiceNode): { id: string; label: string }[] =>
+  skillEntriesForRoot(root).map(({ id, label }) => ({ id, label }))
 
 const matchName = <T>(items: T[], name: string, nameOf: (item: T) => string): T | undefined =>
   items.find(item => nameOf(item) === name) ??
   items.find(item => nameOf(item).trim().toLowerCase() === name.trim().toLowerCase())
+
+// A root stored under its pre-rename name ("Hire") still finds the renamed root ("Hiring").
+const matchRoot = (roots: PublicServiceNode[], name: string) => {
+  for (const candidate of serviceNameCandidates(name)) {
+    const found = matchName(roots, candidate, item => item.name)
+
+    if (found) return found
+  }
+
+  return undefined
+}
 
 /**
  * Turns stored names into catalog ids: the client twin of the server's `idsFromNames`. Names are matched exactly, then
@@ -242,18 +258,20 @@ export const catalogIdsFromNames = (
   const skillIds: Record<string, string[]> = {}
 
   for (const name of services) {
-    const root = matchName(roots, name, item => item.name)
+    const root = matchRoot(roots, name)
 
     if (root && !serviceIds.includes(root.id)) serviceIds.push(root.id)
   }
   for (const [rootName, names] of Object.entries(skills)) {
-    const root = matchName(roots, rootName, item => item.name)
+    const root = matchRoot(roots, rootName)
 
     if (!root) continue
 
     const entries = skillEntriesForRoot(root)
     const ids = (names ?? [])
-      .map(name => matchName(entries, name, entry => entry.label)?.id)
+      .map(
+        name => (matchName(entries, name, entry => entry.name) ?? matchName(entries, name, entry => entry.label))?.id,
+      )
       .filter((id): id is string => Boolean(id))
 
     if (ids.length) skillIds[root.id] = [...new Set(ids)]

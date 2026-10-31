@@ -82,7 +82,11 @@ export async function loadDraftFiles(draftKey: string): Promise<Record<string, F
 
   try {
     const db = await open()
-    const request = db.transaction(storeName).objectStore(storeName).index("draftKey").getAll(IDBKeyRange.only(draftKey))
+    const request = db
+      .transaction(storeName)
+      .objectStore(storeName)
+      .index("draftKey")
+      .getAll(IDBKeyRange.only(draftKey))
     const rows = await new Promise<StoredFile[]>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result as StoredFile[])
       request.onerror = () => reject(request.error)
@@ -90,7 +94,9 @@ export async function loadDraftFiles(draftKey: string): Promise<Record<string, F
 
     db.close()
     for (const row of rows)
-      (groups[row.group] ??= []).push(new File([row.file], row.name, { type: row.type, lastModified: row.lastModified }))
+      (groups[row.group] ??= []).push(
+        new File([row.file], row.name, { type: row.type, lastModified: row.lastModified }),
+      )
   } catch {
     /* Nothing to restore. */
   }

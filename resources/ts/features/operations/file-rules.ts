@@ -1,9 +1,5 @@
 export type FilePurpose =
-  | "provider_document"
-  | "provider_portfolio"
-  | "provider_photo"
-  | "request_attachment"
-  | "message_attachment"
+  "provider_document" | "provider_portfolio" | "provider_photo" | "request_attachment" | "message_attachment"
 
 interface FileRule {
   /** Human readable list, e.g. "PDF, PNG, JPG, WebP, DOC or DOCX". */
@@ -80,10 +76,7 @@ export const fileRules: Record<FilePurpose, FileRule> = {
 }
 
 export const fileAccept = (purpose: FilePurpose) =>
-  [
-    ...fileRules[purpose].extensions.map(extension => `.${extension}`),
-    ...fileRules[purpose].types,
-  ].join(",")
+  [...fileRules[purpose].extensions.map(extension => `.${extension}`), ...fileRules[purpose].types].join(",")
 
 export const fileHint = (purpose: FilePurpose) => {
   const rule = fileRules[purpose]
@@ -105,12 +98,7 @@ export interface FileCheck {
  * Validates freshly picked files for a provider upload purpose.
  * `queued` are files already waiting to upload and `saved` is how many files the provider already has on record.
  */
-export function checkFiles(
-  purpose: FilePurpose,
-  picked: File[],
-  queued: File[] = [],
-  saved = 0,
-): FileCheck {
+export function checkFiles(purpose: FilePurpose, picked: File[], queued: File[] = [], saved = 0): FileCheck {
   const rule = fileRules[purpose]
   const accepted: File[] = []
   const problems: string[] = []

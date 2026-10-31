@@ -30,6 +30,11 @@ const search = reactive({ service: "", title: "", city: "", start: "" })
 const serviceNames = computed(() => services.value.map(item => item.name))
 const jobs = computed(() => popularJobsFor(activeService.value))
 
+// Live mode lists the catalog's own top-level services; demo mode keeps its fixed line.
+const heroEyebrow = computed(() =>
+  isDemoMode ? "Design · Construction · Hire · Procurement · Facility · Waste" : serviceNames.value.join(" · "),
+)
+
 const heroStyle = computed(() => (heroImage ? { "--hero-image": `url(${heroImage})` } : undefined))
 
 const trust = [
@@ -143,7 +148,7 @@ watch(() => route.hash, scrollToHash)
 <template>
   <section class="xp-container pt-6">
     <div class="hero pa-6 pa-md-12" :class="{ 'hero--photo': heroImage }" :style="heroStyle">
-      <p class="hero__eyebrow mb-4">Design · Construction · Hire · Procurement · Facility · Waste</p>
+      <p v-if="heroEyebrow" class="hero__eyebrow mb-4">{{ heroEyebrow }}</p>
       <h1 class="hero__title mb-4">Book trusted professionals for any building job.</h1>
       <p class="hero__copy mb-0">
         Request once. XPro assigns a verified provider, sends your quote and holds your payment until the job is done.
@@ -230,16 +235,11 @@ watch(() => route.hash, scrollToHash)
     </div>
     <VCard v-else variant="outlined">
       <VCardText class="d-flex flex-wrap align-center justify-space-between gap-4 pa-6">
-        <div class="d-flex align-start gap-4">
-          <VAvatar color="primary" variant="tonal" size="44">
-            <VIcon :icon="activeLine.icon" />
-          </VAvatar>
-          <div>
-            <strong class="d-block mb-1">{{ activeLine.name }}</strong>
-            <span class="text-body-2 text-medium-emphasis">
-              {{ activeLine.description || "Tell us what you need and XPro takes it from there." }}
-            </span>
-          </div>
+        <div>
+          <strong class="d-block mb-1">{{ activeLine.name }}</strong>
+          <span class="text-body-2 text-medium-emphasis">
+            {{ activeLine.description || "Tell us what you need and XPro takes it from there." }}
+          </span>
         </div>
         <VBtn :to="{ path: '/request', query: { service: activeLine.name } }" size="large">
           Request {{ activeLine.name }}
