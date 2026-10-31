@@ -941,7 +941,7 @@ const submit = async () => {
                     <strong class="d-block">{{ index + 1 }}. {{ item.path }}</strong>
                     <dl class="service-details">
                       <dt>Brief</dt>
-                      <dd>{{ item.brief }}</dd>
+                      <dd class="service-details__brief">{{ item.brief }}</dd>
                       <template v-for="detail in item.details" :key="detail.key">
                         <dt>{{ detail.label }}</dt>
                         <dd>{{ detail.value }}</dd>
@@ -1114,6 +1114,14 @@ const submit = async () => {
     text-align: end;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+
+  .service-details__brief {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
