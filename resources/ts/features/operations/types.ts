@@ -42,6 +42,7 @@ export type StaffPermission =
   | "staff.manage"
   | "staff.mfa.reset"
   | "settings.manage"
+  | "account.limit"
   | "catalog.manage"
   | "bank.review"
   | "payment.record"

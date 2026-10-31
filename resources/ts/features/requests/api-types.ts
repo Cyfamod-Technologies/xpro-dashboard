@@ -215,6 +215,16 @@ export interface RequestSummary {
   assignment?: AssignmentView | AssignmentView[] | null
 }
 
+/** A customer's open-request limit. `override` is null when the platform default applies (Spec 04 §11.2, MS-7). */
+export interface CustomerRequestLimitView {
+  userId: string
+  override: number | null
+  effective: number
+
+  /** Open requests now. */
+  open: number
+}
+
 /** One other request from the same multi-service submission (`GET /requests/:id`, customers and staff only). */
 export interface RequestSibling {
   id: string
@@ -258,6 +268,9 @@ export interface RequestView extends RequestSummary {
   cancellations?: CancellationView[]
   /** Staff only. */
   noShows?: NoShowView[]
+
+  /** Staff only: the request owner's open-request limit (MS-7). */
+  customerRequestLimit?: CustomerRequestLimitView
   completion?: CompletionView | null
   createdAt?: string
   updatedAt?: string

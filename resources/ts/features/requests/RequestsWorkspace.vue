@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   AssignmentView,
+  CustomerRequestLimitView,
   QuoteItemView,
   QuoteLineView,
   QuoteView,
@@ -15,6 +16,7 @@ import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { providersApi } from "@/services/providers-api"
 import { useAuthStore } from "@/stores/auth"
 import CancelAllDialog from "@/features/requests/CancelAllDialog.vue"
+import CustomerRequestLimit from "@/features/requests/CustomerRequestLimit.vue"
 import RequestGroupPanel from "@/features/requests/RequestGroupPanel.vue"
 import RequestGroupSection from "@/features/requests/RequestGroupSection.vue"
 import RequestLifecycle from "@/features/requests/RequestLifecycle.vue"
@@ -27,6 +29,9 @@ const router = useRouter()
 const auth = useAuthStore()
 const summaries = ref<RequestSummary[]>([])
 const request = ref<RequestView>()
+// Only `GET /requests/:id` carries `customerRequestLimit`; command responses do not. Keep the last fetched value
+// here, and replace it only from that fetch or from the limit endpoint's own response.
+const customerLimit = ref<CustomerRequestLimitView>()
 const loading = ref(false)
 const saving = ref(false)
 const error = ref("")
@@ -163,6 +168,7 @@ async function loadDetail(id = selectedId.value) {
   }
   if (!id) {
     request.value = undefined
+    customerLimit.value = undefined
     payment.value = undefined
 
     return
@@ -171,6 +177,9 @@ async function loadDetail(id = selectedId.value) {
   error.value = ""
   try {
     request.value = await requestsApi.get(id)
+    if (request.value.customerRequestLimit) customerLimit.value = request.value.customerRequestLimit
+    else if (customerLimit.value && request.value.ownerId && customerLimit.value.userId !== request.value.ownerId)
+      customerLimit.value = undefined
     dispatchMode.value = request.value.dispatch?.mode ?? "auto"
     if (request.value.quote) {
       const lines = request.value.quote.items ?? []
@@ -448,6 +457,7 @@ watch([stageFilter, nextActorOnly], () => {
         </VCardText></VCard
       >
       <RequestGroupPanel v-if="request.group" :group="request.group" :siblings="request.siblings ?? []" />
+      <CustomerRequestLimit v-if="customerLimit" :limit="customerLimit" @change="customerLimit = $event" />
 
       <template v-if="props.section === 'dispatch'">
         <VCard class="mb-5"

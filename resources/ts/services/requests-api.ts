@@ -6,6 +6,7 @@ import type {
   CreateRequestBody,
   CreateRequestGroupBody,
   CreateRequestGroupResult,
+  CustomerRequestLimitView,
   EarningsView,
   EscalationView,
   LocationView,
@@ -305,6 +306,9 @@ export const requestsApi = {
   approvals: (params: { filter?: "can_act" | "mine" | "all" | "overdue"; kind?: string; page?: number } = {}) =>
     unwrap($api<ApiEnvelope<ApprovalQueueView>>("/admin/approvals", { query: params })),
   approvalCounts: () => unwrap($api<ApiEnvelope<{ open: number; overdue: number }>>("/admin/approvals/counts")),
+  // Staff with `account.limit` (Spec 04 §11.2, MS-7). `limit: null` returns the customer to the platform default.
+  setCustomerRequestLimit: (userId: string, body: { limit: number | null; note: string }) =>
+    command<CustomerRequestLimitView>(`/admin/customers/${pathId(userId)}/request-limit`, "PUT", body),
   settings: () => unwrap($api<ApiEnvelope<SettingView[]>>("/admin/settings")),
   // High-risk keys need `reauthToken` (from `POST /auth/reauthenticate`), sent as `X-Reauth-Token`.
   saveSettings: (
