@@ -98,6 +98,8 @@ router.beforeEach(async to => {
           ? to.meta.adminSection
           : String(to.params && "section" in to.params ? to.params.section : "")
 
+    if (role === "admin" && section === "account") return { path: "/admin/settings", query: { tab: "profile" } }
+
     const adminSection = workspaceSections.admin.find(item => item.id === section)
 
     if (role !== "admin" || !adminSection) return "/access-denied"
@@ -105,6 +107,8 @@ router.beforeEach(async to => {
     if (!sectionAllowed(adminSection, useOperationsStore(store).can)) return "/access-denied"
   } else if (typeof to.meta.section === "string") {
     const section = to.meta.section
+
+    if (role === "admin" && section === "account") return { path: "/admin/settings", query: { tab: "profile" } }
 
     if (role === "admin" && workspaceSections.admin.some(item => item.id === section)) {
       return {

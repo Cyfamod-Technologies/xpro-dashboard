@@ -20,6 +20,9 @@ const roleLabel = computed(() => {
 
 const router = useRouter()
 const pathFor = (id: string) => (isWorkspaceRole(auth.user?.role) ? sectionPath(auth.user.role, id) : "/")
+const profilePath = computed(() =>
+  auth.user?.role === "admin" ? { path: "/admin/settings", query: { tab: "profile" } } : pathFor("account"),
+)
 
 const switching = ref(false)
 const switchError = ref("")
@@ -86,7 +89,7 @@ const handleLogout = async () => {
           <VDivider class="my-2" />
 
           <!-- 👉 Profile -->
-          <VListItem :to="pathFor('account')">
+          <VListItem :to="profilePath">
             <template #prepend>
               <VIcon class="me-2" icon="tabler-user" size="22" />
             </template>

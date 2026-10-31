@@ -43,6 +43,11 @@ const settings = section(
   "Your preferences will appear here.",
 )
 
+const adminSettings: WorkspaceSection = {
+  ...settings,
+  description: "Manage your profile, platform rules and customer service locations.",
+}
+
 const messages = section(
   "messages",
   "Messages",
@@ -249,8 +254,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "Updates about your requests and assignments.",
       "You are all caught up.",
     ),
-    settings,
-    account,
+    adminSettings,
   ],
 }
 

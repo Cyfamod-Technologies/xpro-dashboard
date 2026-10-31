@@ -4,7 +4,6 @@ import { useAuthStore } from "@/stores/auth"
 import RequestBoard from "@/features/operations/RequestBoard.vue"
 import ProviderProfile from "@/features/operations/ProviderProfile.vue"
 import AccountPhoneVerification from "@/features/phone/AccountPhoneVerification.vue"
-import AdminAccount from "@/features/account/AdminAccount.vue"
 import AccountWorkspaces from "@/features/account/AccountWorkspaces.vue"
 import PayoutDetails from "@/features/operations/PayoutDetails.vue"
 import ProvidersArea from "@/features/operations/ProvidersArea.vue"
@@ -66,7 +65,6 @@ const platformSection = computed(() =>
     />
     <AdminPayments v-else-if="!isDemoMode && section.id === 'finance'" />
     <ProviderEarnings v-else-if="!isDemoMode && section.id === 'payouts'" />
-    <AdminAccount v-else-if="!isDemoMode && section.id === 'account' && auth.user?.role === 'admin'" />
     <div v-else-if="!isDemoMode && section.id === 'account'" class="d-flex flex-column gap-6">
       <AccountPhoneVerification />
       <AccountWorkspaces />

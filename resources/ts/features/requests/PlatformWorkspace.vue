@@ -3,9 +3,11 @@ import type { ApprovalView, NotificationView, SettingView } from "@/features/req
 import { requestsApi } from "@/services/requests-api"
 import { useAuthStore } from "@/stores/auth"
 import LocationManagement from "@/features/requests/LocationManagement.vue"
+import AdminAccount from "@/features/account/AdminAccount.vue"
 
 const props = defineProps<{ section: "notifications" | "approvals" | "settings" }>()
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const items = ref<NotificationView[]>([])
 const approvals = ref<ApprovalView[]>([])
@@ -16,7 +18,10 @@ const loading = ref(false)
 const saving = ref("")
 const error = ref("")
 const reason = ref("")
-const settingsTab = ref("platform")
+type SettingsTab = "platform" | "locations" | "profile"
+const isSettingsTab = (value: unknown): value is SettingsTab =>
+  value === "platform" || value === "locations" || value === "profile"
+const settingsTab = ref<SettingsTab>(isSettingsTab(route.query.tab) ? route.query.tab : "platform")
 const settingSearch = ref("")
 const settingValue = reactive<Record<string, string>>({})
 const history = ref<Awaited<ReturnType<typeof requestsApi.settingsHistory>>>()
@@ -78,6 +83,21 @@ const requestPath = computed(() =>
   auth.user?.role === "admin" ? "/admin/requests" : auth.user?.role === "provider" ? "/jobs" : "/requests",
 )
 
+watch(settingsTab, tab => {
+  if (props.section !== "settings") return
+  const query = { ...route.query }
+  if (tab === "platform") delete query.tab
+  else query.tab = tab
+  if (query.tab !== route.query.tab) router.replace({ query })
+})
+watch(
+  () => route.query.tab,
+  value => {
+    const tab: SettingsTab = isSettingsTab(value) ? value : "platform"
+    if (settingsTab.value !== tab) settingsTab.value = tab
+  },
+)
+
 async function load() {
   loading.value = true
   error.value = ""
@@ -90,7 +110,7 @@ async function load() {
       approvals.value = response.data
       counts.value = response.counts
     } else {
-      settings.value = await requestsApi.settings()
+      settings.value = canManageSettings.value ? await requestsApi.settings() : []
       for (const setting of settings.value) settingValue[setting.key] = JSON.stringify(setting.value, null, 2) ?? "null"
       for (const card of switchCards.value) switchDraft[card.key] = card.setting.value === true
     }
@@ -253,18 +273,20 @@ onBeforeUnmount(() => {
             </p>
           </div>
           <VChip color="primary" variant="tonal" prepend-icon="tabler-adjustments">
-            {{ settings.length }} settings
+            {{ canManageSettings ? `${settings.length} settings` : "Your workspace" }}
           </VChip>
         </VCardText>
         <VTabs v-model="settingsTab" color="primary" class="px-4">
           <VTab value="platform" prepend-icon="tabler-adjustments">Platform settings</VTab>
           <VTab value="locations" prepend-icon="tabler-map-pin">Locations</VTab>
+          <VTab value="profile" prepend-icon="tabler-user">Profile</VTab>
         </VTabs>
       </VCard>
 
       <LocationManagement v-if="settingsTab === 'locations'" :can-manage="canManageSettings" />
+      <AdminAccount v-else-if="settingsTab === 'profile'" />
 
-      <template v-else>
+      <template v-else-if="canManageSettings">
         <VCard class="mb-5">
           <VCardText class="d-flex flex-column flex-sm-row align-sm-center ga-4 pa-5">
             <VIcon icon="tabler-notes" color="primary" size="28" />
@@ -397,6 +419,9 @@ onBeforeUnmount(() => {
           </VList>
         </VCard>
       </template>
+      <VAlert v-else type="info" variant="tonal">
+        You need the Settings management permission to view platform configuration.
+      </VAlert>
     </template>
   </div>
 </template>
