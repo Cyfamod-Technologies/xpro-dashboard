@@ -142,6 +142,7 @@ declare global {
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
   const resolveVuetifyTheme: typeof import('./resources/ts/@core/utils/vuetify')['resolveVuetifyTheme']
   const rgbaToHex: typeof import('./resources/ts/@core/utils/colorConverter')['rgbaToHex']
+  const safeRedirectPath: typeof import('./resources/ts/utils/safe-redirect')['safeRedirectPath']
   const setActivePinia: typeof import('pinia')['setActivePinia']
   const setMapStoreSuffix: typeof import('pinia')['setMapStoreSuffix']
   const shallowReactive: typeof import('vue')['shallowReactive']
@@ -519,6 +520,7 @@ declare module 'vue' {
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly resolveVuetifyTheme: UnwrapRef<typeof import('./resources/ts/@core/utils/vuetify')['resolveVuetifyTheme']>
     readonly rgbaToHex: UnwrapRef<typeof import('./resources/ts/@core/utils/colorConverter')['rgbaToHex']>
+    readonly safeRedirectPath: UnwrapRef<typeof import('./resources/ts/utils/safe-redirect')['safeRedirectPath']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
