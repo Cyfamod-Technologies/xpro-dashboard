@@ -110,11 +110,7 @@ watch(
       <VDivider />
       <VCardActions class="pa-4 flex-wrap justify-end gap-2">
         <VBtn variant="text" @click="open = false"> Maybe later </VBtn>
-        <VBtn
-          :to="sectionPath('provider', 'verification')"
-          append-icon="tabler-arrow-right"
-          @click="open = false"
-        >
+        <VBtn :to="sectionPath('provider', 'verification')" append-icon="tabler-arrow-right" @click="open = false">
           Complete my profile
         </VBtn>
       </VCardActions>

@@ -25,9 +25,7 @@ const emit = defineEmits<{ back: []; claim: []; retry: [] }>()
 
 const title = computed(() => props.request?.title || props.row?.title || "Service request")
 const customerName = computed(() => props.request?.customerName || props.row?.customer.name || "Customer")
-const location = computed(() =>
-  [props.request?.cityName, props.request?.districtName].filter(Boolean).join(", "),
-)
+const location = computed(() => [props.request?.cityName, props.request?.districtName].filter(Boolean).join(", "))
 const startDate = computed(() => formatDate(props.request?.effectiveStartDate ?? props.request?.startDate))
 const ownerName = computed(() => {
   if (props.row?.owner) return props.row.owner.name
@@ -47,7 +45,10 @@ const contact = computed(() =>
     .filter(Boolean)
     .join(" · "),
 )
-const openTo = computed(() => ({ path: "/admin/requests", query: { request: props.request?.id ?? props.row?.requestId } }))
+const openTo = computed(() => ({
+  path: "/admin/requests",
+  query: { request: props.request?.id ?? props.row?.requestId },
+}))
 </script>
 
 <template>
@@ -129,19 +130,20 @@ const openTo = computed(() => ({ path: "/admin/requests", query: { request: prop
           <div class="info-panel__owner">
             <span v-if="ownerName">{{ ownerName }}</span>
             <span v-else class="text-medium-emphasis">Not claimed yet</span>
-            <VBtn v-if="canClaim" size="small" color="primary" variant="tonal" :loading="claiming" @click="emit('claim')">
+            <VBtn
+              v-if="canClaim"
+              size="small"
+              color="primary"
+              variant="tonal"
+              :loading="claiming"
+              @click="emit('claim')"
+            >
               Claim
             </VBtn>
           </div>
         </section>
 
-        <VBtn
-          class="info-panel__open"
-          variant="outlined"
-          block
-          append-icon="tabler-arrow-right"
-          :to="openTo"
-        >
+        <VBtn class="info-panel__open" variant="outlined" block append-icon="tabler-arrow-right" :to="openTo">
           Open request
         </VBtn>
       </template>

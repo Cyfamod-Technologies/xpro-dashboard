@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import type { Attachment } from "@/features/operations/types"
 import type { FilePurpose } from "@/features/operations/file-rules"
-import {
-  checkFiles,
-  fileAccept,
-  fileHint,
-  formatFileSize,
-} from "@/features/operations/file-rules"
+import { checkFiles, fileAccept, fileHint, formatFileSize } from "@/features/operations/file-rules"
 import Attachments from "@/features/operations/Attachments.vue"
 
 const props = defineProps<{

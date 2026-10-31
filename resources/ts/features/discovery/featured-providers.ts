@@ -14,11 +14,7 @@ export interface FeaturedProviderCard {
 }
 
 export type FeaturedIneligibleReason =
-  | "not_approved"
-  | "inactive_account"
-  | "reliability_review"
-  | "recent_no_show"
-  | "incomplete_profile"
+  "not_approved" | "inactive_account" | "reliability_review" | "recent_no_show" | "incomplete_profile"
 
 export interface AdminFeaturedRow {
   providerId: string

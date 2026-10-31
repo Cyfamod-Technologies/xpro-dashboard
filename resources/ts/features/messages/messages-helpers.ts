@@ -24,7 +24,9 @@ export const audienceOptions = (scopes: readonly string[] | undefined, hasProvid
 
   if (has("message.customer")) options.push({ value: "customer" })
   if (has("message.provider"))
-    options.push(hasProvider ? { value: "provider" } : { value: "provider", disabledReason: "No provider on this request yet." })
+    options.push(
+      hasProvider ? { value: "provider" } : { value: "provider", disabledReason: "No provider on this request yet." },
+    )
   if (has("message.internal")) options.push({ value: "internal" })
 
   return options
@@ -38,9 +40,13 @@ export const defaultAudience = (
   row: Pick<ConversationItem, "lastMessage" | "waitingForXpro"> | undefined,
   options: ChatAudienceOption[],
 ): ChatAudience | null => {
-  const usable = options.filter(option => !option.disabledReason && option.value !== "internal").map(option => option.value)
+  const usable = options
+    .filter(option => !option.disabledReason && option.value !== "internal")
+    .map(option => option.value)
   const waiting =
-    row && row.waitingForXpro > 0 && (row.lastMessage.authorRole === "customer" || row.lastMessage.authorRole === "provider")
+    row &&
+    row.waitingForXpro > 0 &&
+    (row.lastMessage.authorRole === "customer" || row.lastMessage.authorRole === "provider")
       ? row.lastMessage.audience
       : undefined
   const wanted: ChatAudience[] = [waiting, "customer"].filter((value): value is ChatAudience => !!value)
@@ -200,7 +206,10 @@ export const currentAssignment = (
   const list = Array.isArray(assignment) ? assignment : assignment ? [assignment] : []
   const [latest] = list
     .map((item, index) => ({ item, index }))
-    .sort((a, b) => (Date.parse(b.item.offeredAt ?? "") || 0) - (Date.parse(a.item.offeredAt ?? "") || 0) || a.index - b.index)
+    .sort(
+      (a, b) =>
+        (Date.parse(b.item.offeredAt ?? "") || 0) - (Date.parse(a.item.offeredAt ?? "") || 0) || a.index - b.index,
+    )
     .map(({ item }) => item)
 
   return latest && currentAssignmentStatuses.has(latest.status) ? latest : null

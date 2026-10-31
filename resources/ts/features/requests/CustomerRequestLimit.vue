@@ -83,13 +83,7 @@ async function save() {
           :disabled="useDefault"
           :error-messages="touched ? valueError : ''"
         />
-        <VTextarea
-          v-model="note"
-          label="Note *"
-          rows="3"
-          counter="500"
-          :error-messages="touched ? missingNote : ''"
-        />
+        <VTextarea v-model="note" label="Note *" rows="3" counter="500" :error-messages="touched ? missingNote : ''" />
         <VAlert v-if="error" type="error" variant="tonal">{{ error }}</VAlert>
       </VCardText>
       <VCardActions class="px-6 pb-5">

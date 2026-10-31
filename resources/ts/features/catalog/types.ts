@@ -1,13 +1,7 @@
 import { serviceNameCandidates } from "@/features/discovery/service-aliases"
 
 export type QuestionType =
-  | "yes_no"
-  | "single_choice"
-  | "multiple_choice"
-  | "short_text"
-  | "long_text"
-  | "number"
-  | "date"
+  "yes_no" | "single_choice" | "multiple_choice" | "short_text" | "long_text" | "number" | "date"
 
 export type DateRole = "start" | "end"
 
@@ -276,7 +270,9 @@ export const catalogIdsFromNames = (
 
     const entries = skillEntriesForRoot(root)
     const ids = (names ?? [])
-      .map(name => (matchName(entries, name, entry => entry.name) ?? matchName(entries, name, entry => entry.label))?.id)
+      .map(
+        name => (matchName(entries, name, entry => entry.name) ?? matchName(entries, name, entry => entry.label))?.id,
+      )
       .filter((id): id is string => Boolean(id))
 
     if (ids.length) skillIds[root.id] = [...new Set(ids)]

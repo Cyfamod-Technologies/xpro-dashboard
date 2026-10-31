@@ -135,7 +135,8 @@ const permissionGroupOf = (permission: string) => {
     ["dispatch.manage", "schedule.manage", "progress.review", "issue.resolve"].includes(permission)
   )
     return "Requests and dispatch"
-  if (["provider.review", "account.suspend", "account.limit", "bank.review"].includes(permission)) return "Providers and accounts"
+  if (["provider.review", "account.suspend", "account.limit", "bank.review"].includes(permission))
+    return "Providers and accounts"
   if (permission.startsWith("quote.")) return "Quotes"
   if (["payment.record", "payout.approve", "refund.manage"].includes(permission)) return "Money"
   if (permission.startsWith("message.")) return "Messages"

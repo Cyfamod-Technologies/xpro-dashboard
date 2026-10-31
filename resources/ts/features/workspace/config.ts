@@ -55,7 +55,8 @@ const messages = section(
 // staff who may not use any message channel.
 const adminMessages: WorkspaceSection = {
   ...messages,
-  description: "Every request's conversation in one place. Reply to customers and providers, and keep notes for the team.",
+  description:
+    "Every request's conversation in one place. Reply to customers and providers, and keep notes for the team.",
   emptyMessage: "No conversations yet. They start when a customer or provider writes to XPro.",
   anyPermission: ["message.customer", "message.provider", "message.internal"],
 }

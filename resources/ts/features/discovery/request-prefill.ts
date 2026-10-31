@@ -50,8 +50,10 @@ export function queryPrefill(
     .flatMap(([key, value]) => (typeof value === "string" && value.trim() ? [[key, value.trim()] as const] : []))
   const path = [root]
 
-  for (let node = root; node.children.length; ) {
-    const child = node.children.find(item => extras.some(([, value]) => item.name.toLowerCase() === value.toLowerCase()))
+  for (let node = root; node.children.length;) {
+    const child = node.children.find(item =>
+      extras.some(([, value]) => item.name.toLowerCase() === value.toLowerCase()),
+    )
 
     if (!child) break
     path.push(child)

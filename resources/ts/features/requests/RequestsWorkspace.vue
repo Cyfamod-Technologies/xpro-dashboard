@@ -435,7 +435,8 @@ watch([stageFilter, nextActorOnly], () => {
             {{ [request.service, request.cityName, request.districtName].filter(Boolean).join(" · ") }}
           </p>
           <p v-if="request.servicePath?.length" class="text-body-2 mb-3">
-            <span class="text-medium-emphasis">Service:</span> {{ request.servicePath.map(step => step.name).join(" › ") }}
+            <span class="text-medium-emphasis">Service:</span>
+            {{ request.servicePath.map(step => step.name).join(" › ") }}
           </p>
           <dl v-if="request.answers?.length" class="answers mb-3">
             <template v-for="answer in request.answers" :key="answer.questionId">

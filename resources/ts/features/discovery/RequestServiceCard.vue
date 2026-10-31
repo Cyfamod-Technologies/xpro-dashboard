@@ -74,7 +74,9 @@ const questionAsSelect = (question: PublicQuestion) => optionsFor(question).leng
 // An "end" date must not precede this card's start date or its "start" date answers.
 const startDates = () => [
   card.value.startDate,
-  ...pathQuestions.value.filter(item => item.dateRole === "start").map(item => String(card.value.answers[item.id] ?? "")),
+  ...pathQuestions.value
+    .filter(item => item.dateRole === "start")
+    .map(item => String(card.value.answers[item.id] ?? "")),
 ]
 const rulesFor = (question: PublicQuestion) => questionRules(question, startDates)
 
@@ -137,7 +139,9 @@ const budgetInput = computed({
     </div>
 
     <VAlert v-if="serverError" class="mx-6 mt-4" type="error" variant="tonal" role="alert">{{ serverError }}</VAlert>
-    <VAlert v-if="duplicateMessage" class="mx-6 mt-4" type="error" variant="tonal" role="alert">{{ duplicateMessage }}</VAlert>
+    <VAlert v-if="duplicateMessage" class="mx-6 mt-4" type="error" variant="tonal" role="alert">{{
+      duplicateMessage
+    }}</VAlert>
 
     <div v-show="expanded" :id="`service-card-content-${card.key}`" class="service-accordion__body">
       <VSelect

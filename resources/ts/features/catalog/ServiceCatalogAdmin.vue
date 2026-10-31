@@ -248,9 +248,13 @@ function askDeleteService() {
   const node = selected.value
 
   if (!node) return
-  askConfirm("Delete service?", `"${node.name}" and its questions will be removed. This cannot be undone.`, async () => {
-    await run(() => catalogApi.deleteService(node.id), "Service deleted.")
-  })
+  askConfirm(
+    "Delete service?",
+    `"${node.name}" and its questions will be removed. This cannot be undone.`,
+    async () => {
+      await run(() => catalogApi.deleteService(node.id), "Service deleted.")
+    },
+  )
 }
 
 // Questions.
@@ -367,11 +371,7 @@ async function saveQuestion() {
 
     return
   }
-  if (
-    questionForm.min.trim() &&
-    questionForm.max.trim() &&
-    Number(questionForm.min) > Number(questionForm.max)
-  ) {
+  if (questionForm.min.trim() && questionForm.max.trim() && Number(questionForm.min) > Number(questionForm.max)) {
     dialogError.value = "The minimum cannot be above the maximum."
 
     return
@@ -559,7 +559,13 @@ onMounted(() => load(true))
                 Raise the maximum depth to add another level.
               </span>
               <VSpacer />
-              <VBtn v-if="canDelete" color="error" variant="outlined" prepend-icon="tabler-trash" @click="askDeleteService">
+              <VBtn
+                v-if="canDelete"
+                color="error"
+                variant="outlined"
+                prepend-icon="tabler-trash"
+                @click="askDeleteService"
+              >
                 Delete
               </VBtn>
               <span v-else class="text-body-2 text-medium-emphasis">
@@ -576,7 +582,13 @@ onMounted(() => load(true))
                 <VBtn size="small" prepend-icon="tabler-plus" @click="openQuestion(null)"> Add question </VBtn>
               </div>
 
-              <VList v-if="inherited.length" density="compact" lines="two" class="py-0" aria-label="Inherited questions">
+              <VList
+                v-if="inherited.length"
+                density="compact"
+                lines="two"
+                class="py-0"
+                aria-label="Inherited questions"
+              >
                 <VListItem v-for="item in inherited" :key="item.question.id">
                   <VListItemTitle>{{ item.question.label }}</VListItemTitle>
                   <VListItemSubtitle>
@@ -587,7 +599,12 @@ onMounted(() => load(true))
                 </VListItem>
               </VList>
 
-              <VList v-if="selected.questions.length" density="compact" class="py-0" aria-label="Questions on this service">
+              <VList
+                v-if="selected.questions.length"
+                density="compact"
+                class="py-0"
+                aria-label="Questions on this service"
+              >
                 <VListItem v-for="(question, index) in selected.questions" :key="question.id">
                   <VListItemTitle class="text-wrap">{{ question.label }}</VListItemTitle>
                   <div class="d-flex flex-wrap gap-1 mt-1">
@@ -648,7 +665,9 @@ onMounted(() => load(true))
     <VDialog v-model="createDialog" max-width="520">
       <VCard>
         <VForm @submit.prevent="createService">
-          <VCardTitle class="pt-4">{{ createParent ? `Add a sub-service to ${createParent.name}` : "Add service" }}</VCardTitle>
+          <VCardTitle class="pt-4">{{
+            createParent ? `Add a sub-service to ${createParent.name}` : "Add service"
+          }}</VCardTitle>
           <VCardText class="d-flex flex-column gap-4">
             <VAlert v-if="dialogError" type="error" variant="tonal">{{ dialogError }}</VAlert>
             <VTextField v-model="createForm.name" label="Name *" :rules="[requiredText]" autofocus />
@@ -755,18 +774,8 @@ onMounted(() => load(true))
             </div>
 
             <div v-if="questionForm.type === 'short_text' || questionForm.type === 'long_text'" class="limits">
-              <VTextField
-                v-model="questionForm.minLength"
-                type="number"
-                label="Minimum length"
-                :rules="[wholeText]"
-              />
-              <VTextField
-                v-model="questionForm.maxLength"
-                type="number"
-                label="Maximum length"
-                :rules="[wholeText]"
-              />
+              <VTextField v-model="questionForm.minLength" type="number" label="Minimum length" :rules="[wholeText]" />
+              <VTextField v-model="questionForm.maxLength" type="number" label="Maximum length" :rules="[wholeText]" />
             </div>
 
             <VSelect

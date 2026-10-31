@@ -89,8 +89,7 @@ const pendingBank = computed(() =>
           </h2>
           <p v-if="!provider.registrationOnly">{{ provider.trade }} · {{ provider.city }}</p>
           <VChip color="primary" variant="tonal" class="mb-3">
-            {{ provider.registrationOnly ? "Profile not started" : provider.verification.replaceAll("_", " ") }}
-          </VChip
+            {{ provider.registrationOnly ? "Profile not started" : provider.verification.replaceAll("_", " ") }} </VChip
           ><VChip
             v-if="provider.pendingChanges && provider.changesReview?.state === 'pending'"
             color="warning"
@@ -100,8 +99,9 @@ const pendingBank = computed(() =>
             Changes to review
           </VChip>
           <p v-if="provider.registrationOnly" class="text-body-2">
-            {{ provider.email }} · Signed up {{ provider.registeredAt ? when(provider.registeredAt) : "date unavailable" }}
-            · Account {{ provider.accountStatus }}
+            {{ provider.email }} · Signed up
+            {{ provider.registeredAt ? when(provider.registeredAt) : "date unavailable" }} · Account
+            {{ provider.accountStatus }}
           </p>
           <p v-else class="text-body-2">
             {{ provider.services.join(" · ") }}<br />{{

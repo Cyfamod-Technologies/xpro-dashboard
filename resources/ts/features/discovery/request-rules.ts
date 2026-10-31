@@ -78,7 +78,9 @@ export const questionRules = (question: PublicQuestion, startDates: () => string
       rules.push(value => {
         const starts = startDates().filter(Boolean)
 
-        return !value || starts.every(start => String(value) >= start) || "The end date cannot be before the start date."
+        return (
+          !value || starts.every(start => String(value) >= start) || "The end date cannot be before the start date."
+        )
       })
   }
 

@@ -27,8 +27,8 @@ const startOver = async () => {
   <div>
     <VAlert v-if="conflict" variant="tonal" color="warning" class="mb-4">
       <div class="mb-2">
-        <strong>Your saved details changed after you started this draft.</strong> Restoring it may overwrite the
-        newer details.
+        <strong>Your saved details changed after you started this draft.</strong> Restoring it may overwrite the newer
+        details.
       </div>
       <div class="d-flex flex-wrap gap-2">
         <VBtn size="small" @click="draft.resolveConflict(true)"> Restore draft anyway </VBtn>
@@ -57,8 +57,7 @@ const startOver = async () => {
       <VCard>
         <VCardTitle class="pt-5 px-5"> Start over? </VCardTitle>
         <VCardText class="px-5">
-          This clears everything you have entered in this form, including attached files, and removes the saved
-          draft.
+          This clears everything you have entered in this form, including attached files, and removes the saved draft.
         </VCardText>
         <VCardActions class="px-5 pb-4 justify-end">
           <VBtn variant="text" @click="confirmReset = false"> Keep draft </VBtn>

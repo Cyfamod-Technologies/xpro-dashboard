@@ -916,9 +916,7 @@ export function applyCommand(previous: OperationsState, actor: Actor, command: C
       }
 
       const unchanged =
-        !submittedBank ||
-        (profile.payout.current && sameAccount(profile.payout.current, submittedBank)) ||
-        awaitingBank
+        !submittedBank || (profile.payout.current && sameAccount(profile.payout.current, submittedBank)) || awaitingBank
       if (!unchanged && submittedBank) {
         requestBankReview(profile, submittedBank, "Bank details submitted")
         for (const member of activeStaffWith(state, "bank.review"))

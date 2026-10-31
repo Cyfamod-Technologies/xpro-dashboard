@@ -16,7 +16,8 @@ export const MAX_SERVICES_PER_SUBMISSION = 5
 export const MAX_CONFIGURABLE_SERVICES = 10
 
 export const DUPLICATE_SERVICE_MESSAGE = "Add each service once. Use the quantity field to ask for more than one."
-export const serviceLimitHint = (max = MAX_SERVICES_PER_SUBMISSION) => `You can request up to ${max} services at a time.`
+export const serviceLimitHint = (max = MAX_SERVICES_PER_SUBMISSION) =>
+  `You can request up to ${max} services at a time.`
 
 export type AnswerValue = string | number | string[] | null | undefined
 export type Answers = Record<string, AnswerValue>
@@ -166,7 +167,9 @@ export const buildAnswers = (questions: PublicQuestion[], answers: Answers): Bui
     if (!hasAnswer(value) || value === null || value === undefined) continue
     if (question.type === "number") result[question.id] = Number(value)
     else if (Array.isArray(value)) result[question.id] = value
-    else result[question.id] = question.type === "short_text" || question.type === "long_text" ? String(value).trim() : String(value)
+    else
+      result[question.id] =
+        question.type === "short_text" || question.type === "long_text" ? String(value).trim() : String(value)
   }
 
   return result
@@ -253,9 +256,7 @@ export interface ServiceUpload {
   attachments: Array<{ id: string }>
 }
 
-export type Submission =
-  | { kind: "single"; body: CreateRequestBody }
-  | { kind: "group"; body: CreateRequestGroupBody }
+export type Submission = { kind: "single"; body: CreateRequestBody } | { kind: "group"; body: CreateRequestGroupBody }
 
 /**
  * One service uses the unchanged single-request shape (`POST /requests`) with that card's files as its attachments.
@@ -316,8 +317,7 @@ export const splitServiceErrors = (details: unknown, count: number): ServiceErro
   for (const detail of details) {
     const record = typeof detail === "object" && detail !== null ? (detail as Record<string, unknown>) : {}
     const path = [record.field, record.path, record.property].find(item => typeof item === "string") as
-      | string
-      | undefined
+      string | undefined
     const message = firstDetailMessage([detail])
 
     if (!message) continue

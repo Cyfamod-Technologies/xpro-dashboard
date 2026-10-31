@@ -330,9 +330,7 @@ const serviceSummaries = computed(() =>
           label: question.label.replace(/ \(.*\)$/, ""),
           value: value
             .map(item =>
-              question.type === "date"
-                ? formatDate(String(item))
-                : choices.get(String(item)) ?? String(item),
+              question.type === "date" ? formatDate(String(item)) : (choices.get(String(item)) ?? String(item)),
             )
             .join(", "),
         }

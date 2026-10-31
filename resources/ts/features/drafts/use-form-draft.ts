@@ -80,7 +80,11 @@ export function useFormDraft<T>(options: FormDraftOptions<T>) {
 
     try {
       if (untouched) store.removeItem(key)
-      else store.setItem(key, JSON.stringify(wrapDraft(JSON.parse(json) as T, options.version, Date.now(), options.base?.())))
+      else
+        store.setItem(
+          key,
+          JSON.stringify(wrapDraft(JSON.parse(json) as T, options.version, Date.now(), options.base?.())),
+        )
     } catch {
       status.value = "unavailable"
 

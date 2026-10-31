@@ -13,8 +13,8 @@ defineProps<{
     <VCardText class="pa-6">
       <h2 class="text-h5 mb-2">Your requests are on their way.</h2>
       <p>
-        <template v-if="projectRef">{{ projectRef }}: </template>{{ requestIds.length }} requests have been sent to
-        XPro for review.
+        <template v-if="projectRef">{{ projectRef }}: </template>{{ requestIds.length }} requests have been sent to XPro
+        for review.
       </p>
       <ul class="mb-4 ps-5" aria-label="Your request references">
         <li v-for="id in requestIds" :key="id">{{ id }}</li>
