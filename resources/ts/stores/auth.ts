@@ -67,6 +67,34 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = response.data
   }
 
+  // Customer and provider roles held; the demo fixtures carry only `role`.
+  const workspaceRoles = computed<("customer" | "provider")[]>(() => {
+    const current = user.value
+    if (!current || current.role === "admin") return []
+
+    return current.workspaceRoles ?? [current.role]
+  })
+
+  const otherWorkspaceRole = computed(() => workspaceRoles.value.find(item => item !== user.value?.role) ?? null)
+
+  function holdsRole(role: "customer" | "provider") {
+    return workspaceRoles.value.includes(role)
+  }
+
+  async function addRole(role: "customer" | "provider", acceptedTerms?: { providerAgreementVersion?: string }) {
+    const response = await authApi.addRole(role, acceptedTerms)
+
+    user.value = response.data
+  }
+
+  async function switchRole(role: "customer" | "provider") {
+    if (user.value?.role === role) return
+
+    const response = await authApi.setActiveRole(role)
+
+    user.value = response.data
+  }
+
   function logout() {
     token.value = null
     user.value = null
@@ -88,6 +116,11 @@ export const useAuthStore = defineStore("auth", () => {
     pendingMfa,
     isAuthenticated,
     homePath,
+    workspaceRoles,
+    otherWorkspaceRole,
+    holdsRole,
+    addRole,
+    switchRole,
     login,
     completeMfa,
     hydrate,

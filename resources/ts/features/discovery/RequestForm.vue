@@ -8,6 +8,7 @@ import FilePicker from "@/features/operations/FilePicker.vue"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
 import { isDemoMode } from "@/utils/demo-mode"
+import { getErrorMessage } from "@/utils/errors"
 import { requestsApi } from "@/services/requests-api"
 import { catalogApi } from "@/services/catalog-api"
 import type { LocationView } from "@/features/requests/api-types"
@@ -83,7 +84,9 @@ const allowance = ref<Allowance | null>(null)
 const submitting = ref(false)
 const isCustomer = computed(() => auth.isAuthenticated && auth.user?.role === "customer")
 const isOtherRole = computed(() => auth.isAuthenticated && auth.user?.role !== "customer")
-const accountLabel = computed(() => (auth.user?.role === "admin" ? "an XPro staff account" : "a provider account"))
+const isStaff = computed(() => auth.user?.role === "admin")
+const roleBusy = ref(false)
+const roleError = ref("")
 const blank: RequestInput = {
   title: "",
   service: "Design",
@@ -210,9 +213,26 @@ async function loadAllowance() {
 
 watch(isCustomer, loadAllowance, { immediate: true })
 
-const startCustomerSignup = async () => {
+// A provider submits from the customer workspace of the same account (01 §6.6, §6.16). The draft belongs to the
+// user, not the role, so it stays on screen once the form opens.
+const useCustomerWorkspace = async () => {
+  if (roleBusy.value) return
+  roleBusy.value = true
+  roleError.value = ""
+  try {
+    if (auth.holdsRole("customer")) await auth.switchRole("customer")
+    else await auth.addRole("customer")
+  } catch (cause) {
+    roleError.value = getErrorMessage(cause, "We couldn't open your customer workspace. Try again.")
+  } finally {
+    roleBusy.value = false
+  }
+}
+
+// Staff keep the draft and continue as a guest, signing in again with a customer account.
+const signOutForCustomerAccount = async () => {
   auth.logout()
-  await router.push({ path: "/auth/signup", query: { role: "customer" } })
+  await router.push({ path: "/login", query: { redirect: "/request" } })
 }
 
 const fieldRules = (field: IntakeField) => [
@@ -627,14 +647,28 @@ const submit = async () => {
         <VBtn :to="{ path: '/requests', query: { request: submitted } }"> View my request </VBtn>
       </VCardText>
     </VCard>
+    <VAlert v-else-if="isOtherRole && isStaff" color="info" variant="tonal">
+      <h2 class="text-h6 mb-1">Requests are made from a customer account</h2>
+      <p class="mb-4">Staff accounts can't submit requests. Sign out and use a customer account.</p>
+      <div class="d-flex flex-wrap gap-3">
+        <VBtn color="primary" @click="signOutForCustomerAccount"> Sign out </VBtn>
+        <VBtn color="primary" variant="outlined" :to="auth.homePath"> Back to my dashboard </VBtn>
+      </div>
+    </VAlert>
     <VAlert v-else-if="isOtherRole" color="info" variant="tonal">
       <h2 class="text-h6 mb-1">Requests are made from a customer account</h2>
       <p class="mb-4">
-        You're signed in with {{ accountLabel }}. To request a service, sign out and create a customer account with a
-        different email address.
+        {{
+          auth.holdsRole("customer")
+            ? "You're in your provider workspace. Switch to your customer workspace to submit this request."
+            : "Requests are submitted from a customer account. Add the customer role to this account to submit it."
+        }}
       </p>
+      <VAlert v-if="roleError" class="mb-4" color="error" variant="tonal">{{ roleError }}</VAlert>
       <div class="d-flex flex-wrap gap-3">
-        <VBtn color="primary" @click="startCustomerSignup"> Create a customer account </VBtn>
+        <VBtn color="primary" :loading="roleBusy" @click="useCustomerWorkspace">
+          {{ auth.holdsRole("customer") ? "Switch to customer workspace" : "Add customer role" }}
+        </VBtn>
         <VBtn color="primary" variant="outlined" :to="auth.homePath"> Back to my dashboard </VBtn>
       </div>
     </VAlert>
