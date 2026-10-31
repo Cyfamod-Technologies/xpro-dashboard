@@ -35,7 +35,7 @@ const parentUnavailable = computed(() => {
 
   return Boolean(
     (state && (!state.active || !state.serviceable)) ||
-      (kind.value === "area" && parent.value && (!parent.value.active || !parent.value.serviceable)),
+    (kind.value === "area" && parent.value && (!parent.value.active || !parent.value.serviceable)),
   )
 })
 const currentKind = computed<LocationKind>(() => {
@@ -147,7 +147,10 @@ async function save() {
     kind: kind.value,
     name: name.value.trim(),
     ...(kind.value === "state" ? {} : { parentId: parentId.value }),
-    aliases: aliasesText.value.split(",").map(value => value.trim()).filter(Boolean),
+    aliases: aliasesText.value
+      .split(",")
+      .map(value => value.trim())
+      .filter(Boolean),
     active: active.value,
     serviceable: serviceable.value,
     sort: Math.max(0, Math.round(Number(sort.value) || 0)),
@@ -233,15 +236,21 @@ watch(
             </template>
             <template #append>
               <div class="d-flex align-center ga-1">
-                <VBtn v-if="place.hasChildren" icon="tabler-chevron-right" variant="text" :aria-label="`Open ${place.name}`" @click="openPlace(place)" />
+                <VBtn
+                  v-if="place.hasChildren"
+                  icon="tabler-chevron-right"
+                  variant="text"
+                  :aria-label="`Open ${place.name}`"
+                  @click="openPlace(place)"
+                />
                 <VBtn icon="tabler-edit" variant="text" :aria-label="`Edit ${place.name}`" @click="openEdit(place)" />
               </div>
             </template>
           </VListItem>
         </VList>
         <VCardText v-else-if="!loading" class="text-medium-emphasis">
-          No {{ currentKind === "state" ? "states" : currentKind === "lga" ? "LGAs" : "areas" }} here yet.
-          Add the first one to open service in this {{ path.at(-1)?.kind ?? "country" }}.
+          No {{ currentKind === "state" ? "states" : currentKind === "lga" ? "LGAs" : "areas" }} here yet. Add the first
+          one to open service in this {{ path.at(-1)?.kind ?? "country" }}.
         </VCardText>
       </VCard>
 
