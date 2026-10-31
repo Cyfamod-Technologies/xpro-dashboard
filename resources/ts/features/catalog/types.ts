@@ -30,7 +30,6 @@ export interface PublicQuestion {
   config: QuestionConfig
   dateRole: DateRole | null
   sensitive: boolean
-  matchesSkill: boolean
 }
 
 /** `GET /services`: only active nodes, questions and options, already sorted. */
