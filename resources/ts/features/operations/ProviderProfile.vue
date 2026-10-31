@@ -1,15 +1,14 @@
 <script setup lang="ts">
+import { sectionEnabled, serviceLines } from "@/features/workspace/config"
 import { useOperationsStore } from "@/stores/operations"
 import { isDemoMode } from "@/utils/demo-mode"
 import type { BankInput, ProviderInput, ServiceLine } from "@/features/operations/types"
-import { serviceLines } from "@/features/workspace/config"
 import { serviceSkills } from "@/features/operations/types"
 import { prepareFiles } from "@/features/operations/files"
 import { checkFiles, fileAccept, fileHint } from "@/features/operations/file-rules"
 import { isNuban, maskAccount } from "@/features/operations/banks"
 import { payoutReady, profileChangeRows } from "@/features/operations/workflow"
 import { defaultWorkingHours, workingHoursProblem } from "@/features/operations/hours"
-import { demoLocations, demoPlaceNamed } from "@/features/operations/demo-locations"
 import AvailabilityPanel from "@/features/operations/AvailabilityPanel.vue"
 import WorkingHoursEditor from "@/features/operations/WorkingHoursEditor.vue"
 import Attachments from "@/features/operations/Attachments.vue"
@@ -30,7 +29,8 @@ import type { PublicServiceNode } from "@/features/catalog/types"
 import { catalogIdsFromNames, skillOptionsForRoot, visibleNodeIds } from "@/features/catalog/types"
 import CatalogSkillTree from "@/features/catalog/CatalogSkillTree.vue"
 
-const props = defineProps<{ availability?: boolean }>()
+const props = defineProps<{ availability?: boolean; v1Mode?: boolean }>()
+const payoutEnabled = sectionEnabled("provider", "payouts")
 const ops = useOperationsStore()
 const auth = useAuthStore()
 const files = ref<File[]>([])
@@ -55,19 +55,8 @@ const placeNames = ref<Record<string, string>>({})
 const savedAreas = (source?: { serviceAreaIds?: string[]; serviceAreas: string[] }) => {
   const saved = new Set<string>()
 
-  if (!isDemoMode) {
-    for (const [index, id] of (source?.serviceAreaIds ?? []).entries()) {
-      placeNames.value[id] ??= source?.serviceAreas[index] ?? id
-      saved.add(id)
-    }
-
-    return [...saved]
-  }
-  // Demo profiles hold names only: a name the demo list knows becomes its id, any other keeps the name as its id.
-  for (const name of source?.serviceAreas ?? []) {
-    const id = demoPlaceNamed(name)?.id ?? name
-
-    placeNames.value[id] ??= name
+  for (const [index, id] of (source?.serviceAreaIds ?? []).entries()) {
+    placeNames.value[id] ??= source?.serviceAreas[index] ?? id
     saved.add(id)
   }
 
@@ -119,8 +108,7 @@ const changesRejected = computed(() =>
   ops.profile?.changesReview?.state === "rejected" ? ops.profile.changesReview.note : "",
 )
 const approved = computed(() => ops.profile?.verification === "approved")
-const fetchPlaces = (parentId?: string): Promise<LocationView[]> =>
-  isDemoMode ? Promise.resolve(demoLocations(parentId)) : requestsApi.locations(parentId)
+const fetchPlaces = (parentId?: string): Promise<LocationView[]> => requestsApi.locations(parentId)
 const remember = (list: LocationView[]) => {
   for (const item of list) placeNames.value[item.id] ??= item.name
 }
@@ -138,15 +126,15 @@ const serviceAreaItems = computed(() => {
 
   return [
     ...offered.map(item => ({ title: item.name, value: item.id, props: { subtitle: kindLabels[item.kind] } })),
-    ...ids.serviceAreaIds
-      .filter(id => !shown.has(id))
-      .map(id => ({ title: placeNames.value[id] ?? id, value: id })),
+    ...ids.serviceAreaIds.filter(id => !shown.has(id)).map(id => ({ title: placeNames.value[id] ?? id, value: id })),
   ]
 })
 
 // A place covers everything under it, so the LGA is covered by listing it or its state.
 const coversLocation = computed(
-  () => ids.serviceAreaIds.includes(ids.locationId) || (Boolean(stateId.value) && ids.serviceAreaIds.includes(stateId.value)),
+  () =>
+    ids.serviceAreaIds.includes(ids.locationId) ||
+    (Boolean(stateId.value) && ids.serviceAreaIds.includes(stateId.value)),
 )
 const areaProblem = computed(() =>
   !ids.serviceAreaIds.length
@@ -437,22 +425,6 @@ async function loadPhonePolicy() {
 }
 
 onMounted(async () => {
-  if (isDemoMode) {
-    if (!props.availability) {
-      // The demo profile names its city; find that LGA (it may be an alias, such as Abuja) and its state.
-      const lga = demoPlaceNamed(profile?.city ?? "")
-
-      states.value = demoLocations()
-      remember(states.value)
-      await showPlace(
-        states.value.find(item => item.id === lga?.parentId),
-        lga?.id ?? "",
-      )
-      await draft.start()
-    }
-
-    return
-  }
   if (!props.availability) await loadPhonePolicy()
   try {
     catalogRoots.value = await catalogApi.publicTree()
@@ -560,15 +532,14 @@ const checklist = computed(() => [
   { label: "Skills", done: chosenServices.value.length > 0 && !missingSkills.value.length },
   { label: "Job capacity", done: !capacityProblem.value },
   { label: "Working hours", done: !hoursProblem.value },
-  { label: "Documents", done: form.documents.length + files.value.length > 0 },
+  ...(!props.v1Mode ? [{ label: "Documents", done: form.documents.length + files.value.length > 0 }] : []),
   { label: "Face photo", done: Boolean(form.photo) },
-  {
-    label: "Bank details (optional)",
-    done: bankReady.value || (!form.bank.bankCode && !form.bank.accountNumber),
-  },
+  ...(payoutEnabled
+    ? [{ label: "Bank details (optional)", done: bankReady.value || (!form.bank.bankCode && !form.bank.accountNumber) }]
+    : []),
   { label: "Submitted", done: ["pending", "approved", "rejected"].includes(ops.profile?.verification ?? "") },
   { label: "Verified (identity)", done: ops.profile?.verification === "approved" },
-  { label: "Bank verified", done: Boolean(ops.profile) && payoutReady(ops.profile!) },
+  ...(payoutEnabled ? [{ label: "Bank verified", done: Boolean(ops.profile) && payoutReady(ops.profile!) }] : []),
 ])
 
 const choosePhoto = async (value: File | File[] | null) => {
@@ -637,8 +608,10 @@ const runSubmit = async () => {
   }
   try {
     if (isDemoMode) {
-      form.documents.push(...(await prepareFiles(files.value)))
-      form.portfolio.push(...(await prepareFiles(portfolioFiles.value)))
+      if (!props.v1Mode) {
+        form.documents.push(...(await prepareFiles(files.value)))
+        form.portfolio.push(...(await prepareFiles(portfolioFiles.value)))
+      }
     } else {
       form.documents.push(
         ...(await Promise.all(files.value.map(file => providersApi.upload(file, "provider_document")))),
@@ -662,7 +635,7 @@ const runSubmit = async () => {
         locationId: ids.locationId,
         serviceAreaIds: [...ids.serviceAreaIds],
         bank:
-          awaitingBank.value || (current.value && !changingBank.value)
+          !payoutEnabled || awaitingBank.value || (current.value && !changingBank.value)
             ? { bankCode: "", accountNumber: "", accountName: "" }
             : toRaw(form.bank),
         skills: Object.fromEntries(form.services.map(service => [service, form.skills[service] ?? []])),
@@ -995,13 +968,7 @@ const submit = async () => {
       </VAlert>
       <VRow>
         <VCol cols="12">
-          <VAlert
-            v-if="ops.profile?.outsideServedAreas"
-            type="info"
-            variant="tonal"
-            density="comfortable"
-            class="mb-4"
-          >
+          <VAlert v-if="ops.profile?.outsideServedAreas" type="info" variant="tonal" density="comfortable" class="mb-4">
             XPro doesn't offer jobs in your areas yet. You can still submit; you'll get offers once XPro opens there.
           </VAlert>
           <VAutocomplete
@@ -1042,6 +1009,7 @@ const submit = async () => {
     </ProfileSection>
 
     <ProfileSection
+      v-if="!props.v1Mode"
       title="Private verification documents"
       subtitle="Identity, qualification or business documents. Only XPro review staff can see these. Files upload when you submit your profile."
     >
@@ -1079,6 +1047,7 @@ const submit = async () => {
     </ProfileSection>
 
     <ProfileSection
+      v-if="!props.v1Mode"
       title="Public portfolio"
       subtitle="These samples appear on your public profile after approval. Files upload when you submit your profile."
     >
@@ -1091,6 +1060,7 @@ const submit = async () => {
     </ProfileSection>
 
     <ProfileSection
+      v-if="payoutEnabled"
       title="Bank details (optional)"
       subtitle="You can submit your profile without bank details and add them later. Payouts require an account verified by XPro."
     >
@@ -1118,10 +1088,18 @@ const submit = async () => {
     </ProfileSection>
 
     <VAlert v-if="ops.profile?.verification === 'approved'" color="info" variant="tonal" class="mb-5">
-      <template v-if="phoneVerificationRequired">Phone changes require SMS verification. </template>Changes to your
-      city, experience, bio, portfolio and weekly working hours apply straight away. Changes to your trade, services,
-      service areas, skills, job capacity, verification documents or face photo are reviewed by XPro first. Your current
-      details stay in use while they are reviewed.
+      <template v-if="props.v1Mode">
+        <template v-if="phoneVerificationRequired">Phone changes require SMS verification. </template>
+        Changes to your city, experience, bio and weekly working hours apply straight away. Changes to your trade,
+        services, service areas, skills, job capacity or face photo are reviewed by XPro first. Your current details
+        stay in use while they are reviewed.
+      </template>
+      <template v-else>
+        <template v-if="phoneVerificationRequired">Phone changes require SMS verification. </template>Changes to your
+        city, experience, bio, portfolio and weekly working hours apply straight away. Changes to your trade, services,
+        service areas, skills, job capacity, verification documents or face photo are reviewed by XPro first. Your
+        current details stay in use while they are reviewed.
+      </template>
     </VAlert>
     <VBtn
       class="mb-5"
@@ -1152,9 +1130,9 @@ const submit = async () => {
 
     <ReviewHistory
       v-if="ops.profile"
-      :history="ops.profile.history"
+      :history="payoutEnabled ? ops.profile.history : ops.profile.history.filter(entry => entry.kind !== 'bank')"
       :pending-fields="pendingFieldLabels"
-      :pending-bank="pendingBank"
+      :pending-bank="payoutEnabled ? pendingBank : null"
     />
   </template>
 </template>

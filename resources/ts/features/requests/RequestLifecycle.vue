@@ -2,11 +2,56 @@
 import type { RequestView, ScheduleView } from "@/features/requests/api-types"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { useAuthStore } from "@/stores/auth"
+import type { V1Actor, V1Request } from "@/features/v1/types"
+import { v1Capabilities } from "@/features/v1/access"
+import { v1Api } from "@/services/v1-api"
+import V1ApproveDialog from "@/features/v1/V1ApproveDialog.vue"
+import V1AssignStaff from "@/features/v1/V1AssignStaff.vue"
+import V1Conversation from "@/features/v1/V1Conversation.vue"
+import V1DecisionPanel from "@/features/v1/V1DecisionPanel.vue"
+import V1DenyDialog from "@/features/v1/V1DenyDialog.vue"
+import V1ReplaceProviderDialog from "@/features/v1/V1ReplaceProviderDialog.vue"
+import V1RequestSummary from "@/features/v1/V1RequestSummary.vue"
+import { getErrorMessage } from "@/utils/errors"
 
-const props = defineProps<{ request: RequestView }>()
+const props = defineProps<{
+  request: RequestView
+  v1Request?: V1Request
+  v1Viewer?: V1Actor
+  viewerId?: string
+}>()
 const emit = defineEmits<{ refresh: [] }>()
 const auth = useAuthStore()
-const activeTab = ref("schedule")
+const v1Current = ref<V1Request | undefined>(props.v1Request)
+const v1ApproveOpen = ref(false)
+const v1DenyOpen = ref(false)
+const v1ReplaceOpen = ref(false)
+const v1Notice = ref("")
+const v1Error = ref("")
+const isV1 = computed(() => Boolean(props.v1Request && props.v1Viewer))
+const v1Caps = computed(() => v1Capabilities(props.v1Viewer ?? null))
+watch(
+  () => props.v1Request,
+  value => {
+    v1Current.value = value
+  },
+)
+const applyV1 = (updated: V1Request) => {
+  v1Current.value = updated
+  v1Notice.value = "Request updated."
+  v1Error.value = ""
+  emit("refresh")
+}
+const refreshV1 = async () => {
+  if (!props.v1Request) return
+  try {
+    v1Current.value = await v1Api.getRequest(props.v1Request.id)
+    v1Error.value = ""
+  } catch (cause) {
+    v1Error.value = getErrorMessage(cause, "The request could not be refreshed.")
+  }
+}
+const activeTab = ref("messages")
 const busy = ref(false)
 const error = ref("")
 const notice = ref("")
@@ -40,9 +85,7 @@ const editDescription = ref(props.request.description ?? "")
 const editNote = ref("")
 const messageText = ref("")
 const messageFiles = ref<File[]>([])
-const channel = ref<"customer" | "provider" | "internal">(
-  auth.user?.role === "provider" ? "provider" : auth.user?.role === "admin" ? "internal" : "customer",
-)
+const channel = ref<"customer" | "provider" | "internal">(auth.user?.role === "provider" ? "provider" : "customer")
 const cancellationReasonCode = ref("customer_changed_mind")
 
 const can = (action: string) => props.request.allowedActions.includes(action)
@@ -54,9 +97,9 @@ const messageChannels = computed(() => {
     { title: "Internal", value: "internal", permission: "message.internal" },
   ]
   if (role.value === "customer") return choices.filter(item => item.value === "customer")
-  if (role.value === "provider") return choices.filter(item => item.value === "provider")
+  if (role.value === "provider") return []
 
-  return choices.filter(item => auth.user?.scopes.includes(item.permission))
+  return choices.filter(item => item.value === "customer" && auth.user?.scopes.includes(item.permission))
 })
 watch(
   messageChannels,
@@ -85,15 +128,15 @@ const currentSchedule = computed(
 const asWAT = (value: string) => new Date(`${value}:00+01:00`).toISOString()
 
 async function load() {
+  if (isV1.value) return
   const id = props.request.id
-  const staff = role.value === "admin"
   schedules.value = props.request.schedules ?? (props.request.schedule ? [props.request.schedule] : [])
-  // Activity and escalations are staff-only routes; skip them for customers and providers instead of swallowing a 403.
+  // V1 exposes the customer conversation only; the other lifecycle APIs stay available for later releases.
   const results = await Promise.allSettled([
-    requestsApi.updates(id),
-    requestsApi.messages(id, { channel: channel.value }),
-    staff ? requestsApi.activity(id) : Promise.resolve(undefined),
-    staff && can("request.escalate") ? requestsApi.requestEscalations(id) : Promise.resolve([]),
+    Promise.resolve([]),
+    role.value === "provider" ? Promise.resolve([]) : requestsApi.messages(id, { channel: "customer" }),
+    Promise.resolve(undefined),
+    Promise.resolve([]),
   ])
   const failed: string[] = []
   if (results[0].status === "fulfilled") updates.value = results[0].value
@@ -207,7 +250,92 @@ watch(() => props.request.version, load)
 </script>
 
 <template>
-  <VCard class="mt-6">
+  <div v-if="isV1 && v1Current" class="mt-6">
+    <VAlert v-if="v1Error" type="error" variant="tonal" class="mb-4">{{ v1Error }}</VAlert>
+    <VAlert v-if="v1Notice" type="success" variant="tonal" class="mb-4">{{ v1Notice }}</VAlert>
+    <V1DecisionPanel :request="v1Current" :viewer="v1Viewer!" class="mb-4" />
+    <VCard v-if="v1Viewer !== 'customer'" variant="outlined" class="mb-4">
+      <VCardText>
+        <VRow>
+          <VCol cols="12" md="6">
+            <V1AssignStaff v-if="v1Caps.canAssignStaff" :request="v1Current" @updated="applyV1" @refresh="refreshV1" />
+            <div v-else>
+              <div class="text-caption text-medium-emphasis">Assigned staff</div>
+              <div class="text-body-1">{{ v1Current.assignee?.name ?? "Not assigned" }}</div>
+            </div>
+          </VCol>
+          <VCol cols="12" md="6">
+            <div class="text-caption text-medium-emphasis mb-2">Decision</div>
+            <div v-if="v1Caps.canDecide && v1Current.status === 'submitted'" class="d-flex flex-wrap gap-2">
+              <VBtn color="primary" prepend-icon="tabler-check" @click="v1ApproveOpen = true">Approve request</VBtn>
+              <VBtn color="error" variant="outlined" prepend-icon="tabler-x" @click="v1DenyOpen = true">
+                Deny request
+              </VBtn>
+            </div>
+            <p v-else-if="v1Current.status === 'submitted'" class="text-body-2 text-medium-emphasis mb-0">
+              Only an admin can approve or deny. Staff can chat with the customer and send quotes.
+            </p>
+            <div
+              v-else-if="v1Current.status === 'approved' && v1Caps.canReplaceProvider"
+              class="d-flex flex-wrap align-center gap-3"
+            >
+              <span class="text-body-2">Provider: {{ v1Current.provider?.providerName }}</span>
+              <VBtn variant="outlined" prepend-icon="tabler-replace" @click="v1ReplaceOpen = true">
+                Replace provider
+              </VBtn>
+            </div>
+            <p v-else class="text-body-2 text-medium-emphasis mb-0">The decision is final and can't be changed.</p>
+          </VCol>
+        </VRow>
+      </VCardText>
+    </VCard>
+    <template v-if="v1Viewer === 'customer'">
+      <V1RequestSummary :request="v1Current" />
+      <VCard variant="outlined" class="mt-4">
+        <VCardText class="d-flex flex-wrap align-center justify-space-between gap-4">
+          <div>
+            <h3 class="text-h6 mb-1">Chat for this request</h3>
+            <p class="text-body-2 text-medium-emphasis mb-0">Open Messages to talk with Xpro about this request.</p>
+          </div>
+          <VBtn :to="{ path: '/messages', query: { request: v1Current.id } }" prepend-icon="tabler-message-circle">
+            View chat for this request
+          </VBtn>
+        </VCardText>
+      </VCard>
+    </template>
+    <VRow v-else>
+      <VCol cols="12" lg="6">
+        <V1RequestSummary :request="v1Current" show-customer />
+        <VCard v-if="v1Current.activity.length" variant="outlined" class="mt-4">
+          <VCardText>
+            <h3 class="text-h6 mb-3">History</h3>
+            <div v-for="entry in [...v1Current.activity].reverse()" :key="entry.id" class="mb-3">
+              <div class="text-body-2">{{ entry.text }}</div>
+              <div class="text-caption text-medium-emphasis">{{ entry.at }}</div>
+            </div>
+          </VCardText>
+        </VCard>
+      </VCol>
+      <VCol cols="12" lg="6">
+        <V1Conversation
+          :request-id="v1Current.id"
+          :status="v1Current.status"
+          :viewer="v1Viewer!"
+          :viewer-id="viewerId ?? auth.user?.id ?? ''"
+        />
+      </VCol>
+    </VRow>
+    <V1ApproveDialog
+      v-model="v1ApproveOpen"
+      :request="v1Current"
+      @updated="applyV1"
+      @approved="applyV1"
+      @refresh="refreshV1"
+    />
+    <V1DenyDialog v-model="v1DenyOpen" :request="v1Current" @denied="applyV1" @refresh="refreshV1" />
+    <V1ReplaceProviderDialog v-model="v1ReplaceOpen" :request="v1Current" @replaced="applyV1" @refresh="refreshV1" />
+  </div>
+  <VCard v-else class="mt-6">
     <VCardText>
       <h2 class="text-h5 mb-4">Request lifecycle</h2>
       <VAlert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</VAlert>
@@ -343,10 +471,8 @@ watch(() => props.request.version, load)
               :subtitle="item.note"
           /></VList> </VCardText
       ></VCard>
-      <VTabs v-model="activeTab" class="mb-5" show-arrows>
-        <VTab value="schedule">Schedule</VTab><VTab value="progress">Progress</VTab
-        ><VTab value="completion">Completion & issues</VTab><VTab value="cancellation">Cancellation</VTab
-        ><VTab value="messages">Messages</VTab><VTab v-if="role === 'admin'" value="activity">Activity</VTab>
+      <VTabs v-if="role !== 'provider'" v-model="activeTab" class="mb-5" show-arrows>
+        <VTab value="messages">Messages</VTab>
       </VTabs>
 
       <section v-if="activeTab === 'schedule'">

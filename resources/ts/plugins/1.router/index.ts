@@ -7,6 +7,7 @@ import { createRouter, createWebHistory } from "vue-router/auto"
 import { store } from "@/plugins/2.pinia"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
+import { v1Actor, v1RouteAllowed } from "@/features/v1/access"
 import { isWorkspaceRole, sectionAllowed, sectionPath, workspaceSections } from "@/features/workspace/config"
 import { isDemoMode } from "@/utils/demo-mode"
 
@@ -98,13 +99,22 @@ router.beforeEach(async to => {
           ? to.meta.adminSection
           : String(to.params && "section" in to.params ? to.params.section : "")
 
+    if (role === "admin" && section === "account") return { path: "/admin/settings", query: { tab: "profile" } }
+
     const adminSection = workspaceSections.admin.find(item => item.id === section)
+    const actor = v1Actor(auth.user)
 
-    if (role !== "admin" || !adminSection) return "/access-denied"
+    // V1 staff have no overview; their home is the assigned-requests list.
+    if (actor === "staff" && section === "overview") return "/admin/requests"
 
-    if (!sectionAllowed(adminSection, useOperationsStore(store).can)) return "/access-denied"
+    // The V1 map is the single source of truth for what each actor may open (staff: requests and their account only).
+    if (role !== "admin" || !adminSection || !v1RouteAllowed(actor, section)) return "/access-denied"
+
+    if (!sectionAllowed("admin", adminSection, useOperationsStore(store).can)) return "/access-denied"
   } else if (typeof to.meta.section === "string") {
     const section = to.meta.section
+
+    if (role === "admin" && section === "account") return { path: "/admin/settings", query: { tab: "profile" } }
 
     if (role === "admin" && workspaceSections.admin.some(item => item.id === section)) {
       return {
@@ -116,12 +126,15 @@ router.beforeEach(async to => {
     // A page of the account's other role (e.g. a provider `/jobs` link while in the customer workspace) switches
     // workspace first (01 §6.5).
     const other = auth.otherWorkspaceRole
+    const hasSection = (target: "customer" | "provider", id: string) =>
+      workspaceSections[target].some(item => item.id === id) && v1RouteAllowed(target, id)
+
     if (
       isWorkspaceRole(role) &&
       role !== "admin" &&
-      !workspaceSections[role].some(item => item.id === section) &&
+      !hasSection(role, section) &&
       other &&
-      workspaceSections[other].some(item => item.id === section)
+      hasSection(other, section)
     ) {
       try {
         await auth.switchRole(other)
@@ -132,8 +145,7 @@ router.beforeEach(async to => {
       return true
     }
 
-    if (!isWorkspaceRole(role) || role === "admin" || !workspaceSections[role].some(item => item.id === section))
-      return "/access-denied"
+    if (!isWorkspaceRole(role) || role === "admin" || !hasSection(role, section)) return "/access-denied"
   } else if (to.path !== "/access-denied") {
     return "/access-denied"
   }

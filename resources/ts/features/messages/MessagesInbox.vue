@@ -12,6 +12,14 @@ import { conversationPollMs, useConversations } from "@/features/messages/use-co
 import type { RequestView } from "@/features/requests/api-types"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { useAuthStore } from "@/stores/auth"
+import { v1Workspace } from "@/features/workspace/config"
+import { toV1RequestView } from "@/features/v1/adapters"
+import V1Conversation from "@/features/v1/V1Conversation.vue"
+import { v1Actor } from "@/features/v1/access"
+import type { V1Request } from "@/features/v1/types"
+import { v1Api } from "@/services/v1-api"
+
+const props = defineProps<{ v1Mode?: boolean }>()
 
 const route = useRoute()
 const router = useRouter()
@@ -24,12 +32,13 @@ const mode = computed<"desktop" | "tablet" | "phone">(() =>
   isDesktop.value ? "desktop" : isTablet.value ? "tablet" : "phone",
 )
 
-const scopes = computed(() => auth.user?.scopes ?? [])
+const scopes = computed(() => (props.v1Mode ? ["message.customer"] : (auth.user?.scopes ?? [])))
 const has = (permission: string) => scopes.value.includes(permission)
 const viewerName = computed(() => `${auth.user?.firstName ?? ""} ${auth.user?.lastName ?? ""}`.trim())
+const v1Viewer = computed(() => v1Actor(auth.user))
 
 const {
-  items,
+  items: allItems,
   statusCounts,
   nextCursor,
   statuses,
@@ -48,7 +57,15 @@ const {
   clearStatuses,
   clearSearch,
   clearFilters,
-} = useConversations()
+} = useConversations({
+  v1Mode: props.v1Mode,
+  viewer: v1Viewer.value === "customer" ? "customer" : "admin",
+})
+const items = computed(() =>
+  v1Workspace.admin.customerMessagesOnly
+    ? allItems.value.filter(item => item.lastMessage.audience === "customer")
+    : allItems.value,
+)
 
 // ---- Route state -----------------------------------------------------------------------------------------------------
 
@@ -106,6 +123,7 @@ function closeInfo() {
 // ---- The open request ------------------------------------------------------------------------------------------------
 
 const detail = ref<RequestView>()
+const v1Detail = ref<V1Request>()
 const detailLoading = ref(false)
 const detailError = ref("")
 const focus = ref<ChatAudience | null>(null)
@@ -123,10 +141,12 @@ async function loadDetail(requestId: string, quiet = false) {
     detailError.value = ""
   }
   try {
-    const result = await requestsApi.get(requestId)
+    const v1Request = props.v1Mode ? await v1Api.getRequest(requestId) : undefined
+    const result = v1Request ? toV1RequestView(v1Request) : await requestsApi.get(requestId)
 
     if (current !== detailSequence) return
     detail.value = result
+    v1Detail.value = v1Request
     detailError.value = ""
   } catch (cause) {
     if (current !== detailSequence) return
@@ -140,6 +160,7 @@ watch(
   selectedId,
   id => {
     detail.value = undefined
+    v1Detail.value = undefined
     focus.value = null
     tabletInfoOpen.value = false
     if (!id) {
@@ -224,20 +245,28 @@ watch(
 )
 
 const current = computed(() => currentAssignment(detail.value?.assignment))
-const hasProvider = computed(() => !!current.value || !!row.value?.provider)
-const audiences = computed(() => audienceOptions(scopes.value, hasProvider.value))
+const hasProvider = computed(() => !!current.value || !!row.value?.provider || !!v1Detail.value?.provider)
+const audiences = computed(() =>
+  audienceOptions(scopes.value, hasProvider.value).filter(
+    item => !v1Workspace.admin.customerMessagesOnly || item.value === "customer",
+  ),
+)
 const startAudience = computed(() => defaultAudience(row.value, audiences.value))
 const finished = computed(() => (detail.value ? isFinishedStatus(detail.value.status) : false))
 const readOnlyReason = computed(() =>
-  finished.value ? "This request is closed. Messages can be read but not sent." : undefined,
+  !props.v1Mode && finished.value ? "This request is closed. Messages can be read but not sent." : undefined,
 )
 const chatReady = computed(() => !!detail.value && settledOnce.value)
 
 const focusOptions = computed<FocusOption[]>(() => [
-  { value: null, title: "All messages" },
+  { value: null, title: v1Workspace.admin.customerMessagesOnly ? "Customer messages" : "All messages" },
   ...(has("message.customer") ? [{ value: "customer" as const, title: "Only customer" }] : []),
-  ...(has("message.provider") ? [{ value: "provider" as const, title: "Only provider" }] : []),
-  ...(has("message.internal") ? [{ value: "internal" as const, title: "Only staff notes" }] : []),
+  ...(!v1Workspace.admin.customerMessagesOnly && has("message.provider")
+    ? [{ value: "provider" as const, title: "Only provider" }]
+    : []),
+  ...(!v1Workspace.admin.customerMessagesOnly && has("message.internal")
+    ? [{ value: "internal" as const, title: "Only staff notes" }]
+    : []),
 ])
 
 const ownerName = computed(() => {
@@ -261,7 +290,8 @@ const canClaim = computed(
     !finished.value &&
     detail.value.allowedActions.includes("request.claim"),
 )
-const openTo = computed(() => ({ path: "/admin/requests", query: { request: selectedId.value ?? "" } }))
+const requestPath = computed(() => (props.v1Mode && v1Viewer.value === "customer" ? "/requests" : "/admin/requests"))
+const openTo = computed(() => ({ path: requestPath.value, query: { request: selectedId.value ?? "" } }))
 
 function say(message: string) {
   notice.value = message
@@ -378,8 +408,36 @@ function retryChat() {
         </div>
       </template>
 
+      <div
+        v-else-if="detail && v1Mode && v1Detail && ['admin', 'customer'].includes(v1Viewer ?? '')"
+        class="inbox__v1-chat"
+      >
+        <ConversationHeader
+          :request-id="detail.id"
+          :title="title"
+          :subtitle="subtitle"
+          :customer-name="customerName"
+          :focus="focus"
+          :focus-options="focusOptions"
+          :can-claim="false"
+          :claiming="false"
+          :show-back="mode === 'phone'"
+          :opens-info="mode !== 'desktop'"
+          :open-to="openTo"
+          @back="backToList"
+          @open-info="openInfo"
+          @update:focus="focus = $event"
+        />
+        <V1Conversation
+          :request-id="v1Detail.id"
+          :status="v1Detail.status"
+          :viewer="v1Viewer!"
+          :viewer-id="auth.user?.id ?? ''"
+          @sent="onSent"
+        />
+      </div>
       <ChatThread
-        v-else-if="detail"
+        v-else-if="detail && !v1Mode"
         :key="selectedId"
         :request-id="detail.id"
         viewer="staff"
@@ -420,11 +478,12 @@ function retryChat() {
         :row="row"
         :loading="detailLoading"
         :error="detailError"
-        :can-see-contact="has('view.customer_contact')"
+        :can-see-contact="v1Mode || has('view.customer_contact')"
         :can-claim="canClaim"
         :claiming="claiming"
         :has-provider="hasProvider"
         :owner-fallback="ownerName"
+        :request-path="requestPath"
         @claim="claim"
         @retry="retryChat"
       />
@@ -446,11 +505,12 @@ function retryChat() {
         :row="row"
         :loading="detailLoading"
         :error="detailError"
-        :can-see-contact="has('view.customer_contact')"
+        :can-see-contact="v1Mode || has('view.customer_contact')"
         :can-claim="canClaim"
         :claiming="claiming"
         :has-provider="hasProvider"
         :owner-fallback="ownerName"
+        :request-path="requestPath"
         fullscreen
         @back="closeInfo"
         @claim="claim"
@@ -464,11 +524,12 @@ function retryChat() {
         :row="row"
         :loading="detailLoading"
         :error="detailError"
-        :can-see-contact="has('view.customer_contact')"
+        :can-see-contact="v1Mode || has('view.customer_contact')"
         :can-claim="canClaim"
         :claiming="claiming"
         :has-provider="hasProvider"
         :owner-fallback="ownerName"
+        :request-path="requestPath"
         fullscreen
         @back="closeInfo"
         @claim="claim"
@@ -532,6 +593,11 @@ function retryChat() {
   display: flex;
   flex-direction: column;
   background: rgb(var(--v-theme-surface));
+}
+
+.inbox__v1-chat {
+  min-block-size: 0;
+  overflow: auto;
 }
 
 .inbox__chat-head {

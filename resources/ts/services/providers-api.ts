@@ -161,6 +161,9 @@ export const providersApi = {
     serviceAreaIds: string[]
     serviceIds: string[]
     skillIds: Record<string, string[]>
+    /** Demo adapter fields; the production API derives labels from catalog ids. */
+    services?: string[]
+    skills?: Record<string, string[]>
     capacity: number
     workingHours: WorkingHours
     experience: number

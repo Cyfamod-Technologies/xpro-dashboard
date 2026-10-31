@@ -48,6 +48,9 @@ closed tab does not lose the work. The code lives in `resources/ts/features/draf
 - `pnpm exec tsx tests/catalog-skills.mts` runs the tests for the provider's service tree helpers (leaf skills, search, renamed-service aliases; `features/catalog/types.ts`).
 - `pnpm exec tsx tests/review-cycles.mts` runs the tests for how the provider's review history is grouped into one card per review (`features/operations/review-cycles.ts`).
 - `pnpm exec tsx tests/featured-slots.mts` runs the tests for the Featured providers slot helpers (reorder, search, unsaved-change count).
+- `pnpm exec tsx tests/v1-access.mts` runs the V1 access tests (who is customer, admin, staff or provider; each actor's menu; hidden routes blocked; no Overview shortcuts to hidden sections; `features/v1/access.ts`).
+- `pnpm exec tsx tests/v1-helpers.mts` runs the V1 helper tests (latest counter card, who can counter, Approve dialog prefill sources, approval, denial and counter validation, naira and kobo; `features/v1/helpers.ts`).
+- `pnpm exec tsx tests/v1-mock-store.mts` runs the V1 mock backend rules directly, with no service worker (visibility, approve and deny, 409 conflicts, staff assignment, counter cards, provider handoff and jobs; `mocks/v1/store.ts`).
 
 ## Chat
 
@@ -100,6 +103,38 @@ the project docs.
 - The staff request view lists assignments without provider names, so the info panel
   shows the current provider's name from the conversation row and has no "Earlier
   providers" list yet.
+
+## Reviewing V1 with the mock backend
+
+The V1 screens (`resources/ts/features/v1`) talk to `services/v1-api.ts`. With
+`VITE_ENABLE_MOCKS=true`, MSW answers that contract from the browser-local V1
+store (`mocks/v1`, handlers in `mocks/v1/handlers.ts`, rules in
+`mocks/v1/store.ts`). Mock routes are scoped to `VITE_API_BASE_URL` so they do
+not intercept Vite module requests.
+Unhandled API requests are surfaced by MSW and do not silently fall through to
+the configured API host.
+With mocks off the same client calls the real server, which does not implement
+V1 yet. Start the dev server with `VITE_ENABLE_MOCKS=true` and sign in with the
+demo accounts (password `Password123!`; MFA is disabled by default in demo
+mode):
+
+| Account                                     | V1 role    | What to open                                                                                                                |
+| ------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `customer@xpro.test`                        | Customer   | Overview, My requests (4 seeded), Messages, **Request a service** (`/request`), **Create a new request** on the denied one  |
+| `admin@xpro.test`                           | Admin (V1) | Requests: assign staff, **Approve request** (provider, price, date), **Deny request**, **Send quote**, **Replace provider** |
+| `operations@xpro.test`                      | Staff (V1) | My assigned requests: chat and quotes, no Approve or Deny                                                                   |
+| `provider@xpro.test`                        | Provider   | Overview, profile and availability (shared V1 record), My jobs (1 seeded)                                                   |
+| `pricing@xpro.test` and `finance@xpro.test` | Staff (V1) | Staff directory and assignable staff records                                                                                |
+
+- The providers list, approval candidates and provider availability use the
+  same mock records. Verifying a provider in the directory changes the
+  assignment candidate list.
+- Mock workflow data lives in `localStorage` under `xpro:v1-mock`; registered
+  demo accounts use `xpro:demo-accounts`. Admin Settings has **Reset demo data**
+  to clear the saved workflow, accounts and demo session.
+- The Services catalog is read-only in V1. Payments are not collected in this
+  demo. Notifications are email-only; Account has basic details and sign-out.
+- File attachments are recorded by name, size and type only; real uploads come with the server phase.
 
 ## Git and CI
 

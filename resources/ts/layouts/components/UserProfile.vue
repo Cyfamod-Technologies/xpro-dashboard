@@ -2,7 +2,8 @@
 import { clearDraftsForOwner } from "@/features/drafts/clear-drafts"
 import { staffRoleLabels } from "@/features/operations/staff"
 import { roleLabels } from "@/types/domain"
-import { isWorkspaceRole, sectionPath } from "@/features/workspace/config"
+import { v1Actor, v1RoleLabel, v1RouteAllowed } from "@/features/v1/access"
+import { isWorkspaceRole, sectionEnabled, sectionPath } from "@/features/workspace/config"
 import { useAuthStore } from "@/stores/auth"
 import { useOperationsStore } from "@/stores/operations"
 import { getErrorMessage } from "@/utils/errors"
@@ -10,8 +11,11 @@ import { getErrorMessage } from "@/utils/errors"
 const auth = useAuthStore()
 const ops = useOperationsStore()
 
+const actor = computed(() => v1Actor(auth.user))
 const roleLabel = computed(() => {
   if (!auth.user) return ""
+  // V1 shows the plain actor: Customer, Admin, Staff or Provider.
+  if (actor.value) return v1RoleLabel(actor.value)
 
   const roles = auth.user.role === "admin" ? ops.staffMember?.roles : undefined
 
@@ -20,6 +24,21 @@ const roleLabel = computed(() => {
 
 const router = useRouter()
 const pathFor = (id: string) => (isWorkspaceRole(auth.user?.role) ? sectionPath(auth.user.role, id) : "/")
+const profilePath = computed(() =>
+  auth.user?.role === "admin"
+    ? { path: "/admin/settings", query: { tab: "profile" } }
+    : actor.value === "provider"
+      ? { path: "/settings", query: { tab: "profile" } }
+      : pathFor("settings"),
+)
+// Staff reach their account from Profile and have no Settings link.
+const showSettings = computed(
+  () =>
+    isWorkspaceRole(auth.user?.role) &&
+    sectionEnabled(auth.user.role, "settings") &&
+    actor.value !== "staff" &&
+    v1RouteAllowed(actor.value, "settings"),
+)
 
 const switching = ref(false)
 const switchError = ref("")
@@ -86,7 +105,7 @@ const handleLogout = async () => {
           <VDivider class="my-2" />
 
           <!-- 👉 Profile -->
-          <VListItem :to="pathFor('account')">
+          <VListItem v-if="actor === 'staff' || actor === 'admin'" :to="profilePath">
             <template #prepend>
               <VIcon class="me-2" icon="tabler-user" size="22" />
             </template>
@@ -95,7 +114,7 @@ const handleLogout = async () => {
           </VListItem>
 
           <!-- 👉 Settings -->
-          <VListItem :to="pathFor('settings')">
+          <VListItem v-if="showSettings" :to="pathFor('settings')">
             <template #prepend>
               <VIcon class="me-2" icon="tabler-settings" size="22" />
             </template>

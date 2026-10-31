@@ -3,8 +3,8 @@ import type { User } from "@/types/domain"
 export const demoCredentials = [
   { role: "Customer", email: "customer@xpro.test", password: "Password123!" },
   { role: "Provider", email: "provider@xpro.test", password: "Password123!" },
-  { role: "Staff · Super admin", email: "admin@xpro.test", password: "Password123!" },
-  { role: "Staff · Operations", email: "operations@xpro.test", password: "Password123!" },
+  { role: "V1 admin (Super admin)", email: "admin@xpro.test", password: "Password123!" },
+  { role: "V1 staff (Operations)", email: "operations@xpro.test", password: "Password123!" },
   { role: "Staff · Pricing", email: "pricing@xpro.test", password: "Password123!" },
   { role: "Staff · Client relations", email: "relations@xpro.test", password: "Password123!" },
   { role: "Staff · Finance", email: "finance@xpro.test", password: "Password123!" },
@@ -44,7 +44,8 @@ export const users: User[] = [
     status: "active",
     title: "Super admin",
     initials: "AO",
-    scopes: ["Requests", "Providers", "Dispatch"],
+    // `staff.manage` makes this account the V1 admin; other admin-role accounts are V1 staff (features/v1/access.ts).
+    scopes: ["Requests", "Providers", "Dispatch", "staff.manage"],
     mfaRequired: true,
   },
   {

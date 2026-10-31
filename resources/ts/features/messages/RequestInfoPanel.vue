@@ -18,6 +18,8 @@ const props = defineProps<{
   hasProvider: boolean
   /** Name shown for the owner when the row has none but the request is claimed by the viewer. */
   ownerFallback?: string
+  /** The request workspace route for this viewer. */
+  requestPath?: string
   /** Phone: shown as its own screen with a back arrow. */
   fullscreen?: boolean
 }>()
@@ -46,8 +48,12 @@ const contact = computed(() =>
     .join(" · "),
 )
 const openTo = computed(() => ({
-  path: "/admin/requests",
+  path: props.requestPath ?? "/admin/requests",
   query: { request: props.request?.id ?? props.row?.requestId },
+}))
+const quoteTo = computed(() => ({
+  path: props.requestPath ?? "/admin/requests",
+  query: { request: props.request?.id ?? props.row?.requestId, quote: "1" },
 }))
 </script>
 
@@ -143,8 +149,21 @@ const openTo = computed(() => ({
           </div>
         </section>
 
+        <section
+          v-if="request?.quote?.status === 'revision_requested'"
+          class="info-panel__section"
+          aria-labelledby="info-quote"
+        >
+          <h3 id="info-quote" class="info-panel__heading">Quote change requested</h3>
+          <p class="text-body-2 mb-3">{{ request.quote.responseNote || "The customer asked for a quote revision." }}</p>
+          <VBtn size="small" variant="tonal" :to="quoteTo">Open quote</VBtn>
+        </section>
+
         <VBtn class="info-panel__open" variant="outlined" block append-icon="tabler-arrow-right" :to="openTo">
           Open request
+        </VBtn>
+        <VBtn v-if="request?.quote" class="info-panel__open mt-2" variant="tonal" block :to="quoteTo">
+          Open quote
         </VBtn>
       </template>
     </div>

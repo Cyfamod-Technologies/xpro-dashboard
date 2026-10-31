@@ -261,7 +261,7 @@ export function useFormDraft<T>(options: FormDraftOptions<T>) {
   }
   onScopeDispose(flush)
 
-  return { status, savedAt, restoredAt, filesLost, conflict, start, discard, clear, resume, resolveConflict }
+  return { status, savedAt, restoredAt, filesLost, conflict, start, discard, clear, resume, resolveConflict, flush }
 }
 
 export type FormDraft = ReturnType<typeof useFormDraft>

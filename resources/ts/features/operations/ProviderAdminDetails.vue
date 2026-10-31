@@ -5,8 +5,10 @@ import { providersApi } from "@/services/providers-api"
 import Attachments from "@/features/operations/Attachments.vue"
 import { weekdayLabels, weekdays, when } from "@/features/operations/types"
 import { accountNameMatches } from "@/features/operations/banks"
+import { v1Workspace } from "@/features/workspace/config"
 import { useOperationsStore } from "@/stores/operations"
 import type { Attachment } from "@/features/operations/types"
+import { isDemoMode } from "@/utils/demo-mode"
 
 type Action =
   | "profile-approve"
@@ -148,8 +150,8 @@ const skillRows = computed(() => Object.entries(provider.value?.skills ?? {}))
 const payoutState = computed(() =>
   provider.value?.payout.pending ? "Pending review" : provider.value?.payout.current ? "Verified" : "Not set",
 )
-const canDelist = computed(() =>
-  ["pending", "approved", "changes_requested"].includes(provider.value?.verification ?? ""),
+const canDelist = computed(
+  () => !isDemoMode && ["pending", "approved", "changes_requested"].includes(provider.value?.verification ?? ""),
 )
 
 const load = async () => {
@@ -376,7 +378,8 @@ onMounted(load)
           <VCardTitle>Coverage and capacity</VCardTitle>
           <VCardText>
             <VAlert v-if="provider.outsideServedAreas" type="info" variant="tonal" density="comfortable" class="mb-4">
-              XPro doesn't offer jobs in these areas yet. The provider can still be approved and will get offers once XPro opens there.
+              XPro doesn't offer jobs in these areas yet. The provider can still be approved and will get offers once
+              XPro opens there.
             </VAlert>
             <div class="text-caption text-medium-emphasis mb-1">Service areas</div>
             <VChip v-for="area in provider.serviceAreas" :key="area" size="small" variant="tonal" class="me-1 mb-3">{{
@@ -552,7 +555,8 @@ onMounted(load)
           </VCardText>
         </VCard>
 
-        <VCard>
+        <!-- V1: no bank review controls. Bank collection and payout readiness are deferred. -->
+        <VCard v-if="v1Workspace.admin.bankReview">
           <VCardTitle class="d-flex align-center justify-space-between"
             >Payout details
             <VChip

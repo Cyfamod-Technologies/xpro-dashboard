@@ -106,6 +106,11 @@ export const staffInviteApi = {
 }
 
 export const authApi = {
+  logout: (accessToken?: string) =>
+    $api<ApiEnvelope<{ loggedOut: boolean }>>("/auth/logout", {
+      method: "POST",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    }),
   reauthenticate: (password: string, code?: string) =>
     $api<ApiEnvelope<{ reauthToken: string; expiresInSeconds: number }>>("/auth/reauthenticate", {
       method: "POST",
@@ -164,7 +169,7 @@ export const authApi = {
     /** Where to resume after verification and sign-in, e.g. `/request` for a guest draft. */
     returnTo?: string
   }) =>
-    $api<ApiEnvelope<{ email: string; status: string }>>("/auth/register", {
+    $api<ApiEnvelope<{ email: string; status: string; verificationToken?: string }>>("/auth/register", {
       method: "POST",
       body: payload,
     }),

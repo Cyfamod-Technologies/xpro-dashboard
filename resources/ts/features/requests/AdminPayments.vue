@@ -4,6 +4,8 @@ import { HOLDABLE_PAYOUT_STATUSES } from "@/features/requests/api-types"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { providersApi } from "@/services/providers-api"
 
+const props = defineProps<{ demo?: boolean }>()
+
 const refunds = ref<RefundView[]>([])
 const payouts = ref<PayoutView[]>([])
 const requests = ref<RequestSummary[]>([])
@@ -86,11 +88,21 @@ async function uploadProof() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  if (!props.demo) await load()
+})
 </script>
 
 <template>
-  <div>
+  <VCard v-if="demo" max-width="900">
+    <VCardText>
+      <h2 class="text-h5 mb-2">Payments</h2>
+      <p class="text-medium-emphasis mb-0">
+        Payments are outside the V1 demo. No payments are collected or stored here.
+      </p>
+    </VCardText>
+  </VCard>
+  <div v-else>
     <VAlert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</VAlert>
     <VProgressLinear v-if="loading" indeterminate class="mb-4" />
     <VTextField v-model="note" label="Decision note or reason" class="mb-5" />

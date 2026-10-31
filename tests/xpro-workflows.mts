@@ -74,7 +74,7 @@ const line = [{ description: 'Construction service', quantity: 2, rate: 12000000
 fails(stranger, { type: 'request.cancel', requestId, note: 'Invalid access' })
 fails(customer, { type: 'provider.review', providerId: provider.id, decision: 'approved', note: '' })
 fails(admin, { type: 'assignment.offer', requestId, providerId: provider.id, note: 'Not approved' })
-run(provider, { type: 'provider.submit', input: { phone: '0800 000 0001', trade: 'Construction', city: 'Abuja', services: ['Construction'], serviceAreas: ['Abuja'], skills: { Construction: ['Floor finishing'] }, capacity: 3, workingHours: allDay(), experience: 8, bio: 'Demo introduction', documents: [{ id: 'identity', name: 'Identity.pdf', size: 1000, type: 'application/pdf' }], portfolio: [], photo: demoPhoto, bank: demoBank } })
+run(provider, { type: 'provider.submit', input: { phone: '0800 000 0001', trade: 'Construction', city: 'Abuja', services: ['Construction'], serviceAreas: ['Abuja'], skills: { Construction: ['Floor finishing'] }, capacity: 3, workingHours: allDay(), experience: 8, bio: 'A demo introduction for the construction provider profile.', documents: [{ id: 'identity', name: 'Identity.pdf', size: 1000, type: 'application/pdf' }], portfolio: [], photo: demoPhoto, bank: demoBank } })
 run(admin, { type: 'provider.review', providerId: provider.id, decision: 'approved', note: 'Reviewed documents' })
 run(admin, { type: 'request.review', requestId, clarify: true, note: 'Please confirm site access.' })
 run(customer, { type: 'message.send', requestId, channel: 'customer', text: 'Site access confirmed.', attachments: [] })

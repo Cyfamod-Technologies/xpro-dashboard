@@ -49,7 +49,7 @@ const addRole = async () => {
       role === "provider" && agreement.value ? { providerAgreementVersion: agreement.value.version } : undefined,
     )
     // The new role is now the active workspace; a full load opens its home with fresh data.
-    window.location.assign(role === "provider" ? "/verification" : auth.homePath)
+    window.location.assign(role === "provider" ? "/settings?tab=profile" : auth.homePath)
   } catch (error) {
     errorMessage.value = getErrorMessage(error, "We couldn't add this role. Try again.")
     busy.value = false
@@ -72,7 +72,7 @@ const addRole = async () => {
       <template v-else-if="missingRole === 'provider'">
         <p class="text-body-2 text-medium-emphasis mb-5">
           Offer your services on XPro from this same account. After you add the provider role, complete your provider
-          profile — documents, a face photo and bank details — for XPro to review.
+          profile and verification details for XPro to review.
         </p>
         <VCheckbox v-if="agreement" v-model="accepted" class="mb-2">
           <template #label>

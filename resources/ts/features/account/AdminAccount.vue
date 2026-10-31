@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminSecurity from "@/features/account/AdminSecurity.vue"
+import { v1Workspace } from "@/features/workspace/config"
 import { formatDate, permissionLabels } from "@/features/staff/staff-helpers"
 import { staffRoleLabels } from "@/features/operations/staff"
 import { accountApi } from "@/services/account-api"
@@ -24,13 +25,13 @@ async function load() {
   try {
     const [self, others] = await Promise.all([
       staffApi.get(auth.user?.id ?? ""),
-      staffApi.owners(auth.user?.id).catch(() => null),
+      v1Workspace.admin.leaveAndCover ? staffApi.owners(auth.user?.id).catch(() => null) : Promise.resolve(null),
     ])
 
     member.value = self.data
     owners.value = others?.data ?? []
   } catch {
-    // Roles and leave are extras; the page still shows the name, email and permissions from the session.
+    // Staff details are optional; the page still shows the name, email and permissions from the session.
     member.value = null
   } finally {
     loading.value = false
@@ -135,7 +136,7 @@ onMounted(load)
 
     <AdminSecurity />
 
-    <VCard>
+    <VCard v-if="v1Workspace.admin.leaveAndCover">
       <VCardText>
         <h2 class="text-h5 mb-1">Leave and cover</h2>
         <p class="text-body-2 text-medium-emphasis mb-4">Choose who covers your requests while you're away.</p>
@@ -171,7 +172,7 @@ onMounted(load)
       </VCardText>
     </VCard>
 
-    <VCard>
+    <VCard v-if="v1Workspace.admin.emailPreferences">
       <VCardText>
         <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-1">
           <h2 class="text-h5">Email notifications</h2>

@@ -25,19 +25,13 @@ const handled = [
   },
   {
     icon: "tabler-receipt",
-    title: "Sends your quote",
-    body: "You receive one clear quote from XPro to accept or decline.",
-  },
-  { icon: "tabler-calendar-check", title: "Schedules the work", body: "We confirm a date with you and the provider." },
-  {
-    icon: "tabler-photo-check",
-    title: "Shares approved updates",
-    body: "Progress updates are checked by XPro before you see them.",
+    title: "Agrees the terms with you",
+    body: "Discuss the price and start date with Xpro before the request is approved.",
   },
   {
-    icon: "tabler-circle-check",
-    title: "Confirms completion",
-    body: "You confirm the job is done, then XPro closes it out and pays the provider.",
+    icon: "tabler-calendar-check",
+    title: "Confirms a start date",
+    body: "The agreed date is included in the approval.",
   },
 ]
 

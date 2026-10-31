@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useOperationsStore } from "@/stores/operations"
+import { v1Workspace } from "@/features/workspace/config"
 import { isDemoMode } from "@/utils/demo-mode"
 import type { BankAccount } from "@/features/operations/types"
 import { weekdayLabels, weekdays, when } from "@/features/operations/types"
@@ -144,7 +145,8 @@ const pendingBank = computed(() =>
         <p>{{ selected.services.join(" · ") }}</p>
         <h3 class="text-h6 mt-5 mb-3">Coverage and capacity</h3>
         <VAlert v-if="selected.outsideServedAreas" type="info" variant="tonal" density="comfortable" class="mb-3">
-          XPro doesn't offer jobs in these areas yet. The provider can still be approved and will get offers once XPro opens there.
+          XPro doesn't offer jobs in these areas yet. The provider can still be approved and will get offers once XPro
+          opens there.
         </VAlert>
         <dl class="coverage">
           <dt>Service areas</dt>
@@ -283,72 +285,75 @@ const pendingBank = computed(() =>
             </div>
           </template>
         </template>
-        <VDivider class="my-6" />
-        <div class="d-flex justify-space-between align-center flex-wrap gap-2 mb-3">
-          <h3 class="text-h6">Payout details</h3>
-          <VChip
-            v-if="selected.payout.review"
-            size="small"
-            variant="tonal"
-            :color="
-              selected.payout.review.state === 'approved'
-                ? 'success'
-                : selected.payout.review.state === 'pending'
-                  ? 'warning'
-                  : 'error'
-            "
-          >
-            Bank review: {{ selected.payout.review.state }}
-          </VChip>
-        </div>
-        <p v-if="selected.payout.current" class="mb-1">
-          <strong>Current:</strong> {{ accountLine(selected.payout.current) }}
-        </p>
-        <p v-if="selected.payout.pending" class="mb-1">
-          <strong>Pending:</strong> {{ accountLine(selected.payout.pending) }}
-        </p>
-        <p v-if="!selected.payout.current && !selected.payout.pending" class="text-body-2 text-medium-emphasis">
-          No bank details on record.
-        </p>
-        <p v-if="selected.payout.review?.state === 'rejected' && selected.payout.review.note" class="text-body-2">
-          Last rejection: {{ selected.payout.review.note }}
-        </p>
-        <template v-if="selected.payout.history.length">
-          <p v-for="(entry, index) in selected.payout.history" :key="index" class="text-body-2 mb-1">
-            {{ entry.action }}<template v-if="entry.note"> · {{ entry.note }} </template>
-            <span class="text-medium-emphasis">{{ entry.by }} · {{ when(entry.createdAt) }}</span>
-          </p> </template
-        ><template v-if="pendingBank && ops.can('bank.review')">
-          <VAlert
-            v-if="!accountNameMatches(pendingBank.accountName, selected.name)"
-            color="warning"
-            variant="tonal"
-            class="mt-4"
-          >
-            Account name differs from profile name — check before approving. </VAlert
-          ><VTextarea v-model="bankNote" label="Bank review note (required to reject)" rows="2" class="mt-4" /><VAlert
-            v-if="ops.error"
-            color="error"
-            variant="tonal"
-            class="mb-4"
-          >
-            {{ ops.error }}
-          </VAlert>
-          <div class="d-flex flex-wrap gap-2">
-            <VBtn
-              :disabled="ops.busy"
-              @click="ops.run({ type: 'payout.review', providerId: selected.id, approve: true, note: bankNote })"
+        <!-- V1: no bank review controls. Bank collection and payout readiness are deferred. -->
+        <template v-if="v1Workspace.admin.bankReview">
+          <VDivider class="my-6" />
+          <div class="d-flex justify-space-between align-center flex-wrap gap-2 mb-3">
+            <h3 class="text-h6">Payout details</h3>
+            <VChip
+              v-if="selected.payout.review"
+              size="small"
+              variant="tonal"
+              :color="
+                selected.payout.review.state === 'approved'
+                  ? 'success'
+                  : selected.payout.review.state === 'pending'
+                    ? 'warning'
+                    : 'error'
+              "
             >
-              Approve bank details </VBtn
-            ><VBtn
-              variant="outlined"
-              color="warning"
-              :disabled="ops.busy"
-              @click="ops.run({ type: 'payout.review', providerId: selected.id, approve: false, note: bankNote })"
-            >
-              Reject bank details
-            </VBtn>
+              Bank review: {{ selected.payout.review.state }}
+            </VChip>
           </div>
+          <p v-if="selected.payout.current" class="mb-1">
+            <strong>Current:</strong> {{ accountLine(selected.payout.current) }}
+          </p>
+          <p v-if="selected.payout.pending" class="mb-1">
+            <strong>Pending:</strong> {{ accountLine(selected.payout.pending) }}
+          </p>
+          <p v-if="!selected.payout.current && !selected.payout.pending" class="text-body-2 text-medium-emphasis">
+            No bank details on record.
+          </p>
+          <p v-if="selected.payout.review?.state === 'rejected' && selected.payout.review.note" class="text-body-2">
+            Last rejection: {{ selected.payout.review.note }}
+          </p>
+          <template v-if="selected.payout.history.length">
+            <p v-for="(entry, index) in selected.payout.history" :key="index" class="text-body-2 mb-1">
+              {{ entry.action }}<template v-if="entry.note"> · {{ entry.note }} </template>
+              <span class="text-medium-emphasis">{{ entry.by }} · {{ when(entry.createdAt) }}</span>
+            </p> </template
+          ><template v-if="pendingBank && ops.can('bank.review')">
+            <VAlert
+              v-if="!accountNameMatches(pendingBank.accountName, selected.name)"
+              color="warning"
+              variant="tonal"
+              class="mt-4"
+            >
+              Account name differs from profile name — check before approving. </VAlert
+            ><VTextarea v-model="bankNote" label="Bank review note (required to reject)" rows="2" class="mt-4" /><VAlert
+              v-if="ops.error"
+              color="error"
+              variant="tonal"
+              class="mb-4"
+            >
+              {{ ops.error }}
+            </VAlert>
+            <div class="d-flex flex-wrap gap-2">
+              <VBtn
+                :disabled="ops.busy"
+                @click="ops.run({ type: 'payout.review', providerId: selected.id, approve: true, note: bankNote })"
+              >
+                Approve bank details </VBtn
+              ><VBtn
+                variant="outlined"
+                color="warning"
+                :disabled="ops.busy"
+                @click="ops.run({ type: 'payout.review', providerId: selected.id, approve: false, note: bankNote })"
+              >
+                Reject bank details
+              </VBtn>
+            </div>
+          </template>
         </template>
       </VCardText>
     </VCard>

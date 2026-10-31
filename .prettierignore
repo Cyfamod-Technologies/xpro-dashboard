@@ -10,6 +10,7 @@ public/hot
 public/storage
 
 # Generated files
+auto-imports.d.ts
 resources/ts/plugins/iconify/icons.css
 public/mockServiceWorker.js
 typed-router.d.ts
