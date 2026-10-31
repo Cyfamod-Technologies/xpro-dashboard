@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { contactMethodLabels, formatDateTime, formatDay, formatNaira } from "@/features/v1/helpers"
-import { formatFileSize } from "@/features/operations/file-rules"
+import V1AttachmentPreview from "@/features/v1/V1AttachmentPreview.vue"
 import type { V1Request } from "@/features/v1/types"
 
 const props = defineProps<{
@@ -42,9 +42,8 @@ const rows = computed(() => [
       <template v-if="request.attachments.length">
         <VDivider class="my-4" />
         <div class="text-caption text-medium-emphasis mb-2">Files</div>
-        <div v-for="file in request.attachments" :key="file.id" class="d-flex align-center gap-2 text-body-2 mb-1">
-          <VIcon icon="tabler-paperclip" size="18" />
-          {{ file.name }} · {{ formatFileSize(file.size) }}
+        <div v-for="file in request.attachments" :key="file.id" class="mb-1">
+          <V1AttachmentPreview :file="file" />
         </div>
       </template>
     </VCardText>

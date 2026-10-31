@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import V1CounterCard from "@/features/v1/V1CounterCard.vue"
 import V1CounterDialog from "@/features/v1/V1CounterDialog.vue"
+import V1AttachmentPreview from "@/features/v1/V1AttachmentPreview.vue"
 import { v1Capabilities } from "@/features/v1/access"
 import {
   authorLabelFor,
@@ -10,7 +11,7 @@ import {
   isSuperseded,
   latestCounter,
 } from "@/features/v1/helpers"
-import { checkFiles, fileAccept, fileHint, formatFileSize } from "@/features/operations/file-rules"
+import { checkFiles, fileAccept, fileHint } from "@/features/operations/file-rules"
 import type { V1Actor, V1Counter, V1Message, V1Status } from "@/features/v1/types"
 import { uploadV1Files } from "@/features/v1/uploads"
 import { v1Api } from "@/services/v1-api"
@@ -186,9 +187,8 @@ defineExpose({ reload: load })
         <div v-else class="bubble" :class="{ 'bubble--own': ownSide(message) }">
           <div class="text-caption font-weight-medium">{{ labelFor(message) }}</div>
           <p v-if="message.text" class="bubble-text mb-0">{{ message.text }}</p>
-          <div v-for="file in message.attachments" :key="file.id" class="d-flex align-center gap-1 text-body-2">
-            <VIcon icon="tabler-paperclip" size="16" />
-            {{ file.name }} · {{ formatFileSize(file.size) }}
+          <div v-for="file in message.attachments" :key="file.id" class="mt-1">
+            <V1AttachmentPreview :file="file" />
           </div>
           <div class="text-caption text-medium-emphasis">{{ formatDateTime(message.createdAt) }}</div>
         </div>
