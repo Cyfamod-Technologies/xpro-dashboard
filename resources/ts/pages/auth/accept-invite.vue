@@ -29,10 +29,11 @@ const formRef = ref<VForm>()
 const form = reactive({
   password: "",
   confirmation: "",
-  accepted: false,
   hasLinkedAccount: "no" as "no" | "yes",
   linkedEmail: "",
 })
+
+const minTwelve = (value: unknown) => String(value ?? "").length >= 12 || "Use at least 12 characters."
 
 const loadPreview = async () => {
   if (isDemoMode) return
@@ -77,12 +78,6 @@ const submit = async () => {
 
     return
   }
-  if (!preview.value?.policy) {
-    errorMessage.value = "The staff policy is not available yet. Ask an XPro super admin to publish it."
-
-    return
-  }
-
   loading.value = true
   try {
     const linked = form.hasLinkedAccount === "yes"
@@ -90,7 +85,6 @@ const submit = async () => {
     const response = await staffInviteApi.accept({
       token: token.value,
       password: form.password,
-      policyVersion: preview.value.policy.version,
       conflictDeclaration: {
         hasLinkedCustomerAccount: linked,
         ...(linked && linkedEmail ? { linkedCustomerEmail: linkedEmail } : {}),
@@ -154,7 +148,7 @@ onMounted(loadPreview)
               v-model="form.password"
               label="Password"
               autocomplete="new-password"
-              :rules="passwordRules"
+              :rules="[...passwordRules, minTwelve]"
               :type="passwordVisible ? 'text' : 'password'"
               :append-inner-icon="passwordVisible ? 'tabler-eye-off' : 'tabler-eye'"
               @click:append-inner="passwordVisible = !passwordVisible"
@@ -187,21 +181,6 @@ onMounted(loadPreview)
           autocomplete="off"
           class="mt-3"
         />
-        <VCheckbox v-model="form.accepted" :rules="[required('Acceptance of the terms')]" class="my-4">
-          <template #label>
-            <span>
-              I accept the privacy and
-              <a
-                v-if="preview?.policy?.url"
-                :href="preview.policy.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                @click.stop
-                >acceptable-use terms</a
-              ><template v-else>acceptable-use terms</template>.
-            </span>
-          </template>
-        </VCheckbox>
         <VBtn block size="large" type="submit" :loading="loading"> Accept invitation </VBtn>
       </VForm>
       <div v-if="enrollment && !completed">
