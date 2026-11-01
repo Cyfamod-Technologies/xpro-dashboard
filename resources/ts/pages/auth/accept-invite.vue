@@ -93,10 +93,14 @@ const submit = async () => {
           : "I have no separate customer account with XPro.",
       },
     })
-    enrollment.value = {
-      token: response.data.enrollmentToken,
-      secret: response.data.secret,
-      otpauthUrl: response.data.otpauthUrl,
+    if (response.data.result === "mfa_enrollment_required") {
+      enrollment.value = {
+        token: response.data.enrollmentToken,
+        secret: response.data.secret,
+        otpauthUrl: response.data.otpauthUrl,
+      }
+    } else {
+      completed.value = true
     }
   } catch (error) {
     errorMessage.value = getErrorMessage(error)

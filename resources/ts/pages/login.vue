@@ -39,6 +39,7 @@ const resetDemo = () => {
     window.localStorage.removeItem("xpro:v1-mock")
     window.localStorage.removeItem("xpro:demo-accounts")
     window.localStorage.removeItem("xpro:demo-user-state")
+    window.localStorage.removeItem("xpro:demo-mfa-users")
     for (const key of Object.keys(window.localStorage))
       if (key.startsWith("xpro:draft:")) window.localStorage.removeItem(key)
     window.sessionStorage.removeItem("xpro-demo-workspace-v1")
