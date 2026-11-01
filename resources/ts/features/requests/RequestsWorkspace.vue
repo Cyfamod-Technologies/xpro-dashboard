@@ -48,6 +48,8 @@ const notice = ref("")
 const query = ref("")
 const stageFilter = ref("")
 const nextActorOnly = ref(false)
+const v1Service = ref(typeof route.query.service === "string" ? route.query.service : "")
+const v1Services = ref<string[]>([])
 const modeNote = ref("")
 const dispatchMode = ref<"auto" | "manual">("auto")
 const run = ref<RankingRunView>()
@@ -173,6 +175,7 @@ async function loadList() {
         q: query.value || undefined,
         status,
         assignee: v1Assignee.value || undefined,
+        service: v1Service.value || undefined,
         page: 1,
         itemsPerPage: 50,
       })
@@ -367,6 +370,14 @@ async function beginCheckout() {
 }
 
 onMounted(async () => {
+  if (props.v1Mode) {
+    try {
+      const options = await v1Api.formOptions()
+      v1Services.value = options.services.map(item => item.name)
+    } catch {
+      v1Services.value = []
+    }
+  }
   if (props.v1Mode && v1Viewer.value === "admin") {
     try {
       v1Staff.value = await v1Api.listStaff()
@@ -400,6 +411,9 @@ watch([stageFilter, nextActorOnly], () => {
 watch(v1Assignee, () => {
   if (!selectedId.value && props.v1Mode) loadList()
 })
+watch(v1Service, () => {
+  if (!selectedId.value && props.v1Mode) loadList()
+})
 </script>
 
 <template>
@@ -410,7 +424,7 @@ watch(v1Assignee, () => {
           <div>
             <h2 class="text-h5">{{ sectionTitle }}</h2>
             <p class="text-medium-emphasis mb-0">
-              {{ v1Mode ? "Requests from the V1 demo workspace." : "Live requests from the XPro API." }}
+              {{ v1Mode ? "Requests from the V1 workspace." : "Live requests from the XPro API." }}
             </p>
           </div>
           <div class="d-flex flex-wrap align-center ga-3">
@@ -429,6 +443,7 @@ watch(v1Assignee, () => {
                 { title: 'Submitted', value: 'submitted' },
                 { title: 'Approved', value: 'approved' },
                 { title: 'Denied', value: 'denied' },
+                { title: 'Cancelled', value: 'cancelled' },
               ]"
               label="Status"
               clearable
@@ -443,6 +458,14 @@ watch(v1Assignee, () => {
                 ...v1Staff.map(member => ({ title: member.name, value: member.id })),
               ]"
               label="Assignee"
+              clearable
+              hide-details
+              class="stage-filter"
+            /><VSelect
+              v-if="v1Mode"
+              v-model="v1Service"
+              :items="[{ title: 'Any service', value: '' }, ...v1Services]"
+              label="Service"
               clearable
               hide-details
               class="stage-filter"

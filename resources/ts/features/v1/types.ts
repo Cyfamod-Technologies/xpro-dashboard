@@ -117,6 +117,7 @@ export interface V1Staff {
   name: string
   email: string
   openRequests: number
+  roles?: string[]
 }
 
 export interface ProviderCandidate {

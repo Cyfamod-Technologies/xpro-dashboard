@@ -3,10 +3,8 @@ import { defineAsyncComponent } from "vue"
 
 import { isWorkspaceRole, sectionEnabled, workspaceSections } from "@/features/workspace/config"
 import { v1Actor, v1RouteAllowed, v1SectionDescription, v1SectionTitle, v1ViewFor } from "@/features/v1/access"
-import V1Messages from "@/features/v1/V1Messages.vue"
 import V1Overview from "@/features/v1/V1Overview.vue"
 import V1ProviderJobs from "@/features/v1/V1ProviderJobs.vue"
-import V1Requests from "@/features/v1/V1Requests.vue"
 import AdminAccount from "@/features/account/AdminAccount.vue"
 import ProviderSettings from "@/features/account/ProviderSettings.vue"
 import CustomerSettings from "@/features/account/CustomerSettings.vue"
@@ -48,15 +46,12 @@ const v1View = computed(() => (section.value ? v1ViewFor(actor.value, section.va
 const overviewViewer = computed(() =>
   actor.value === "customer" || actor.value === "admin" || actor.value === "provider" ? actor.value : null,
 )
-const messagesViewer = computed(() => (actor.value === "customer" || actor.value === "admin" ? actor.value : null))
 const title = computed(() => (section.value ? v1SectionTitle(actor.value, section.value.id, section.value.title) : ""))
 const description = computed(() =>
   section.value ? v1SectionDescription(actor.value, section.value.id, section.value.description) : "",
 )
 // Staff get the Messages inbox, which fills the page, so the standard title block is replaced by a hidden heading.
-const showsInbox = computed(
-  () => (actor.value === "admin" || (isDemoMode && actor.value === "customer")) && section.value?.id === "messages",
-)
+const showsInbox = computed(() => ["admin", "customer"].includes(actor.value ?? "") && section.value?.id === "messages")
 const platformSection = computed(() =>
   section.value?.id === "notifications" || section.value?.id === "approvals" ? section.value.id : null,
 )
@@ -82,17 +77,11 @@ const platformSection = computed(() =>
       v-if="v1View === 'overview' && overviewViewer && !(isDemoMode && overviewViewer === 'admin')"
       :viewer="overviewViewer"
     />
-    <V1Requests
-      v-else-if="v1View === 'requests' && actor && !(isDemoMode && ['admin', 'staff', 'customer'].includes(actor))"
+    <RequestsWorkspace
+      v-else-if="v1View === 'requests' && actor && ['admin', 'staff', 'customer'].includes(actor)"
       :key="section.id"
-      :viewer="actor"
-    />
-    <V1Messages
-      v-else-if="
-        v1View === 'messages' && messagesViewer && !(isDemoMode && ['admin', 'customer'].includes(messagesViewer))
-      "
-      :key="section.id"
-      :viewer="messagesViewer"
+      section="requests"
+      v1-mode
     />
     <V1ProviderJobs v-else-if="v1View === 'jobs'" />
     <!-- V1 staff "Account" is the profile page; the platform settings tabs are admin only. -->
@@ -100,17 +89,11 @@ const platformSection = computed(() =>
     <CustomerSettings v-else-if="actor === 'customer' && section.id === 'settings'" />
     <ProviderSettings v-else-if="actor === 'provider' && section.id === 'settings'" />
     <WorkspaceOverview v-else-if="section.id === 'overview'" :v1-mode="isDemoMode && actor === 'admin'" />
-    <MessagesInbox v-else-if="showsInbox" :v1-mode="isDemoMode" />
+    <MessagesInbox v-else-if="showsInbox" v1-mode />
     <RequestsWorkspace
       v-else-if="!isDemoMode && ['requests', 'jobs', 'dispatch', 'quotes', 'payments'].includes(section.id)"
       :key="section.id"
       :section="section.id"
-    />
-    <RequestsWorkspace
-      v-else-if="isDemoMode && ['admin', 'staff', 'customer'].includes(actor ?? '') && section.id === 'requests'"
-      :key="section.id"
-      section="requests"
-      v1-mode
     />
     <PlatformWorkspace v-else-if="platformSection" :section="platformSection" />
     <PlatformWorkspace v-else-if="auth.user?.role === 'admin' && section.id === 'settings'" section="settings" />

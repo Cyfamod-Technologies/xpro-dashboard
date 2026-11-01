@@ -7,8 +7,8 @@ import { v1Capabilities } from "@/features/v1/access"
 import { v1Api } from "@/services/v1-api"
 import V1ApproveDialog from "@/features/v1/V1ApproveDialog.vue"
 import V1AssignStaff from "@/features/v1/V1AssignStaff.vue"
+import V1CancelDialog from "@/features/v1/V1CancelDialog.vue"
 import V1Conversation from "@/features/v1/V1Conversation.vue"
-import V1DecisionPanel from "@/features/v1/V1DecisionPanel.vue"
 import V1DenyDialog from "@/features/v1/V1DenyDialog.vue"
 import V1ReplaceProviderDialog from "@/features/v1/V1ReplaceProviderDialog.vue"
 import V1RequestSummary from "@/features/v1/V1RequestSummary.vue"
@@ -25,11 +25,19 @@ const auth = useAuthStore()
 const v1Current = ref<V1Request | undefined>(props.v1Request)
 const v1ApproveOpen = ref(false)
 const v1DenyOpen = ref(false)
+const v1CancelOpen = ref(false)
 const v1ReplaceOpen = ref(false)
 const v1Notice = ref("")
 const v1Error = ref("")
+const v1Tab = ref<"details" | "messages" | "history">("details")
 const isV1 = computed(() => Boolean(props.v1Request && props.v1Viewer))
 const v1Caps = computed(() => v1Capabilities(props.v1Viewer ?? null))
+const canV1Approve = computed(
+  () =>
+    v1Caps.value.canDecide &&
+    (props.v1Viewer === "admin" ||
+      (props.v1Viewer === "staff" && v1Current.value?.assignee?.id === (props.viewerId ?? auth.user?.id))),
+)
 watch(
   () => props.v1Request,
   value => {
@@ -250,91 +258,117 @@ watch(() => props.request.version, load)
 </script>
 
 <template>
-  <div v-if="isV1 && v1Current" class="mt-6">
-    <VAlert v-if="v1Error" type="error" variant="tonal" class="mb-4">{{ v1Error }}</VAlert>
-    <VAlert v-if="v1Notice" type="success" variant="tonal" class="mb-4">{{ v1Notice }}</VAlert>
-    <V1DecisionPanel :request="v1Current" :viewer="v1Viewer!" class="mb-4" />
-    <VCard v-if="v1Viewer !== 'customer'" variant="outlined" class="mb-4">
-      <VCardText>
-        <VRow>
-          <VCol cols="12" md="6">
-            <V1AssignStaff v-if="v1Caps.canAssignStaff" :request="v1Current" @updated="applyV1" @refresh="refreshV1" />
-            <div v-else>
-              <div class="text-caption text-medium-emphasis">Assigned staff</div>
-              <div class="text-body-1">{{ v1Current.assignee?.name ?? "Not assigned" }}</div>
-            </div>
-          </VCol>
-          <VCol cols="12" md="6">
-            <div class="text-caption text-medium-emphasis mb-2">Decision</div>
-            <div v-if="v1Caps.canDecide && v1Current.status === 'submitted'" class="d-flex flex-wrap gap-2">
-              <VBtn color="primary" prepend-icon="tabler-check" @click="v1ApproveOpen = true">Approve request</VBtn>
-              <VBtn color="error" variant="outlined" prepend-icon="tabler-x" @click="v1DenyOpen = true">
-                Deny request
-              </VBtn>
-            </div>
-            <p v-else-if="v1Current.status === 'submitted'" class="text-body-2 text-medium-emphasis mb-0">
-              Only an admin can approve or deny. Staff can chat with the customer and send quotes.
-            </p>
-            <div
-              v-else-if="v1Current.status === 'approved' && v1Caps.canReplaceProvider"
-              class="d-flex flex-wrap align-center gap-3"
-            >
-              <span class="text-body-2">Provider: {{ v1Current.provider?.providerName }}</span>
-              <VBtn variant="outlined" prepend-icon="tabler-replace" @click="v1ReplaceOpen = true">
-                Replace provider
-              </VBtn>
-            </div>
-            <p v-else class="text-body-2 text-medium-emphasis mb-0">The decision is final and can't be changed.</p>
-          </VCol>
-        </VRow>
-      </VCardText>
-    </VCard>
-    <template v-if="v1Viewer === 'customer'">
-      <V1RequestSummary :request="v1Current" />
-      <VCard variant="outlined" class="mt-4">
-        <VCardText class="d-flex flex-wrap align-center justify-space-between gap-4">
-          <div>
-            <h3 class="text-h6 mb-1">Chat for this request</h3>
-            <p class="text-body-2 text-medium-emphasis mb-0">Open Messages to talk with Xpro about this request.</p>
-          </div>
-          <VBtn :to="{ path: '/messages', query: { request: v1Current.id } }" prepend-icon="tabler-message-circle">
-            View chat for this request
-          </VBtn>
+  <VCard v-if="isV1 && v1Current" class="mt-6">
+    <VCardText>
+      <h2 class="text-h5 mb-4">Request lifecycle</h2>
+      <VAlert v-if="v1Error" type="error" variant="tonal" class="mb-4">{{ v1Error }}</VAlert>
+      <VAlert v-if="v1Notice" type="success" variant="tonal" class="mb-4">{{ v1Notice }}</VAlert>
+
+      <VCard v-if="v1Viewer !== 'customer'" variant="outlined" class="mb-5">
+        <VCardText>
+          <VRow align="center">
+            <VCol cols="12" md="5">
+              <V1AssignStaff
+                v-if="v1Caps.canAssignStaff"
+                :request="v1Current"
+                @updated="applyV1"
+                @refresh="refreshV1"
+              />
+              <div v-else>
+                <div class="text-caption text-medium-emphasis">Assigned staff</div>
+                <div class="text-body-1">{{ v1Current.assignee?.name ?? "Not assigned" }}</div>
+              </div>
+            </VCol>
+            <VCol cols="12" md="7">
+              <div class="text-caption text-medium-emphasis mb-2">Decision</div>
+              <div v-if="canV1Approve && v1Current.status === 'submitted'" class="d-flex align-center flex-wrap gap-3">
+                <VBtn color="primary" prepend-icon="tabler-check" @click="v1ApproveOpen = true">Approve request</VBtn>
+                <VBtn
+                  v-if="v1Caps.canDeny"
+                  color="error"
+                  variant="outlined"
+                  prepend-icon="tabler-x"
+                  @click="v1DenyOpen = true"
+                >
+                  Deny request
+                </VBtn>
+              </div>
+              <p v-else-if="v1Current.status === 'submitted'" class="text-body-2 text-medium-emphasis mb-0">
+                Only the assigned staff member or an admin can approve this request. Staff can message the customer.
+              </p>
+              <div
+                v-else-if="v1Current.status === 'approved' && v1Caps.canReplaceProvider"
+                class="d-flex align-center flex-wrap gap-3"
+              >
+                <span class="text-body-2">Provider: {{ v1Current.provider?.providerName ?? "Not assigned" }}</span>
+                <VBtn variant="outlined" prepend-icon="tabler-replace" @click="v1ReplaceOpen = true">
+                  {{ v1Current.provider ? "Replace provider" : "Assign provider" }}
+                </VBtn>
+              </div>
+              <p v-else class="text-body-2 text-medium-emphasis mb-0">The decision is final and can't be changed.</p>
+            </VCol>
+          </VRow>
         </VCardText>
       </VCard>
-    </template>
-    <VRow v-else>
-      <VCol cols="12" lg="6">
-        <V1RequestSummary :request="v1Current" show-customer />
-        <VCard v-if="v1Current.activity.length" variant="outlined" class="mt-4">
-          <VCardText>
-            <h3 class="text-h6 mb-3">History</h3>
+
+      <template v-if="v1Viewer === 'customer'">
+        <V1RequestSummary :request="v1Current" />
+        <VCard variant="outlined" class="mt-4">
+          <VCardText class="d-flex flex-wrap align-center justify-space-between gap-4">
+            <div>
+              <h3 class="text-h6 mb-1">Chat for this request</h3>
+              <p class="text-body-2 text-medium-emphasis mb-0">Open Messages to talk with Xpro about this request.</p>
+            </div>
+            <VBtn :to="{ path: '/messages', query: { request: v1Current.id } }" prepend-icon="tabler-message-circle">
+              View chat for this request
+            </VBtn>
+          </VCardText>
+        </VCard>
+        <div v-if="v1Current.status === 'submitted'" class="d-flex justify-end mt-4">
+          <VBtn color="error" variant="outlined" prepend-icon="tabler-x" @click="v1CancelOpen = true">
+            Cancel request
+          </VBtn>
+        </div>
+      </template>
+      <template v-else>
+        <VTabs v-model="v1Tab" class="mb-5" show-arrows>
+          <VTab value="details">Request details</VTab>
+          <VTab value="messages">Messages</VTab>
+          <VTab v-if="v1Viewer === 'admin'" value="history">History</VTab>
+        </VTabs>
+        <section v-if="v1Tab === 'details'">
+          <V1RequestSummary :request="v1Current" show-customer />
+        </section>
+        <section v-else-if="v1Tab === 'messages'">
+          <V1Conversation
+            :request-id="v1Current.id"
+            :status="v1Current.status"
+            :viewer="v1Viewer!"
+            :viewer-id="viewerId ?? auth.user?.id ?? ''"
+          />
+        </section>
+        <section v-else-if="v1Tab === 'history' && v1Viewer === 'admin'">
+          <div v-if="v1Current.activity.length">
             <div v-for="entry in [...v1Current.activity].reverse()" :key="entry.id" class="mb-3">
               <div class="text-body-2">{{ entry.text }}</div>
               <div class="text-caption text-medium-emphasis">{{ entry.at }}</div>
             </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol cols="12" lg="6">
-        <V1Conversation
-          :request-id="v1Current.id"
-          :status="v1Current.status"
-          :viewer="v1Viewer!"
-          :viewer-id="viewerId ?? auth.user?.id ?? ''"
-        />
-      </VCol>
-    </VRow>
-    <V1ApproveDialog
-      v-model="v1ApproveOpen"
-      :request="v1Current"
-      @updated="applyV1"
-      @approved="applyV1"
-      @refresh="refreshV1"
-    />
-    <V1DenyDialog v-model="v1DenyOpen" :request="v1Current" @denied="applyV1" @refresh="refreshV1" />
-    <V1ReplaceProviderDialog v-model="v1ReplaceOpen" :request="v1Current" @replaced="applyV1" @refresh="refreshV1" />
-  </div>
+          </div>
+          <p v-else class="text-body-2 text-medium-emphasis">No history has been recorded yet.</p>
+        </section>
+      </template>
+      <V1ApproveDialog
+        v-model="v1ApproveOpen"
+        :request="v1Current"
+        @updated="applyV1"
+        @approved="applyV1"
+        @refresh="refreshV1"
+      />
+      <V1DenyDialog v-model="v1DenyOpen" :request="v1Current" @denied="applyV1" @refresh="refreshV1" />
+      <V1CancelDialog v-model="v1CancelOpen" :request="v1Current" @cancelled="applyV1" @refresh="refreshV1" />
+      <V1ReplaceProviderDialog v-model="v1ReplaceOpen" :request="v1Current" @replaced="applyV1" @refresh="refreshV1" />
+    </VCardText>
+  </VCard>
   <VCard v-else class="mt-6">
     <VCardText>
       <h2 class="text-h5 mb-4">Request lifecycle</h2>

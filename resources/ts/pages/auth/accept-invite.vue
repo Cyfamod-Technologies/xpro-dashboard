@@ -2,7 +2,7 @@
 import { VForm } from "vuetify/components/VForm"
 
 import AuthShell from "@/features/auth/AuthShell.vue"
-import { matches, required, strongPassword } from "@/features/auth/validation"
+import { matches, passwordRules, required } from "@/features/auth/validation"
 import { staffRoleLabels } from "@/features/operations/staff"
 import type { StaffInvitePreview } from "@/services/xpro-api"
 import { staffInviteApi } from "@/services/xpro-api"
@@ -23,6 +23,8 @@ const loading = ref(false)
 const errorMessage = ref("")
 const enrollment = ref<{ token: string; secret: string; otpauthUrl: string } | null>(null)
 const mfaCode = ref("")
+const passwordVisible = ref(false)
+const confirmationVisible = ref(false)
 const formRef = ref<VForm>()
 const form = reactive({
   password: "",
@@ -31,8 +33,6 @@ const form = reactive({
   hasLinkedAccount: "no" as "no" | "yes",
   linkedEmail: "",
 })
-
-const minTwelve = (value: unknown) => String(value ?? "").length >= 12 || "Use at least 12 characters."
 
 const loadPreview = async () => {
   if (isDemoMode) return
@@ -153,18 +153,22 @@ onMounted(loadPreview)
             <AppTextField
               v-model="form.password"
               label="Password"
-              type="password"
               autocomplete="new-password"
-              :rules="[required('Password'), minTwelve, strongPassword]"
+              :rules="passwordRules"
+              :type="passwordVisible ? 'text' : 'password'"
+              :append-inner-icon="passwordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+              @click:append-inner="passwordVisible = !passwordVisible"
             />
           </VCol>
           <VCol cols="12" sm="6">
             <AppTextField
               v-model="form.confirmation"
               label="Confirm password"
-              type="password"
               autocomplete="new-password"
               :rules="[required('Password confirmation'), matches(() => form.password, 'Password confirmation')]"
+              :type="confirmationVisible ? 'text' : 'password'"
+              :append-inner-icon="confirmationVisible ? 'tabler-eye-off' : 'tabler-eye'"
+              @click:append-inner="confirmationVisible = !confirmationVisible"
             />
           </VCol>
         </VRow>
