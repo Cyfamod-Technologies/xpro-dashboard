@@ -12,17 +12,31 @@ const url = ref("")
 const error = ref("")
 
 const isImage = computed(() => props.file.type.toLowerCase().startsWith("image/"))
-const isPdf = computed(() => props.file.type.toLowerCase() === "application/pdf")
+const isPdf = computed(
+  () => props.file.type.toLowerCase() === "application/pdf" || props.file.name.toLowerCase().endsWith(".pdf"),
+)
 
 const preview = async () => {
-  open.value = true
   error.value = ""
   url.value = ""
+  const pdfTab = isPdf.value ? window.open("about:blank", "_blank") : null
+
+  if (pdfTab) pdfTab.opener = null
+  open.value = !pdfTab
 
   loading.value = true
   try {
-    url.value = (await requestsApi.fileLink(props.file.id)).url
+    const fileUrl = (await requestsApi.fileLink(props.file.id, { inline: isImage.value || isPdf.value })).url
+
+    if (pdfTab) {
+      pdfTab.location.replace(fileUrl)
+
+      return
+    }
+    url.value = fileUrl
   } catch (cause) {
+    pdfTab?.close()
+    open.value = true
     error.value = getErrorMessage(cause, "This file could not be opened.")
   } finally {
     loading.value = false
@@ -49,13 +63,12 @@ const preview = async () => {
         </div>
         <VAlert v-else-if="error" type="error" variant="tonal">{{ error }}</VAlert>
         <VImg v-else-if="isImage && url" :src="url" :alt="file.name" max-height="72vh" contain />
-        <iframe
-          v-else-if="isPdf && url"
-          class="pdf-preview"
-          :src="url"
-          :title="`PDF preview: ${file.name}`"
-          referrerpolicy="no-referrer"
-        />
+        <div v-else-if="isPdf && url" class="text-center pa-8">
+          <p class="mb-4">Open this PDF in your browser's built-in viewer.</p>
+          <VBtn :href="url" target="_blank" rel="noopener noreferrer" prepend-icon="tabler-file-type-pdf">
+            Open PDF
+          </VBtn>
+        </div>
         <div v-else-if="url" class="text-center pa-8">
           <p class="mb-4">Preview is not available for this file type.</p>
           <VBtn :href="url" target="_blank" rel="noopener noreferrer" prepend-icon="tabler-download">
@@ -77,12 +90,5 @@ const preview = async () => {
 
 .preview-body {
   min-height: 220px;
-}
-
-.pdf-preview {
-  display: block;
-  inline-size: 100%;
-  block-size: min(72vh, 760px);
-  border: 0;
 }
 </style>

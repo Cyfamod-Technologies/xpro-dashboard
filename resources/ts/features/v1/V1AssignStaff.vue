@@ -8,6 +8,7 @@ const props = defineProps<{ request: V1Request }>()
 const emit = defineEmits<{ updated: [request: V1Request]; refresh: [] }>()
 
 const staff = ref<V1Staff[]>([])
+const staffLoaded = ref(false)
 const staffId = ref<string | null>(null)
 const busy = ref(false)
 const error = ref("")
@@ -19,7 +20,7 @@ const reassigning = computed(() => Boolean(props.request.assignee))
 // wrong owner.
 const items = computed(() =>
   staff.value
-    .filter(member => member.id !== props.request.assignee?.id)
+    .filter(member => member.id !== props.request.assignee?.id && !member.roles?.includes("super_admin"))
     .map(member => ({ title: `${member.name} · ${member.openRequests} open`, value: member.id })),
 )
 
@@ -28,6 +29,8 @@ onMounted(async () => {
     staff.value = await v1Api.listStaff()
   } catch (cause) {
     error.value = getErrorMessage(cause, "The staff list could not be loaded.")
+  } finally {
+    staffLoaded.value = true
   }
 })
 
@@ -63,7 +66,7 @@ const assign = async () => {
         <div class="text-caption text-medium-emphasis">Assigned staff</div>
         <div class="text-body-1">{{ request.assignee?.name ?? "Not assigned yet" }}</div>
       </div>
-      <VBtn color="primary" variant="tonal" prepend-icon="tabler-user-plus" @click="dialogOpen = true">
+      <VBtn color="primary" variant="outlined" prepend-icon="tabler-user-plus" @click="dialogOpen = true">
         {{ reassigning ? "Reassign staff" : "Assign staff" }}
       </VBtn>
     </div>
@@ -82,11 +85,19 @@ const assign = async () => {
             {{ request.id }} · {{ request.title }}. Choose the staff member responsible for this request.
           </p>
           <VSelect
+            v-if="items.length"
             v-model="staffId"
             :items="items"
             :label="reassigning ? 'Reassign to' : 'Choose staff'"
             density="comfortable"
           />
+          <VAlert v-else-if="staffLoaded && !error" type="info" variant="tonal" class="mb-4">
+            <div>No eligible staff are available to assign this request.</div>
+            <VBtn to="/admin/staff" variant="text" class="mt-2 px-0" prepend-icon="tabler-user-plus">
+              Create or invite a staff member
+            </VBtn>
+          </VAlert>
+          <VProgressLinear v-else-if="!staffLoaded" indeterminate color="primary" class="mb-4" />
           <p v-if="staffId" class="text-body-2 mb-0">
             {{ reassigning ? "The request will move to" : "This request will be assigned to" }}
             <strong>{{ staff.find(member => member.id === staffId)?.name }}</strong

@@ -174,16 +174,6 @@ const emptyText = computed(() => (filter.value === "former" ? "No former staff."
     <VBtn v-if="!props.readOnly" prepend-icon="tabler-user-plus" @click="start(null, 'invite')">Invite staff</VBtn>
   </div>
 
-  <VAlert
-    v-if="summary && summary.activeSuperAdmins < 2"
-    type="warning"
-    variant="tonal"
-    class="mb-4"
-    title="Only one active super admin"
-  >
-    If that account is locked out, access can only be recovered through the break-glass procedure. Invite a second super
-    admin.
-  </VAlert>
   <VAlert v-if="notice" type="success" variant="tonal" closable class="mb-4" @click:close="notice = ''">
     {{ notice }}
   </VAlert>

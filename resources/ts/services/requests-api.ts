@@ -307,8 +307,12 @@ export const requestsApi = {
     ),
   deleteUpload: (id: string) =>
     unwrap($api<ApiEnvelope<{ deleted: boolean }>>(`/uploads/${pathId(id)}`, { method: "DELETE" })),
-  fileLink: (id: string) =>
-    unwrap($api<ApiEnvelope<{ url: string; expiresInSeconds: number }>>(`/files/${pathId(id)}`)),
+  fileLink: (id: string, options: { inline?: boolean } = {}) =>
+    unwrap(
+      $api<ApiEnvelope<{ url: string; expiresInSeconds: number }>>(`/files/${pathId(id)}`, {
+        query: options.inline ? { inline: "true" } : undefined,
+      }),
+    ),
   notifications: (params: { unread?: boolean; page?: number; itemsPerPage?: number } = {}) =>
     unwrap($api<ApiEnvelope<NotificationInboxView>>("/notifications", { query: params })),
   markNotificationsRead: (notificationId?: string) =>

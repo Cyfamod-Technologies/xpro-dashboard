@@ -40,6 +40,7 @@ const open = computed({
 const is = (name: StaffAction) => props.action === name
 const version = computed(() => props.member?.rowVersion)
 const name = computed(() => (props.member ? fullName(props.member) : ""))
+const inviteRoleItems = roleItems.filter(item => item.value === "operations" || item.value === "client_relations")
 
 // ---- form state, reset whenever a dialog opens ----
 const first = ref("")
@@ -251,7 +252,7 @@ const showOwnerNote = computed(() => is("leave") && (props.member?.workload.open
     <fieldset class="border-0 pa-0 mt-3">
       <legend class="text-body-1 font-weight-medium mb-1">Staff roles</legend>
       <VCheckbox
-        v-for="item in roleItems"
+        v-for="item in inviteRoleItems"
         :key="item.value"
         :model-value="roles.includes(item.value)"
         :label="item.title"
