@@ -25,6 +25,11 @@ export const accountApi = {
       method: "POST",
       body: { currentPassword, password },
     }),
+  setupMfa: () => $api<ApiEnvelope<{ secret: string; otpauthUrl: string }>>("/auth/mfa/setup", { method: "POST" }),
+  confirmMfa: (code: string) =>
+    $api<ApiEnvelope<{ mfaEnabled: boolean }>>("/auth/mfa/confirm", { method: "POST", body: { code } }),
+  disableMfa: (password: string, code: string) =>
+    $api<ApiEnvelope<{ mfaEnabled: boolean }>>("/auth/mfa/disable", { method: "POST", body: { password, code } }),
   sessions: () => $api<ApiEnvelope<SessionView[]>>("/auth/me/sessions"),
   revokeSession: (sessionId: string) =>
     $api<ApiEnvelope<{ message: string }>>(`/auth/me/sessions/${encodeURIComponent(sessionId)}`, {

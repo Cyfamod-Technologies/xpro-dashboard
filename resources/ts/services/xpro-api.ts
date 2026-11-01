@@ -83,12 +83,9 @@ export interface StaffInvitePreview {
   policy: { version: string; url: string } | null
 }
 
-export interface StaffInviteAccepted {
-  result: "mfa_enrollment_required"
-  enrollmentToken: string
-  secret: string
-  otpauthUrl: string
-}
+export type StaffInviteAccepted =
+  | { result: "accepted" }
+  | { result: "mfa_enrollment_required"; enrollmentToken: string; secret: string; otpauthUrl: string }
 
 export const staffInviteApi = {
   preview: (token: string) => $api<ApiEnvelope<StaffInvitePreview>>(`/auth/staff-invite/${encodeURIComponent(token)}`),
