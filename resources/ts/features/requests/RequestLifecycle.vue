@@ -29,7 +29,7 @@ const v1CancelOpen = ref(false)
 const v1ReplaceOpen = ref(false)
 const v1Notice = ref("")
 const v1Error = ref("")
-const v1Tab = ref<"details" | "messages" | "history">("details")
+const v1Tab = ref<"details" | "history">("details")
 const isV1 = computed(() => Boolean(props.v1Request && props.v1Viewer))
 const v1Caps = computed(() => v1Capabilities(props.v1Viewer ?? null))
 const canV1Approve = computed(
@@ -333,14 +333,12 @@ watch(() => props.request.version, load)
       <template v-else>
         <VTabs v-model="v1Tab" class="mb-5" show-arrows>
           <VTab value="details">Request details</VTab>
-          <VTab value="messages">Messages</VTab>
           <VTab v-if="v1Viewer === 'admin'" value="history">History</VTab>
         </VTabs>
         <section v-if="v1Tab === 'details'">
           <V1RequestSummary :request="v1Current" show-customer />
-        </section>
-        <section v-else-if="v1Tab === 'messages'">
           <V1Conversation
+            class="mt-4"
             :request-id="v1Current.id"
             :status="v1Current.status"
             :viewer="v1Viewer!"

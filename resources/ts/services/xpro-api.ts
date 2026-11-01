@@ -79,7 +79,7 @@ export interface StaffInvitePreview {
   email: string
   roles: StaffRole[]
   expiresAt: string
-  /** The staff policy the invitee must accept; its version is sent back on accept. */
+  /** The published staff policy, when this workspace flow requires acceptance. */
   policy: { version: string; url: string } | null
 }
 
@@ -95,7 +95,7 @@ export const staffInviteApi = {
   accept: (payload: {
     token: string
     password: string
-    policyVersion: string
+    policyVersion?: string
     conflictDeclaration: { hasLinkedCustomerAccount: boolean; linkedCustomerEmail?: string; statement: string }
   }) => $api<ApiEnvelope<StaffInviteAccepted>>("/auth/staff-invite/accept", { method: "POST", body: payload }),
   verifyEnrollment: (enrollmentToken: string, code: string) =>
