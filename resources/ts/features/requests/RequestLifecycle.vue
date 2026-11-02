@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RequestView, ScheduleView } from "@/features/requests/api-types"
+import type { PaymentView, RequestPaymentsView, RequestView, ScheduleView } from "@/features/requests/api-types"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
 import { useAuthStore } from "@/stores/auth"
 import type { V1Actor, V1Request } from "@/features/v1/types"
@@ -27,9 +27,14 @@ const v1ApproveOpen = ref(false)
 const v1DenyOpen = ref(false)
 const v1CancelOpen = ref(false)
 const v1ReplaceOpen = ref(false)
+const staffAssignment = ref<{ openDialog: () => void } | null>(null)
 const v1Notice = ref("")
 const v1Error = ref("")
-const v1Tab = ref<"details" | "history">("details")
+const v1Tab = ref<"details" | "messages" | "history">("details")
+const v1Payments = ref<RequestPaymentsView | null>(null)
+const v1PaymentLoading = ref(false)
+const v1CheckoutLoading = ref(false)
+const v1PaymentError = ref("")
 const isV1 = computed(() => Boolean(props.v1Request && props.v1Viewer))
 const v1Caps = computed(() => v1Capabilities(props.v1Viewer ?? null))
 const canV1Approve = computed(
@@ -59,6 +64,53 @@ const refreshV1 = async () => {
     v1Error.value = getErrorMessage(cause, "The request could not be refreshed.")
   }
 }
+const loadV1Payments = async () => {
+  if (props.v1Viewer !== "customer" || v1Current.value?.status !== "approved") {
+    v1Payments.value = null
+
+    return
+  }
+  v1PaymentLoading.value = true
+  v1PaymentError.value = ""
+  try {
+    v1Payments.value = await requestsApi.payments(v1Current.value.id)
+  } catch (cause) {
+    v1PaymentError.value = getErrorMessage(cause, "Payment details could not be loaded.")
+  } finally {
+    v1PaymentLoading.value = false
+  }
+}
+const startV1Checkout = async () => {
+  if (!v1Current.value) return
+  v1CheckoutLoading.value = true
+  v1PaymentError.value = ""
+  try {
+    const result = await requestsApi.initiatePayment(v1Current.value.id)
+    window.location.assign(result.authorizationUrl)
+  } catch (cause) {
+    v1PaymentError.value = getErrorMessage(cause, "Checkout could not be started.")
+    v1CheckoutLoading.value = false
+  }
+}
+const refreshV1Payments = () => loadV1Payments()
+const latestV1Payment = computed<PaymentView | undefined>(() => v1Payments.value?.payments.at(0))
+const v1PaymentAmount = computed(() => {
+  const amount = v1Payments.value?.amountDue
+  if (amount == null) return ""
+
+  return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(
+    amount / 100,
+  )
+})
+const hasV1PaymentInProgress = computed(() =>
+  v1Payments.value?.payments.some(payment => payment.status === "pending" || payment.status === "recorded"),
+)
+const hasV1Paid = computed(() => v1Payments.value?.payments.some(payment => payment.status === "paid"))
+watch(
+  () => [props.v1Viewer, v1Current.value?.status, v1Current.value?.id] as const,
+  () => loadV1Payments(),
+  { immediate: true },
+)
 const activeTab = ref("messages")
 const busy = ref(false)
 const error = ref("")
@@ -265,54 +317,119 @@ watch(() => props.request.version, load)
       <VAlert v-if="v1Notice" type="success" variant="tonal" class="mb-4">{{ v1Notice }}</VAlert>
 
       <VCard v-if="v1Viewer !== 'customer'" variant="outlined" class="mb-5">
-        <VCardText>
-          <VRow align="center">
-            <VCol cols="12" md="5">
-              <V1AssignStaff
+        <VCardText class="pa-5">
+          <V1AssignStaff
+            v-if="v1Caps.canAssignStaff"
+            ref="staffAssignment"
+            :request="v1Current"
+            hide-trigger
+            @updated="applyV1"
+            @refresh="refreshV1"
+          />
+          <div v-else>
+            <div class="text-caption text-medium-emphasis">Assigned staff</div>
+            <div class="text-body-1">{{ v1Current.assignee?.name ?? "Not assigned" }}</div>
+          </div>
+          <VDivider class="my-4" />
+          <div class="d-flex flex-column flex-sm-row align-sm-center ga-3">
+            <p
+              v-if="v1Current.status === 'submitted' && !canV1Approve"
+              class="text-body-2 text-medium-emphasis mb-0 me-sm-auto"
+            >
+              Only the assigned staff member or an admin can approve this request. Staff can message the customer.
+            </p>
+            <p
+              v-else-if="
+                v1Current.status !== 'submitted' && !(v1Current.status === 'approved' && v1Caps.canReplaceProvider)
+              "
+              class="text-body-2 text-medium-emphasis mb-0 me-sm-auto"
+            >
+              The decision is final and can't be changed.
+            </p>
+            <div class="d-flex flex-wrap justify-end ga-3">
+              <VBtn
                 v-if="v1Caps.canAssignStaff"
-                :request="v1Current"
-                @updated="applyV1"
-                @refresh="refreshV1"
-              />
-              <div v-else>
-                <div class="text-caption text-medium-emphasis">Assigned staff</div>
-                <div class="text-body-1">{{ v1Current.assignee?.name ?? "Not assigned" }}</div>
-              </div>
-            </VCol>
-            <VCol cols="12" md="7">
-              <div class="text-caption text-medium-emphasis mb-2">Decision</div>
-              <div v-if="canV1Approve && v1Current.status === 'submitted'" class="d-flex align-center flex-wrap gap-3">
-                <VBtn color="primary" prepend-icon="tabler-check" @click="v1ApproveOpen = true">Approve request</VBtn>
-                <VBtn
-                  v-if="v1Caps.canDeny"
-                  color="error"
-                  variant="outlined"
-                  prepend-icon="tabler-x"
-                  @click="v1DenyOpen = true"
-                >
-                  Deny request
-                </VBtn>
-              </div>
-              <p v-else-if="v1Current.status === 'submitted'" class="text-body-2 text-medium-emphasis mb-0">
-                Only the assigned staff member or an admin can approve this request. Staff can message the customer.
-              </p>
-              <div
-                v-else-if="v1Current.status === 'approved' && v1Caps.canReplaceProvider"
-                class="d-flex align-center flex-wrap gap-3"
+                color="primary"
+                variant="outlined"
+                prepend-icon="tabler-user-plus"
+                @click="staffAssignment?.openDialog()"
               >
-                <span class="text-body-2">Provider: {{ v1Current.provider?.providerName ?? "Not assigned" }}</span>
-                <VBtn variant="outlined" prepend-icon="tabler-replace" @click="v1ReplaceOpen = true">
-                  {{ v1Current.provider ? "Replace provider" : "Assign provider" }}
-                </VBtn>
-              </div>
-              <p v-else class="text-body-2 text-medium-emphasis mb-0">The decision is final and can't be changed.</p>
-            </VCol>
-          </VRow>
+                {{ v1Current.assignee ? "Reassign staff" : "Assign staff" }}
+              </VBtn>
+              <VBtn
+                v-if="canV1Approve && v1Current.status === 'submitted'"
+                color="primary"
+                prepend-icon="tabler-check"
+                @click="v1ApproveOpen = true"
+              >
+                Approve request
+              </VBtn>
+              <VBtn
+                v-if="canV1Approve && v1Caps.canDeny && v1Current.status === 'submitted'"
+                color="error"
+                variant="outlined"
+                prepend-icon="tabler-x"
+                @click="v1DenyOpen = true"
+              >
+                Deny request
+              </VBtn>
+              <VBtn
+                v-if="v1Current.status === 'approved' && v1Caps.canReplaceProvider"
+                variant="outlined"
+                prepend-icon="tabler-replace"
+                @click="v1ReplaceOpen = true"
+              >
+                {{ v1Current.provider ? "Replace provider" : "Assign provider" }}
+              </VBtn>
+            </div>
+          </div>
         </VCardText>
       </VCard>
 
       <template v-if="v1Viewer === 'customer'">
         <V1RequestSummary :request="v1Current" />
+        <VCard v-if="v1Current.status === 'approved'" variant="outlined" class="mt-4">
+          <VCardText>
+            <div class="d-flex align-start justify-space-between flex-wrap gap-3">
+              <div>
+                <h3 class="text-h6 mb-1">Payment</h3>
+                <p v-if="v1PaymentLoading" class="text-body-2 text-medium-emphasis mb-0">Loading payment details…</p>
+                <template v-else-if="v1Payments?.amountDue != null">
+                  <p class="text-h5 font-weight-semibold mb-1">{{ v1PaymentAmount }}</p>
+                  <p class="text-body-2 text-medium-emphasis mb-0">
+                    {{ hasV1Paid ? "Payment received." : "Pay the accepted offer through Paystack." }}
+                  </p>
+                </template>
+                <p v-else class="text-body-2 text-medium-emphasis mb-0">
+                  No accepted offer is available for payment yet. Contact Xpro if you think this is an error.
+                </p>
+              </div>
+              <div class="d-flex align-center flex-wrap gap-2">
+                <VBtn variant="outlined" :loading="v1PaymentLoading" @click="refreshV1Payments">Refresh status</VBtn>
+                <VBtn
+                  v-if="v1Payments?.amountDue != null && !hasV1Paid"
+                  color="primary"
+                  prepend-icon="tabler-credit-card"
+                  :disabled="hasV1PaymentInProgress"
+                  :loading="v1CheckoutLoading"
+                  @click="startV1Checkout"
+                >
+                  {{ hasV1PaymentInProgress ? "Payment processing" : "Pay with Paystack" }}
+                </VBtn>
+              </div>
+            </div>
+            <VAlert v-if="v1PaymentError" type="error" variant="tonal" density="compact" class="mt-3">
+              {{ v1PaymentError }}
+            </VAlert>
+            <VAlert v-if="v1Payments?.offlineInstructions && !hasV1Paid" type="info" variant="tonal" class="mt-3">
+              {{ v1Payments.offlineInstructions }}
+            </VAlert>
+            <div v-if="latestV1Payment" class="text-caption text-medium-emphasis mt-3">
+              Latest payment: {{ latestV1Payment.status }}
+              <span v-if="latestV1Payment.reference"> · {{ latestV1Payment.reference }}</span>
+            </div>
+          </VCardText>
+        </VCard>
         <VCard variant="outlined" class="mt-4">
           <VCardText class="d-flex flex-wrap align-center justify-space-between gap-4">
             <div>
@@ -333,16 +450,21 @@ watch(() => props.request.version, load)
       <template v-else>
         <VTabs v-model="v1Tab" class="mb-5" show-arrows>
           <VTab value="details">Request details</VTab>
+          <VTab value="messages">Messages</VTab>
           <VTab v-if="v1Viewer === 'admin'" value="history">History</VTab>
         </VTabs>
         <section v-if="v1Tab === 'details'">
           <V1RequestSummary :request="v1Current" show-customer />
+        </section>
+        <section v-else-if="v1Tab === 'messages'">
           <V1Conversation
-            class="mt-4"
             :request-id="v1Current.id"
             :status="v1Current.status"
             :viewer="v1Viewer!"
             :viewer-id="viewerId ?? auth.user?.id ?? ''"
+            :version="v1Current.version"
+            :height="600"
+            @accepted="applyV1"
           />
         </section>
         <section v-else-if="v1Tab === 'history' && v1Viewer === 'admin'">

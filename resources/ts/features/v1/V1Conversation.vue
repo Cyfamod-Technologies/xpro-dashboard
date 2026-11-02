@@ -8,11 +8,12 @@ import {
   canCounter,
   counterOpen,
   formatDateTime,
+  formatNaira,
   isSuperseded,
   latestCounter,
 } from "@/features/v1/helpers"
 import { checkFiles, fileAccept, fileHint } from "@/features/operations/file-rules"
-import type { V1Actor, V1Counter, V1Message, V1Status } from "@/features/v1/types"
+import type { V1Actor, V1Counter, V1Message, V1Request, V1Status } from "@/features/v1/types"
 import { uploadV1Files } from "@/features/v1/uploads"
 import { v1Api } from "@/services/v1-api"
 import { getErrorMessage } from "@/utils/errors"
@@ -22,10 +23,11 @@ const props = defineProps<{
   status: V1Status
   viewer: V1Actor
   viewerId: string
+  version?: number
   /** Fixed scroll height in px for the message list. */
   height?: number
 }>()
-const emit = defineEmits<{ sent: [message: V1Message] }>()
+const emit = defineEmits<{ sent: [message: V1Message]; accepted: [request: V1Request] }>()
 
 const messages = ref<V1Message[]>([])
 const loading = ref(true)
@@ -34,6 +36,10 @@ const text = ref("")
 const files = ref<File[]>([])
 const problems = ref<string[]>([])
 const sending = ref(false)
+const accepting = ref(false)
+const acceptError = ref("")
+const acceptDialog = ref(false)
+const requestVersion = ref(props.version)
 const sendError = ref("")
 const list = ref<HTMLElement | null>(null)
 const picker = ref<HTMLInputElement | null>(null)
@@ -41,11 +47,25 @@ const picker = ref<HTMLInputElement | null>(null)
 const dialogOpen = ref(false)
 const dialogMode = ref<"quote" | "counter">("quote")
 const dialogSeed = ref<V1Counter | null>(null)
+const conversationListStyle = computed(() =>
+  props.height ? { blockSize: `${props.height}px` } : { maxBlockSize: "420px" },
+)
 
 const latest = computed(() => latestCounter(messages.value))
 const open = computed(() => counterOpen(props.status))
-const showSendQuote = computed(() => v1Capabilities(props.viewer).canSendQuote && open.value)
-const counterAllowed = computed(() => canCounter(props.viewerId, latest.value, open.value, props.viewer))
+const negotiationOpen = computed(() => open.value && !latest.value?.counter?.acceptedAt)
+const showSendQuote = computed(() => v1Capabilities(props.viewer).canSendQuote && negotiationOpen.value)
+const counterAllowed = computed(
+  () => negotiationOpen.value && canCounter(props.viewerId, latest.value, open.value, props.viewer),
+)
+const canAccept = computed(
+  () =>
+    props.viewer === "customer" &&
+    props.status === "submitted" &&
+    Boolean(latest.value?.counter) &&
+    !latest.value?.counter?.acceptedAt &&
+    latest.value?.authorRole !== "customer",
+)
 const canSend = computed(() => !sending.value && (text.value.trim() !== "" || files.value.length > 0))
 
 const ownSide = (message: V1Message) =>
@@ -61,12 +81,36 @@ const scrollToEnd = async () => {
 const load = async () => {
   loadError.value = ""
   try {
-    messages.value = await v1Api.messages(props.requestId)
+    const [loadedMessages, request] = await Promise.all([
+      v1Api.messages(props.requestId),
+      props.viewer === "customer" ? v1Api.getRequest(props.requestId) : Promise.resolve(null),
+    ])
+    messages.value = loadedMessages
+    if (request) requestVersion.value = request.version
     await scrollToEnd()
   } catch (cause) {
     loadError.value = getErrorMessage(cause, "The conversation could not be loaded.")
   } finally {
     loading.value = false
+  }
+}
+
+const acceptLatestOffer = async () => {
+  const offer = latest.value?.counter
+  if (!offer || requestVersion.value === undefined) return
+  accepting.value = true
+  acceptError.value = ""
+  try {
+    const updated = await v1Api.acceptOffer(props.requestId, offer.id, requestVersion.value)
+    requestVersion.value = updated.version
+    await load()
+    emit("accepted", updated)
+    acceptDialog.value = false
+  } catch (cause) {
+    acceptError.value = getErrorMessage(cause, "The offer could not be accepted.")
+    await load()
+  } finally {
+    accepting.value = false
   }
 }
 
@@ -145,13 +189,23 @@ defineExpose({ reload: load })
         >
           Send quote
         </VBtn>
+        <VBtn
+          v-if="canAccept"
+          size="small"
+          color="success"
+          variant="flat"
+          prepend-icon="tabler-check"
+          @click="acceptDialog = true"
+        >
+          Accept latest offer
+        </VBtn>
       </div>
     </VCardText>
 
     <div
       ref="list"
       class="conversation-list px-4"
-      :style="{ maxBlockSize: `${height ?? 420}px` }"
+      :style="conversationListStyle"
       role="log"
       aria-live="polite"
       aria-label="Conversation"
@@ -197,6 +251,9 @@ defineExpose({ reload: load })
 
     <VDivider />
     <div class="pa-3">
+      <VAlert v-if="acceptError" type="error" variant="tonal" density="compact" class="mb-2">
+        {{ acceptError }}
+      </VAlert>
       <VAlert v-if="sendError" type="error" variant="tonal" density="compact" class="mb-2">{{ sendError }}</VAlert>
       <VAlert v-for="problem in problems" :key="problem" type="warning" variant="tonal" density="compact" class="mb-2">
         {{ problem }}
@@ -240,6 +297,22 @@ defineExpose({ reload: load })
       </div>
       <div class="text-caption text-medium-emphasis mt-1">{{ fileHint("message_attachment") }}</div>
     </div>
+
+    <VDialog v-model="acceptDialog" max-width="440">
+      <VCard>
+        <VCardTitle>Accept XPro's offer?</VCardTitle>
+        <VCardText>
+          This records your acceptance of
+          {{ latest?.counter ? formatNaira(latest.counter.amountKobo) : "the latest offer" }}. Payment becomes available
+          after XPro approves the request.
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" :disabled="accepting" @click="acceptDialog = false">Cancel</VBtn>
+          <VBtn color="primary" :loading="accepting" @click="acceptLatestOffer">Accept offer</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <V1CounterDialog
       v-model="dialogOpen"

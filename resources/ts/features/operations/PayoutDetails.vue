@@ -4,6 +4,7 @@ import type { BankInput } from "@/features/operations/types"
 import { when } from "@/features/operations/types"
 import { isNuban } from "@/features/operations/banks"
 import BankForm from "@/features/operations/BankForm.vue"
+import { isDemoMode } from "@/utils/demo-mode"
 
 const ops = useOperationsStore()
 const empty = (): BankInput => ({ bankCode: "", accountNumber: "", accountName: "" })
@@ -30,6 +31,15 @@ const ready = computed(
 const submit = async () => {
   if (await ops.run({ type: "payout.update", bank: { ...form.value } })) form.value = empty()
 }
+
+onMounted(async () => {
+  if (isDemoMode || ops.profile) return
+  try {
+    await ops.refreshProviderProfile()
+  } catch (cause) {
+    ops.error = cause instanceof Error ? cause.message : "Unable to load your payout details."
+  }
+})
 </script>
 
 <template>

@@ -161,6 +161,9 @@ export const v1Handlers = [
   http.post(`${api}/requests/:id/cancel`, ({ request, params }) =>
     handle(request, actor => store.cancelRequest(actor, String(params.id), ifMatch(request))),
   ),
+  http.post(`${api}/requests/:id/offers/:offerId/accept`, ({ request, params }) =>
+    handle(request, actor => store.acceptOffer(actor, String(params.id), String(params.offerId), ifMatch(request))),
+  ),
   http.get(`${api}/requests/:id/provider-candidates`, ({ request, params }) =>
     handle(request, actor => store.providerCandidates(actor, String(params.id))),
   ),
@@ -188,15 +191,7 @@ export const v1Handlers = [
         .filter(member => member.id !== excluded)
         .map(member => ({
           ...member,
-          roles: [
-            member.id === "usr-operations"
-              ? "operations"
-              : member.id === "usr-pricing"
-                ? "pricing"
-                : member.id === "usr-relations"
-                  ? "client_relations"
-                  : "finance",
-          ],
+          roles: member.roles,
           onLeave: false,
           leaveTo: null,
           workload: { openOwned: member.openRequests, overdueOwned: 0 },

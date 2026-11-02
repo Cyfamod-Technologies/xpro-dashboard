@@ -18,6 +18,7 @@ export interface MockStaff {
   id: string
   name: string
   email: string
+  roles: string[]
 }
 
 export interface V1MockData {
@@ -123,10 +124,10 @@ export const createProviders = (): MockProvider[] => [
 ]
 
 export const createStaff = (): MockStaff[] => [
-  { id: demoIds.staff, name: kemi.name, email: "operations@xpro.test" },
-  { id: "usr-pricing", name: "Chidi Nwosu", email: "pricing@xpro.test" },
-  { id: demoIds.secondStaff, name: "Zainab Lawal", email: "relations@xpro.test" },
-  { id: "usr-finance", name: "Ngozi Eze", email: "finance@xpro.test" },
+  { id: demoIds.staff, name: kemi.name, email: "operations@xpro.test", roles: ["operations"] },
+  { id: "usr-pricing", name: "Chidi Nwosu", email: "pricing@xpro.test", roles: ["pricing"] },
+  { id: demoIds.secondStaff, name: "Zainab Lawal", email: "relations@xpro.test", roles: ["client_relations"] },
+  { id: "usr-finance", name: "Ngozi Eze", email: "finance@xpro.test", roles: ["finance"] },
 ]
 
 export const createSeed = (now: Date = new Date()): V1MockData => {

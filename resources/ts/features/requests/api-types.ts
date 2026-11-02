@@ -626,6 +626,7 @@ export type RefundStatus =
 /** Finance refund queue row (`GET /admin/refunds`) and the `refunds` list of `GET /requests/:id/payments`. */
 export interface RefundView {
   id: string
+  version?: number
   /** Kobo. `null` for staff without `view.pricing`. */
   amount: number | null
   status: RefundStatus | string
@@ -634,8 +635,34 @@ export interface RefundView {
   paymentId?: string
   cancellationId?: string | null
   method?: "paystack" | "offline" | string | null
+  transferPrepared?: boolean
+  transferRecorded?: boolean
   createdAt?: string
   completedAt?: string | null
+}
+
+export interface RefundReserveFundingView {
+  id: string
+  amount: number
+  reference: string
+  proofUploadId: string
+  note: string | null
+  status: string
+  recordedBy: string
+  reconciledBy: string | null
+  reconciliationNote: string | null
+  version: number
+  createdAt: string
+  reconciledAt: string | null
+}
+
+export interface RefundReserveSummary {
+  currency: "NGN"
+  reserveBalance: string
+  outstandingRefunds: string
+  available: string
+  pendingFunding: RefundReserveFundingView[]
+  recentFunding: RefundReserveFundingView[]
 }
 
 export type PayoutStatus =

@@ -34,7 +34,7 @@ const counter = computed(() => props.message.counter)
           Counter offer
         </span>
         <VChip :color="superseded ? 'secondary' : 'primary'" size="x-small" variant="flat" label>
-          {{ superseded ? "Superseded" : "Latest offer" }}
+          {{ superseded ? "Superseded" : counter.acceptedAt ? "Accepted" : "Latest offer" }}
         </VChip>
       </div>
       <div class="text-h4 font-weight-bold mb-1">{{ formatNaira(counter.amountKobo) }}</div>
@@ -46,7 +46,7 @@ const counter = computed(() => props.message.counter)
       <div class="d-flex align-center justify-space-between flex-wrap gap-2">
         <span class="text-caption">{{ authorLabel }} · {{ formatDateTime(message.createdAt) }}</span>
         <VBtn
-          v-if="canCounter"
+          v-if="canCounter && !counter.acceptedAt"
           size="small"
           color="primary"
           variant="flat"

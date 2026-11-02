@@ -143,6 +143,8 @@ export const v1Api = {
   ) => command<V1Request>(`/requests/${pathId(id)}/reassign`, "POST", body, version),
   /** The assigned staff member or an admin closes the intake decision. */
   approve: (id: string, version: number) => command<V1Request>(`/requests/${pathId(id)}/approve`, "POST", {}, version),
+  acceptOffer: (id: string, offerId: string, version: number) =>
+    command<V1Request>(`/requests/${pathId(id)}/offers/${pathId(offerId)}/accept`, "POST", {}, version),
   /** Admin only. The reason is shown to the customer. */
   deny: (id: string, body: { reason: string }, version: number) =>
     command<V1Request>(`/requests/${pathId(id)}/deny`, "POST", body, version),

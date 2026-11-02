@@ -95,6 +95,7 @@ export interface V1Counter {
   note: string
   /** Id of the counter card that replaced this one. */
   supersededBy?: string | null
+  acceptedAt?: string | null
 }
 
 export type V1MessageKind = "text" | "counter"

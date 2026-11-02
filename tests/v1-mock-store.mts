@@ -52,7 +52,14 @@ const newRequest: V1CreateRequestBody = {
   const page = store.listRequests(admin)
 
   assert.equal(page.total, 4)
-  assert.deepEqual(store.counts(admin), { submitted: 2, approved: 1, denied: 1, unassigned: 1, assigned: 1 })
+  assert.deepEqual(store.counts(admin), {
+    submitted: 2,
+    approved: 1,
+    denied: 1,
+    cancelled: 0,
+    unassigned: 1,
+    assigned: 1,
+  })
   assert.equal(store.getRequest(admin, unassigned).assignee, null)
   assert.equal(store.getRequest(admin, negotiating).assignee?.id, "usr-operations")
   assert.equal(store.getRequest(admin, deniedId).decision.reason?.length! >= 10, true)
@@ -211,11 +218,13 @@ const newRequest: V1CreateRequestBody = {
   failsWith(() => store.listStaff(customer), 403)
 }
 
-// --- Approve: admin only, needs an assignee, provider, price above zero and a date; one decision only.
+// --- Approve: admin or assigned staff, needs an assignee, provider, price above zero and a date; one decision only.
 {
   const store = fresh()
 
-  failsWith(() => store.approve(kemi, negotiating, terms), 403)
+  const staffApproved = fresh().approve(kemi, negotiating, terms)
+
+  assert.equal(staffApproved.status, "approved")
   failsWith(() => store.approve(customer, negotiating, terms), 403)
   failsWith(() => store.approve(tunde, negotiating, terms), 403)
   failsWith(() => store.approve(admin, unassigned, terms), 422, "ASSIGNEE_REQUIRED")
@@ -430,19 +439,19 @@ const newRequest: V1CreateRequestBody = {
   )
 }
 
-// --- Provider candidates: verified and available only, best fit first.
+// --- Provider candidates: verified, available and eligible for the request's service area.
 {
   const store = fresh()
   const candidates = store.providerCandidates(admin, negotiating) // Construction in Ikeja
 
   assert.deepEqual(
     candidates.map(item => item.id),
-    ["usr-provider", "prv-ngozi", "prv-femi"],
+    ["usr-provider", "prv-ngozi"],
   )
   assert.ok(candidates.every(item => item.verified && item.available))
   assert.ok(!candidates.some(item => item.id === "prv-chuks"))
   assert.deepEqual(candidates[0].reasons, ["Offers Construction", "Serves Ikeja"])
-  assert.equal(store.providerCandidates(kemi, negotiating).length, 3)
+  assert.equal(store.providerCandidates(kemi, negotiating).length, 2)
   failsWith(() => store.providerCandidates(zainab, negotiating), 404)
   failsWith(() => store.providerCandidates(customer, negotiating), 403)
   failsWith(() => store.providerCandidates(tunde, negotiating), 403)
@@ -506,7 +515,7 @@ const newRequest: V1CreateRequestBody = {
 
   assert.equal(replaced.provider?.providerId, "prv-ngozi")
   assert.equal(replaced.status, "approved")
-  assert.equal(replaced.decision.terms?.providerName, "Tunde Bakare") // the decision stays as recorded
+  assert.equal(replaced.decision.terms?.providerName, "Ngozi Interiors") // keep the recorded terms aligned with the replacement
   assert.equal(replaced.activity.at(-1)?.kind, "provider_replaced")
   assert.equal(store.providerJobs(tunde).length, 0)
   assert.deepEqual(

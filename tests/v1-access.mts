@@ -36,19 +36,10 @@ const navIds = (actor: V1Actor) => {
     .map(item => item.id)
 }
 
-assert.deepEqual(navIds("customer"), ["overview", "requests", "messages", "account"])
-assert.deepEqual(navIds("admin"), [
-  "overview",
-  "requests",
-  "messages",
-  "providers",
-  "finance",
-  "services",
-  "staff",
-  "settings",
-])
+assert.deepEqual(navIds("customer"), ["overview", "requests", "payments", "messages", "settings"])
+assert.deepEqual(navIds("admin"), ["overview", "requests", "messages", "providers", "services", "staff", "settings"])
 assert.deepEqual(navIds("staff"), ["requests", "settings"])
-assert.deepEqual(navIds("provider"), ["overview", "verification", "availability", "jobs", "account"])
+assert.deepEqual(navIds("provider"), ["overview", "availability", "jobs", "payouts", "settings"])
 
 // Every section in the V1 map exists and is enabled in the workspace config.
 for (const [actor, ids] of Object.entries(v1Sections)) {
@@ -65,10 +56,10 @@ for (const [actor, ids] of Object.entries(v1Sections)) {
 
 // --- Hidden sections are blocked as direct routes for the actor that never had them.
 const blocked: Record<V1Actor, string[]> = {
-  customer: ["quotes", "payments", "schedule", "notifications", "settings", "services", "staff", "providers"],
-  admin: ["approvals", "dispatch", "quotes", "schedule", "audit", "notifications"],
+  customer: ["quotes", "schedule", "notifications", "services", "staff", "providers"],
+  admin: ["approvals", "dispatch", "quotes", "schedule", "audit", "notifications", "finance"],
   staff: ["overview", "messages", "providers", "finance", "services", "staff", "approvals", "dispatch", "audit"],
-  provider: ["quotes", "payouts", "schedule", "messages", "notifications", "settings", "requests"],
+  provider: ["verification", "quotes", "schedule", "messages", "notifications", "requests"],
 }
 
 for (const [actor, ids] of Object.entries(blocked))
@@ -102,16 +93,15 @@ const menuPaths = (actor: V1Actor) => {
   return vertical.map(item => ("to" in item ? toPath(item.to) : ""))
 }
 
-assert.deepEqual(menuPaths("customer"), ["/", "/overview", "/requests", "/messages", "/account"])
+assert.deepEqual(menuPaths("customer"), ["/", "/overview", "/requests", "/payments", "/messages", "/settings"])
 assert.deepEqual(menuPaths("staff"), ["/", "/admin/requests", "/admin/settings"])
-assert.deepEqual(menuPaths("provider"), ["/", "/overview", "/verification", "/availability", "/jobs", "/account"])
+assert.deepEqual(menuPaths("provider"), ["/", "/overview", "/availability", "/jobs", "/payouts", "/settings"])
 assert.deepEqual(menuPaths("admin"), [
   "/",
   "/admin",
   "/admin/requests",
   "/admin/messages",
   "/admin/providers",
-  "/admin/finance",
   "/admin/services",
   "/admin/staff",
   "/admin/settings",
@@ -152,13 +142,15 @@ assert.equal(v1ViewFor("provider", "quotes"), null)
 
 assert.deepEqual(v1Capabilities("admin"), {
   canDecide: true,
+  canDeny: true,
   canAssignStaff: true,
   canSendQuote: true,
   canReplaceProvider: true,
   canChat: true,
 })
 assert.deepEqual(v1Capabilities("staff"), {
-  canDecide: false,
+  canDecide: true,
+  canDeny: false,
   canAssignStaff: false,
   canSendQuote: true,
   canReplaceProvider: true,
@@ -166,6 +158,7 @@ assert.deepEqual(v1Capabilities("staff"), {
 })
 assert.deepEqual(v1Capabilities("customer"), {
   canDecide: false,
+  canDeny: false,
   canAssignStaff: false,
   canSendQuote: false,
   canReplaceProvider: false,
@@ -173,6 +166,7 @@ assert.deepEqual(v1Capabilities("customer"), {
 })
 assert.deepEqual(v1Capabilities("provider"), {
   canDecide: false,
+  canDeny: false,
   canAssignStaff: false,
   canSendQuote: false,
   canReplaceProvider: false,
@@ -185,7 +179,8 @@ const hiddenPaths = ["approvals", "dispatch", "quotes", "schedule", "audit", "no
 
 for (const id of hiddenPaths) assert.ok(!overview.includes(`/${id}`), `V1Overview has no shortcut to /${id}`)
 
-// --- Staff and admin cannot approve/deny by capability only for the admin.
-assert.equal(v1Capabilities("staff").canDecide, false)
+// --- Assigned staff can approve, while only admins can deny.
+assert.equal(v1Capabilities("staff").canDecide, true)
+assert.equal(v1Capabilities("staff").canDeny, false)
 
 console.log("v1-access: ok")

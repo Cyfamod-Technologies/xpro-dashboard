@@ -99,6 +99,12 @@ const platformSection = computed(() =>
     <PlatformWorkspace v-else-if="auth.user?.role === 'admin' && section.id === 'settings'" section="settings" />
     <AdminPayments v-else-if="section.id === 'finance'" :demo="isDemoMode" />
     <ProviderEarnings v-else-if="!isDemoMode && section.id === 'payouts'" />
+    <VAlert v-else-if="isDemoMode && section.id === 'payments'" color="info" variant="tonal">
+      Customer payment history and checkout use the connected payment API and are not simulated in the local demo.
+    </VAlert>
+    <VAlert v-else-if="isDemoMode && actor === 'provider' && section.id === 'payouts'" color="info" variant="tonal">
+      Payout history appears here in the connected workspace. Provider bank details are available under Settings.
+    </VAlert>
     <div v-else-if="section.id === 'account'" class="d-flex flex-column gap-6">
       <AccountPhoneVerification />
       <AccountWorkspaces />
