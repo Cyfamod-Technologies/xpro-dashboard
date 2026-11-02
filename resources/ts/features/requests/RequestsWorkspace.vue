@@ -13,7 +13,6 @@ import { REQUEST_STAGES } from "@/features/requests/api-types"
 import type { GroupEntry } from "@/features/requests/request-groups"
 import { groupRequests } from "@/features/requests/request-groups"
 import { RequestsApiError, requestsApi } from "@/services/requests-api"
-import { providersApi } from "@/services/providers-api"
 import { useAuthStore } from "@/stores/auth"
 import CancelAllDialog from "@/features/requests/CancelAllDialog.vue"
 import CustomerRequestLimit from "@/features/requests/CustomerRequestLimit.vue"
@@ -67,12 +66,6 @@ const quoteNote = ref("")
 const payoutAmount = ref<number | null>(null)
 const payment = ref<Awaited<ReturnType<typeof requestsApi.payments>>>()
 const checkoutBusy = ref(false)
-const paymentNote = ref("")
-const offlineAmount = ref<number | null>(null)
-const offlineChannel = ref("bank_transfer")
-const offlineReference = ref("")
-const proofFileId = ref("")
-const proofFile = ref<File | null>(null)
 const intakeQuestion = ref("")
 const offerBrief = ref("")
 const rejectionReason = ref("")
@@ -80,6 +73,20 @@ const contactCheck = ref(false)
 const paymentPoll = ref<ReturnType<typeof setInterval>>()
 const expiryTick = ref(Date.now())
 const expiryTimer = ref<ReturnType<typeof setInterval>>()
+const hasSettledPayment = computed(() =>
+  payment.value?.payments.some(item => item.status === "paid" || item.status === "partially_refunded"),
+)
+const hasPaymentInProgress = computed(() =>
+  payment.value?.payments.some(item => item.status === "pending" || item.status === "recorded"),
+)
+const latestPayment = computed(() => payment.value?.payments[0])
+const customerPaymentState = computed(() => {
+  if (hasSettledPayment.value && !payment.value?.amountDue) return "paid"
+  if (hasPaymentInProgress.value) return "processing"
+  if (payment.value?.amountDue != null) return "due"
+
+  return "not_ready"
+})
 const sectionTitle = computed(
   () =>
     ({ dispatch: "Dispatch", quotes: "Quotes", payments: "Payments", payouts: "Earnings" })[props.section] ??
@@ -266,20 +273,6 @@ function startPaymentPolling(id: string) {
   }, 5000)
 }
 
-async function uploadPaymentProof() {
-  if (!proofFile.value) return
-  saving.value = true
-  try {
-    const uploaded = await providersApi.upload(proofFile.value, "payment_proof")
-    proofFileId.value = uploaded.id
-    notice.value = "Payment proof uploaded."
-  } catch (cause) {
-    fail(cause)
-  } finally {
-    saving.value = false
-  }
-}
-
 function select(id?: string) {
   router.push({ path: route.path, query: id ? { request: id } : {} })
 }
@@ -424,7 +417,13 @@ watch(v1Service, () => {
           <div>
             <h2 class="text-h5">{{ sectionTitle }}</h2>
             <p class="text-medium-emphasis mb-0">
-              {{ v1Mode ? "Requests from the V1 workspace." : "Live requests from the XPro API." }}
+              {{
+                props.section === "payments"
+                  ? "Choose a request to view its amount due, pay securely, or review your payment history."
+                  : v1Mode
+                    ? "Requests from the V1 workspace."
+                    : "Live requests from the XPro API."
+              }}
             </p>
           </div>
           <div class="d-flex flex-wrap align-center ga-3">
@@ -1127,102 +1126,147 @@ watch(v1Service, () => {
       </template>
 
       <template v-else-if="props.section === 'payments'">
-        <VCard
-          ><VCardText>
-            <div class="d-flex flex-wrap justify-space-between align-center ga-3 mb-4">
-              <h3 class="text-h5 mb-0">Payment</h3>
-              <VBtn v-if="can('payment.initiate')" :loading="checkoutBusy" @click="beginCheckout"
-                >Pay {{ money(payment?.amountDue) }}</VBtn
-              ><VBtn variant="outlined" :loading="loading" @click="refreshCurrent">Refresh status</VBtn>
-            </div>
-            <p v-if="payment?.dueAt" class="text-medium-emphasis">Due {{ new Date(payment.dueAt).toLocaleString() }}</p>
-            <VAlert v-if="payment?.offlineInstructions" color="info" variant="tonal" class="mb-4">{{
-              payment.offlineInstructions
-            }}</VAlert>
-            <VTable v-if="payment?.payments.length"
-              ><thead>
-                <tr>
-                  <th>Reference</th>
-                  <th>Method</th>
-                  <th>Status</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="item in payment.payments" :key="item.id">
-                  <td>{{ item.reference || item.id }}</td>
-                  <td>{{ item.method }}</td>
-                  <td>{{ item.status }}</td>
-                  <td>{{ money(item.amount) }}</td>
-                </tr>
-              </tbody></VTable
-            >
-            <p v-else class="text-medium-emphasis mb-0">No payment has been recorded.</p>
-            <div v-if="can('payment.recordOffline')" class="mt-6">
-              <h4 class="text-subtitle-1 mb-3">Record offline payment</h4>
-              <div class="d-flex flex-wrap ga-3">
-                <VTextField v-model.number="offlineAmount" label="Amount (kobo)" type="number" />
-                <VSelect
-                  v-model="offlineChannel"
-                  :items="[
-                    { title: 'Bank transfer', value: 'bank_transfer' },
-                    { title: 'Cash', value: 'cash' },
-                    { title: 'Cheque', value: 'cheque' },
-                  ]"
-                  label="Channel"
-                />
-                <VTextField v-model="offlineReference" label="Reference" />
-                <VFileInput v-model="proofFile" label="Payment proof" accept="image/*,.pdf" hide-details />
-                <VBtn variant="outlined" :disabled="!proofFile" :loading="saving" @click="uploadPaymentProof"
-                  >Upload proof</VBtn
-                >
-                <VChip v-if="proofFileId" color="success" variant="tonal">Proof uploaded</VChip>
-                <VBtn
-                  :disabled="!offlineAmount || !offlineReference || !proofFileId"
-                  :loading="saving"
-                  @click="
-                    perform(
-                      () =>
-                        requestsApi.recordOfflinePayment(request!.id, {
-                          amount: offlineAmount!,
-                          channel: offlineChannel,
-                          reference: offlineReference,
-                          paidAt: new Date().toISOString(),
-                          proofFileId,
-                          note: paymentNote || undefined,
-                        }),
-                      'Offline payment recorded.',
-                      true,
-                    )
-                  "
-                  >Record payment</VBtn
-                >
-              </div>
-            </div>
-            <VTextField v-model="paymentNote" label="Reconciliation note" class="mt-4" />
-            <div v-for="item in payment?.payments ?? []" :key="`payment-actions-${item.id}`" class="d-flex ga-2 mb-2">
-              <VBtn
-                v-if="can('payment.reconcile') && item.method === 'offline' && item.status === 'recorded'"
-                size="small"
-                :loading="saving"
-                @click="perform(() => requestsApi.reconcilePayment(item.id, paymentNote), 'Payment reconciled.', true)"
-                >Reconcile {{ item.reference || item.id }}</VBtn
-              >
-              <VBtn
-                v-if="can('payment.rejectOffline') && item.method === 'offline' && item.status === 'recorded'"
-                size="small"
-                color="error"
-                variant="tonal"
-                :loading="saving"
-                @click="perform(() => requestsApi.rejectPayment(item.id, paymentNote), 'Payment rejected.', true)"
-                >Reject</VBtn
-              >
-            </div>
-            <p class="text-caption text-medium-emphasis mt-4 mb-0">
-              Payment status comes from the server. Returning from checkout does not mark a payment as paid.
-            </p>
-          </VCardText></VCard
-        >
+        <VRow>
+          <VCol cols="12" md="7">
+            <VCard class="h-100">
+              <VCardText class="pa-5 pa-md-6">
+                <div class="d-flex justify-space-between align-start ga-3 mb-5">
+                  <div>
+                    <div class="text-overline text-primary">REQUEST PAYMENT</div>
+                    <h3 class="text-h5 mb-1">{{ request.title || "Service request" }}</h3>
+                    <p class="text-body-2 text-medium-emphasis mb-0">{{ request.id }}</p>
+                  </div>
+                  <VChip
+                    :color="
+                      customerPaymentState === 'paid' ? 'success' : customerPaymentState === 'due' ? 'warning' : 'info'
+                    "
+                    variant="tonal"
+                  >
+                    {{
+                      customerPaymentState === "paid"
+                        ? "Paid"
+                        : customerPaymentState === "processing"
+                          ? "Processing"
+                          : customerPaymentState === "due"
+                            ? "Payment due"
+                            : "Not ready"
+                    }}
+                  </VChip>
+                </div>
+
+                <VAlert v-if="customerPaymentState === 'due'" type="info" variant="tonal" class="mb-5">
+                  Your accepted offer is ready to pay. Checkout is handled securely by Paystack.
+                </VAlert>
+                <VAlert v-else-if="customerPaymentState === 'processing'" type="warning" variant="tonal" class="mb-5">
+                  We’re confirming your payment. Keep this page open or refresh the status in a moment.
+                </VAlert>
+                <VAlert v-else-if="customerPaymentState === 'paid'" type="success" variant="tonal" class="mb-5">
+                  Payment received. Your receipt details are listed below.
+                </VAlert>
+                <VAlert v-else type="info" variant="tonal" class="mb-5">
+                  No payment is due yet. Payment appears here after XPro approves your request and confirms an offer.
+                </VAlert>
+
+                <div class="d-flex flex-wrap align-end justify-space-between ga-4">
+                  <div>
+                    <p class="text-body-2 text-medium-emphasis mb-1">Amount due</p>
+                    <p class="text-h4 font-weight-semibold mb-0">{{ money(payment?.amountDue) }}</p>
+                    <p v-if="payment?.dueAt" class="text-body-2 text-medium-emphasis mt-2 mb-0">
+                      Due {{ new Date(payment.dueAt).toLocaleDateString() }}
+                    </p>
+                  </div>
+                  <div class="d-flex flex-wrap ga-2">
+                    <VBtn variant="outlined" prepend-icon="tabler-refresh" :loading="loading" @click="refreshCurrent">
+                      Refresh status
+                    </VBtn>
+                    <VBtn
+                      v-if="can('payment.initiate') && customerPaymentState === 'due'"
+                      color="primary"
+                      prepend-icon="tabler-lock-check"
+                      :loading="checkoutBusy"
+                      @click="beginCheckout"
+                    >
+                      Pay securely with Paystack
+                    </VBtn>
+                  </div>
+                </div>
+              </VCardText>
+            </VCard>
+          </VCol>
+          <VCol cols="12" md="5">
+            <VCard class="h-100" variant="tonal">
+              <VCardText class="pa-5 pa-md-6">
+                <h3 class="text-h6 mb-4">What happens next</h3>
+                <VList density="comfortable" class="bg-transparent pa-0">
+                  <VListItem
+                    prepend-icon="tabler-credit-card"
+                    title="Pay through Paystack"
+                    subtitle="Your card or bank payment is processed securely."
+                  />
+                  <VListItem
+                    prepend-icon="tabler-shield-check"
+                    title="We confirm your payment"
+                    subtitle="This page updates when the server verifies the transaction."
+                  />
+                  <VListItem
+                    prepend-icon="tabler-receipt"
+                    title="Keep your receipt"
+                    subtitle="Your payment reference and status stay in your history below."
+                  />
+                </VList>
+                <VAlert v-if="payment?.offlineInstructions" type="info" variant="outlined" class="mt-4">
+                  {{ payment.offlineInstructions }}
+                </VAlert>
+              </VCardText>
+            </VCard>
+          </VCol>
+          <VCol cols="12">
+            <VCard>
+              <VCardText>
+                <div class="d-flex align-center justify-space-between flex-wrap ga-3 mb-3">
+                  <div>
+                    <h3 class="text-h6 mb-1">Payment history</h3>
+                    <p class="text-body-2 text-medium-emphasis mb-0">Payments linked to this request.</p>
+                  </div>
+                  <VChip v-if="latestPayment" size="small" variant="tonal"
+                    >Latest: {{ latestPayment.status.replaceAll("_", " ") }}</VChip
+                  >
+                </div>
+                <VTable v-if="payment?.payments.length" hover>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Reference</th>
+                      <th>Method</th>
+                      <th>Status</th>
+                      <th class="text-end">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in payment.payments" :key="item.id">
+                      <td>{{ new Date(item.paidAt || item.createdAt).toLocaleString() }}</td>
+                      <td>{{ item.reference || "—" }}</td>
+                      <td class="text-capitalize">{{ item.method }}</td>
+                      <td>
+                        <VChip size="small" variant="tonal" :color="item.status === 'paid' ? 'success' : 'default'">{{
+                          item.status.replaceAll("_", " ")
+                        }}</VChip>
+                      </td>
+                      <td class="text-end text-no-wrap">{{ money(item.amount) }}</td>
+                    </tr>
+                  </tbody>
+                </VTable>
+                <div v-else class="text-body-2 text-medium-emphasis py-5 text-center">
+                  No payment has been recorded for this request yet.
+                </div>
+                <p class="text-caption text-medium-emphasis mt-3 mb-0">
+                  Payment status comes from XPro’s verified transaction record. Returning from checkout alone does not
+                  mark a payment as paid.
+                </p>
+              </VCardText>
+            </VCard>
+          </VCol>
+        </VRow>
       </template>
       <template
         v-else-if="
@@ -1302,7 +1346,7 @@ watch(v1Service, () => {
         >
       </template>
       <RequestLifecycle
-        v-if="['requests', 'dispatch', 'quotes', 'payments'].includes(props.section)"
+        v-if="['requests', 'dispatch', 'quotes'].includes(props.section)"
         :request="request"
         :v1-request="v1Request"
         :v1-viewer="v1Mode ? (v1Viewer ?? undefined) : undefined"

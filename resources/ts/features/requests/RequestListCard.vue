@@ -20,7 +20,13 @@ defineEmits<{ open: [id: string] }>()
       </p>
       <p class="text-body-2">Next: {{ nextActorLabel(item.nextActor) }}</p>
       <VBtn variant="outlined" @click="$emit('open', item.id)">{{
-        section === "quotes" ? "View quote" : section === "dispatch" ? "Dispatch" : "View request"
+        section === "quotes"
+          ? "View quote"
+          : section === "dispatch"
+            ? "Dispatch"
+            : section === "payments"
+              ? "View payment"
+              : "View request"
       }}</VBtn>
     </VCardText></VCard
   >
