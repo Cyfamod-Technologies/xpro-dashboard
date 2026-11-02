@@ -21,11 +21,11 @@ export const isWorkspaceRole = (role?: UserRole): role is WorkspaceRole =>
 // Keep the section definitions and feature components in place for later releases.
 // V1 exposes only the smaller workspace through navigation and route checks. Who sees which section, per V1 actor
 // (customer, admin, staff, provider), is `v1Sections` in `features/v1/access.ts`; these lists switch whole sections off.
-// V1-ASSUMPTION A6: admin Payments (`finance`) and Service catalog (`services`) stay visible and untouched.
+// V1 keeps admin Finance (`finance`) implemented but hidden; refund/payout operations are Phase 2.
 export const v1Workspace = {
   disabledSections: {
-    customer: ["quotes", "payments", "schedule", "notifications"],
-    provider: ["quotes", "payouts", "schedule", "messages", "notifications"],
+    customer: ["quotes", "schedule", "notifications"],
+    provider: ["quotes", "schedule", "messages", "notifications"],
     admin: ["approvals", "dispatch", "quotes", "schedule", "audit", "notifications"],
   },
   admin: {
@@ -35,8 +35,8 @@ export const v1Workspace = {
     settingsHistory: false,
     emailPreferences: false,
     customerMessagesOnly: true,
-    // V1 provider review is identity and services only; bank review and payout readiness are deferred.
-    bankReview: false,
+    // Payouts require verified destinations, so keep bank review in the V1 admin workflow.
+    bankReview: true,
   },
 } as const
 
@@ -136,7 +136,7 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "payments",
       "Payments",
       "tabler-credit-card",
-      "Payment tools will be available in a later release.",
+      "Review amounts due, payment status and receipts for your requests.",
       "Payment details will appear here when a quote is accepted.",
     ),
     schedule,
@@ -189,10 +189,10 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
     ),
     section(
       "payouts",
-      "Payout details",
-      "tabler-building-bank",
-      "The bank account XPro pays you into.",
-      "Add your bank details to receive payouts.",
+      "Earnings",
+      "tabler-wallet",
+      "Review your payout history and payment status.",
+      "Your earnings will appear here when a payout is created.",
     ),
     schedule,
     messages,

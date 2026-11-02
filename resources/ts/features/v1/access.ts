@@ -21,11 +21,11 @@ export const v1Actor = (user: ActorSource | null | undefined): V1Actor | null =>
 
 /** Sidebar sections each actor sees, in menu order. Ids match `workspaceSections` in `workspace/config.ts`. */
 export const v1Sections: Record<V1Actor, readonly string[]> = {
-  customer: ["overview", "requests", "messages", "settings"],
-  admin: ["overview", "requests", "messages", "providers", "finance", "services", "staff", "settings"],
+  customer: ["overview", "requests", "payments", "messages", "settings"],
+  admin: ["overview", "requests", "messages", "providers", "services", "staff", "settings"],
   // Staff "Account" is the admin profile page, which lives under the `settings` section id.
   staff: ["requests", "settings"],
-  provider: ["overview", "availability", "jobs", "settings"],
+  provider: ["overview", "availability", "jobs", "payouts", "settings"],
 }
 
 /** Section ids that are ordinary route pages for the actor (the router and the nav both ask this). */

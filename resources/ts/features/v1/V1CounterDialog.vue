@@ -78,29 +78,31 @@ const send = async () => {
           }}
         </p>
         <VAlert v-if="error" type="error" variant="tonal" density="compact" class="mb-4">{{ error }}</VAlert>
-        <VTextField
-          v-model="amount"
-          label="Amount"
-          prefix="₦"
-          inputmode="decimal"
-          autofocus
-          :error-messages="submitted ? check.errors.amount : undefined"
-        />
-        <VTextField
-          v-model="date"
-          label="Start date (optional)"
-          type="date"
-          :min="todayIso()"
-          :error-messages="submitted ? check.errors.date : undefined"
-        />
-        <VTextarea
-          v-model="note"
-          label="Note (optional)"
-          rows="2"
-          auto-grow
-          :counter="counterNoteMaxLength"
-          :error-messages="submitted ? check.errors.note : undefined"
-        />
+        <div class="d-flex flex-column ga-4">
+          <VTextField
+            v-model="amount"
+            label="Amount"
+            prefix="₦"
+            inputmode="decimal"
+            autofocus
+            :error-messages="submitted ? check.errors.amount : undefined"
+          />
+          <VTextField
+            v-model="date"
+            label="Start date (optional)"
+            type="date"
+            :min="todayIso()"
+            :error-messages="submitted ? check.errors.date : undefined"
+          />
+          <VTextarea
+            v-model="note"
+            label="Note (optional)"
+            rows="2"
+            auto-grow
+            :counter="counterNoteMaxLength"
+            :error-messages="submitted ? check.errors.note : undefined"
+          />
+        </div>
       </VCardText>
       <VCardActions class="px-6 pb-5">
         <VSpacer />

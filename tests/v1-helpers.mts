@@ -57,7 +57,7 @@ const candidate = (id: string, score: number, verified = true, available = true)
 })
 
 // --- Labels.
-assert.deepEqual(statusLabels, { submitted: "Submitted", approved: "Approved", denied: "Denied" })
+assert.deepEqual(statusLabels, { submitted: "Submitted", approved: "Approved", denied: "Denied", cancelled: "Cancelled" })
 
 // --- Money: kobo in data, naira on screen.
 assert.equal(formatNaira(15_000_000), "₦150,000")
@@ -191,7 +191,7 @@ assert.equal(preview("abcdefghij", 5), "abcd…")
 assert.equal(isVersionConflict({ status: 409 }), true)
 assert.equal(isVersionConflict({ status: 422 }), false)
 assert.equal(isVersionConflict(null), false)
-assert.equal(authorLabelFor("customer", { authorRole: "staff", authorLabel: "Kemi" }), "Kemi · Xpro")
+assert.equal(authorLabelFor("customer", { authorRole: "staff", authorLabel: "Kemi" }), "XPro Team")
 assert.equal(authorLabelFor("customer", { authorRole: "customer", authorLabel: "Ada" }), "Ada")
 assert.equal(authorLabelFor("admin", { authorRole: "staff", authorLabel: "Kemi" }), "Kemi")
 

@@ -30,7 +30,7 @@ import { catalogIdsFromNames, skillOptionsForRoot, visibleNodeIds } from "@/feat
 import CatalogSkillTree from "@/features/catalog/CatalogSkillTree.vue"
 
 const props = defineProps<{ availability?: boolean; v1Mode?: boolean }>()
-const payoutEnabled = sectionEnabled("provider", "payouts")
+const payoutEnabled = sectionEnabled("provider", "payouts") && !props.v1Mode
 const ops = useOperationsStore()
 const auth = useAuthStore()
 const files = ref<File[]>([])

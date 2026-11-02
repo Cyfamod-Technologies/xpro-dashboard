@@ -108,6 +108,7 @@ export interface V1Store {
     version?: number,
   ): V1Request
   messages(actor: MockActor, id: string): V1Message[]
+  acceptOffer(actor: MockActor, id: string, offerId: string, version?: number): V1Request
   sendMessage(actor: MockActor, id: string, body: V1MessageBody): V1Message
   adminConversations(actor: MockActor, params?: { q?: string }): V1Conversation[]
   customerConversations(actor: MockActor): V1Conversation[]
@@ -396,6 +397,8 @@ export const createV1Store = (options: { storage?: StorageLike | null; now?: () 
       const member = data.staff.find(item => item.id === body.staffId)
 
       if (!member) throw invalid("Choose an active staff member.")
+      if (!member.roles.some(role => role === "operations" || role === "client_relations"))
+        throw invalid("Choose an operations or client relations staff member.")
       // The caller names who it thinks currently owns the request, so two admins can't overwrite each other.
       if ((body.expectedOwnerId ?? null) !== (request.assignee?.id ?? null))
         throw new V1MockError(409, "OWNER_CHANGED", "Someone else changed the assignee. Refresh and try again.", {
@@ -420,8 +423,7 @@ export const createV1Store = (options: { storage?: StorageLike | null; now?: () 
     },
 
     approve: (actor, id, body, version) => {
-      if (actor.role !== "admin" && actor.role !== "staff")
-        throw forbidden("Only XPro staff can approve a request.")
+      if (actor.role !== "admin" && actor.role !== "staff") throw forbidden("Only XPro staff can approve a request.")
 
       const request = findRequest(id)
 
@@ -530,13 +532,16 @@ export const createV1Store = (options: { storage?: StorageLike | null; now?: () 
     listStaff: actor => {
       if (actor.role !== "admin") throw forbidden()
 
-      return data.staff.map(member => ({
-        id: member.id,
-        name: member.name,
-        email: member.email,
-        openRequests: data.requests.filter(item => item.status === "submitted" && item.assignee?.id === member.id)
-          .length,
-      }))
+      return data.staff
+        .filter(member => member.roles.some(role => role === "operations" || role === "client_relations"))
+        .map(member => ({
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          roles: clone(member.roles),
+          openRequests: data.requests.filter(item => item.status === "submitted" && item.assignee?.id === member.id)
+            .length,
+        }))
     },
 
     listProviders: actor => {
@@ -632,6 +637,24 @@ export const createV1Store = (options: { storage?: StorageLike | null; now?: () 
       return clone(threadMessages(id))
     },
 
+    acceptOffer: (actor, id, offerId, version) => {
+      if (actor.role !== "customer") throw forbidden("Only the customer can accept this offer.")
+      const request = readable(actor, id)
+      checkVersion(request, version)
+      if (request.status !== "submitted")
+        throw new V1MockError(409, "COUNTER_CLOSED", "Offers are closed for this request.")
+
+      const latest = latestCounter(threadMessages(id))
+      if (!latest?.counter || latest.id !== offerId || latest.authorRole === "customer" || latest.counter.acceptedAt)
+        throw new V1MockError(409, "OFFER_NOT_AVAILABLE", "Only the latest XPro offer can be accepted.")
+
+      latest.counter.acceptedAt = stamp()
+      bump(request)
+      save()
+
+      return project(actor, request)
+    },
+
     sendMessage: (actor, id, body) => {
       const request = readable(actor, id)
 
@@ -667,8 +690,11 @@ export const createV1Store = (options: { storage?: StorageLike | null; now?: () 
 
         const latest = latestCounter(thread)
 
-        // A customer can only answer an offer; Xpro can open the negotiation with a quote.
-        if (!latest || (actor.role === "customer") === (latest.authorRole === "customer"))
+        if (latest?.counter?.acceptedAt)
+          throw new V1MockError(409, "COUNTER_CLOSED", "This offer was accepted. No further counters can be sent.")
+
+        // Customers may only answer XPro. XPro staff/admin can replace the team's latest offer.
+        if (actor.role === "customer" && (!latest || latest.authorRole === "customer"))
           throw new V1MockError(409, "NO_OFFER_TO_COUNTER", "There is no offer from Xpro to counter.")
 
         const counterId = `ctr-${data.nextMessage}`
