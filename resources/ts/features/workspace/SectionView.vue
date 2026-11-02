@@ -27,6 +27,7 @@ import { isDemoMode } from "@/utils/demo-mode"
 const props = defineProps<{ sectionId: string }>()
 const RequestsWorkspace = defineAsyncComponent(() => import("@/features/requests/RequestsWorkspace.vue"))
 const AdminPayments = defineAsyncComponent(() => import("@/features/requests/AdminPayments.vue"))
+const AdminTransactions = defineAsyncComponent(() => import("@/features/requests/AdminTransactions.vue"))
 const ProviderEarnings = defineAsyncComponent(() => import("@/features/requests/ProviderEarnings.vue"))
 const PlatformWorkspace = defineAsyncComponent(() => import("@/features/requests/PlatformWorkspace.vue"))
 const auth = useAuthStore()
@@ -98,6 +99,7 @@ const platformSection = computed(() =>
     <PlatformWorkspace v-else-if="platformSection" :section="platformSection" />
     <PlatformWorkspace v-else-if="auth.user?.role === 'admin' && section.id === 'settings'" section="settings" />
     <AdminPayments v-else-if="section.id === 'finance'" :demo="isDemoMode" />
+    <AdminTransactions v-else-if="section.id === 'transactions'" />
     <ProviderEarnings v-else-if="!isDemoMode && section.id === 'payouts'" />
     <VAlert v-else-if="isDemoMode && section.id === 'payments'" color="info" variant="tonal">
       Customer payment history and checkout use the connected payment API and are not simulated in the local demo.
