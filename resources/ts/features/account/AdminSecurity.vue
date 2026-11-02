@@ -15,6 +15,15 @@ const error = ref("")
 const revoking = ref("")
 const others = computed(() => sessions.value.filter(session => !session.current))
 const recentSignIns = computed(() => signIns.value.slice(0, 5))
+const mfaSetup = ref<{ secret: string; otpauthUrl: string }>()
+const mfaCode = ref("")
+const mfaBusy = ref(false)
+const mfaError = ref("")
+const mfaNotice = ref("")
+const disableDialog = ref(false)
+const disablePassword = ref("")
+const disableCode = ref("")
+const mfaEnabled = computed(() => auth.user?.mfaRequired === true)
 
 async function load() {
   loading.value = true
@@ -55,6 +64,61 @@ async function signOut(session: SessionView) {
   } finally {
     revoking.value = ""
   }
+}
+
+async function beginMfaSetup() {
+  mfaBusy.value = true
+  mfaError.value = ""
+  mfaNotice.value = ""
+  try {
+    mfaSetup.value = (await accountApi.setupMfa()).data
+    mfaCode.value = ""
+  } catch (cause) {
+    mfaError.value = getErrorMessage(cause, "MFA setup could not be started.")
+  } finally {
+    mfaBusy.value = false
+  }
+}
+
+async function confirmMfaSetup() {
+  if (!/^\d{6}$/.test(mfaCode.value.trim())) return
+  mfaBusy.value = true
+  mfaError.value = ""
+  try {
+    await accountApi.confirmMfa(mfaCode.value.trim())
+    await auth.refreshUser()
+    mfaSetup.value = undefined
+    mfaCode.value = ""
+    mfaNotice.value = "Two-step sign-in is enabled. You'll need an authenticator code next time you sign in."
+  } catch (cause) {
+    mfaError.value = getErrorMessage(cause, "The authenticator code could not be verified.")
+  } finally {
+    mfaBusy.value = false
+  }
+}
+
+async function disableMfa() {
+  if (!disablePassword.value || !/^\d{6}$/.test(disableCode.value.trim())) return
+  mfaBusy.value = true
+  mfaError.value = ""
+  try {
+    await accountApi.disableMfa(disablePassword.value, disableCode.value.trim())
+    await auth.refreshUser()
+    disableDialog.value = false
+    disablePassword.value = ""
+    disableCode.value = ""
+    mfaNotice.value = "Two-step sign-in is off."
+  } catch (cause) {
+    mfaError.value = getErrorMessage(cause, "Two-step sign-in could not be disabled.")
+  } finally {
+    mfaBusy.value = false
+  }
+}
+
+function closeMfaSetup() {
+  mfaSetup.value = undefined
+  mfaCode.value = ""
+  mfaError.value = ""
 }
 
 const dialog = ref(false)
@@ -129,16 +193,47 @@ onMounted(load)
           <div class="text-body-1">Two-step sign-in</div>
           <div class="text-body-2 text-medium-emphasis">
             {{
-              auth.user?.mfaRequired
-                ? "An authenticator app is set up. To reset it, ask another super admin."
-                : "No authenticator app yet. You'll be asked to set one up when you next sign in."
+              mfaEnabled
+                ? "An authenticator app is set up and required at sign-in. You can turn it off here."
+                : "Optional. Set up an authenticator app whenever you want extra protection at sign-in."
             }}
           </div>
         </div>
-        <VChip size="small" variant="tonal" :color="auth.user?.mfaRequired ? 'success' : 'warning'">{{
-          auth.user?.mfaRequired ? "On" : "Not set up"
-        }}</VChip>
+        <div class="d-flex align-center ga-2">
+          <VChip size="small" variant="tonal" :color="mfaEnabled ? 'success' : 'secondary'">{{
+            mfaEnabled ? "On" : "Off"
+          }}</VChip>
+          <VBtn v-if="mfaEnabled" variant="outlined" size="small" :disabled="mfaBusy" @click="disableDialog = true">
+            Turn off
+          </VBtn>
+          <VBtn v-else variant="outlined" size="small" :loading="mfaBusy" @click="beginMfaSetup"> Set up </VBtn>
+        </div>
       </div>
+      <VAlert v-if="mfaError" type="error" variant="tonal" class="mb-4">{{ mfaError }}</VAlert>
+      <VAlert v-if="mfaNotice" type="success" variant="tonal" class="mb-4">{{ mfaNotice }}</VAlert>
+      <VCard v-if="mfaSetup" variant="outlined" class="mb-4">
+        <VCardText>
+          <h3 class="text-subtitle-1 mb-2">Set up an authenticator app</h3>
+          <p class="text-body-2 text-medium-emphasis">
+            Add this key to your authenticator app, then enter the six-digit code it generates.
+          </p>
+          <AppTextField :model-value="mfaSetup.secret" label="Setup key" readonly class="mb-4" />
+          <AppTextField
+            v-model="mfaCode"
+            label="Authenticator code"
+            inputmode="numeric"
+            maxlength="6"
+            class="mb-4"
+            @keydown.enter.prevent="confirmMfaSetup"
+          />
+          <div class="d-flex flex-wrap ga-2">
+            <VBtn :loading="mfaBusy" :disabled="!/^\d{6}$/.test(mfaCode.trim())" @click="confirmMfaSetup">
+              Verify and enable
+            </VBtn>
+            <VBtn variant="text" :disabled="mfaBusy" @click="closeMfaSetup">Cancel</VBtn>
+          </div>
+        </VCardText>
+      </VCard>
 
       <div class="security-row security-row--stack">
         <div class="d-flex align-center justify-space-between flex-wrap ga-2">
@@ -236,6 +331,29 @@ onMounted(load)
           </div>
         </VForm>
       </VCardText>
+    </VCard>
+  </VDialog>
+
+  <VDialog v-model="disableDialog" max-width="440" :persistent="mfaBusy">
+    <VCard>
+      <VCardTitle>Turn off two-step sign-in?</VCardTitle>
+      <VCardText>
+        <p class="text-body-2 text-medium-emphasis">Confirm with your password and current authenticator code.</p>
+        <AppTextField v-model="disablePassword" label="Password" type="password" autocomplete="current-password" />
+        <AppTextField v-model="disableCode" label="Authenticator code" inputmode="numeric" maxlength="6" class="mt-3" />
+        <VAlert v-if="mfaError" type="error" variant="tonal" class="mt-3">{{ mfaError }}</VAlert>
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn variant="text" :disabled="mfaBusy" @click="disableDialog = false">Cancel</VBtn>
+        <VBtn
+          color="error"
+          :loading="mfaBusy"
+          :disabled="!disablePassword || !/^\d{6}$/.test(disableCode.trim())"
+          @click="disableMfa"
+          >Turn off</VBtn
+        >
+      </VCardActions>
     </VCard>
   </VDialog>
 </template>

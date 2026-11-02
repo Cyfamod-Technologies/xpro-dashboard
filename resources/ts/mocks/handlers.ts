@@ -9,6 +9,24 @@ import { normalizePhone } from "@/features/phone/phone"
 
 const api = mockApiBase
 const demoMfaEnabled = false
+const demoMfaStorageKey = "xpro:demo-mfa-users"
+const loadDemoMfaUsers = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(demoMfaStorageKey) ?? "[]") as unknown
+
+    return Array.isArray(stored) ? stored.filter((id): id is string => typeof id === "string") : []
+  } catch {
+    return []
+  }
+}
+const demoMfaUsers = new Set(loadDemoMfaUsers())
+const saveDemoMfaUsers = () => {
+  try {
+    localStorage.setItem(demoMfaStorageKey, JSON.stringify([...demoMfaUsers]))
+  } catch {
+    // Keep MFA usable for this session if browser storage is unavailable.
+  }
+}
 const accountStorageKey = "xpro:demo-accounts"
 const demoUserStateStorageKey = "xpro:demo-user-state"
 interface PersistedAccount {
@@ -125,7 +143,7 @@ function toServerUser(user: User) {
     phoneVerified: user.phoneVerified ?? false,
     phoneVerifiedAt: user.phoneVerifiedAt ?? null,
     onboardingCompleted: true,
-    mfaEnabled: demoMfaEnabled && user.mfaRequired,
+    mfaEnabled: (demoMfaEnabled && user.mfaRequired) || demoMfaUsers.has(user.id),
   }
 }
 
@@ -154,7 +172,7 @@ export const handlers = [
     if (user.status !== "active") return validationError("This account is not currently active.")
 
     const mfaCode = (payload as { mfaCode?: string }).mfaCode
-    const requiresMfa = demoMfaEnabled && user.mfaRequired
+    const requiresMfa = (demoMfaEnabled && user.mfaRequired) || demoMfaUsers.has(user.id)
     if (requiresMfa && !mfaCode)
       return HttpResponse.json({ error: { code: "MFA_REQUIRED", message: "MFA code required." } }, { status: 422 })
     if (requiresMfa && mfaCode !== "123456")
@@ -181,6 +199,48 @@ export const handlers = [
     if (!user || payload.code !== "123456") return validationError("The authentication code is invalid or has expired.")
 
     return envelope({ token: `mock-token-${user.id}`, user: toServerUser(user), requiresMfa: false })
+  }),
+
+  http.post(`${api}/auth/mfa/setup`, ({ request }) => {
+    const current = requireUser(request)
+    if (current instanceof Response) return current
+    if (demoMfaUsers.has(current.id))
+      return HttpResponse.json(
+        { error: { code: "MFA_ALREADY_ENABLED", message: "MFA is already enabled." } },
+        { status: 400 },
+      )
+
+    const secret = "XPRODEMO12345678"
+
+    return envelope({
+      secret,
+      otpauthUrl: `otpauth://totp/Xpro:${encodeURIComponent(current.email)}?secret=${secret}&issuer=Xpro`,
+    })
+  }),
+
+  http.post(`${api}/auth/mfa/confirm`, async ({ request }) => {
+    const current = requireUser(request)
+    if (current instanceof Response) return current
+    const payload = (await request.json()) as { code?: string }
+    if (payload.code !== "123456") return validationError("The authenticator code is invalid.")
+    demoMfaUsers.add(current.id)
+    saveDemoMfaUsers()
+
+    return envelope({ mfaEnabled: true })
+  }),
+
+  http.post(`${api}/auth/mfa/disable`, async ({ request }) => {
+    const current = requireUser(request)
+    if (current instanceof Response) return current
+    const payload = (await request.json()) as { password?: string; code?: string }
+    if (accountPasswords.get(current.email) !== payload.password)
+      return validationError("Current password is incorrect.")
+    if (demoMfaUsers.has(current.id) && payload.code !== "123456")
+      return validationError("The authenticator code is invalid.")
+    demoMfaUsers.delete(current.id)
+    saveDemoMfaUsers()
+
+    return envelope({ mfaEnabled: false })
   }),
 
   http.get(`${api}/auth/legal-documents`, ({ request }) => {
