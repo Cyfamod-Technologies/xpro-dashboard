@@ -4,7 +4,7 @@ import type { V1Request, V1Staff } from "@/features/v1/types"
 import { v1Api } from "@/services/v1-api"
 import { getErrorMessage } from "@/utils/errors"
 
-const props = defineProps<{ request: V1Request }>()
+const props = withDefaults(defineProps<{ request: V1Request; hideTrigger?: boolean }>(), { hideTrigger: false })
 const emit = defineEmits<{ updated: [request: V1Request]; refresh: [] }>()
 
 const staff = ref<V1Staff[]>([])
@@ -14,6 +14,9 @@ const busy = ref(false)
 const error = ref("")
 const conflict = ref(false)
 const dialogOpen = ref(false)
+const openDialog = () => (dialogOpen.value = true)
+
+defineExpose({ openDialog })
 
 const reassigning = computed(() => Boolean(props.request.assignee))
 // V1-ASSUMPTION A5: the admin can assign or reassign at any status, so an approved request is never stuck with the
@@ -66,7 +69,7 @@ const assign = async () => {
         <div class="text-caption text-medium-emphasis">Assigned staff</div>
         <div class="text-body-1">{{ request.assignee?.name ?? "Not assigned yet" }}</div>
       </div>
-      <VBtn color="primary" variant="outlined" prepend-icon="tabler-user-plus" @click="dialogOpen = true">
+      <VBtn v-if="!hideTrigger" color="primary" variant="outlined" prepend-icon="tabler-user-plus" @click="openDialog">
         {{ reassigning ? "Reassign staff" : "Assign staff" }}
       </VBtn>
     </div>
