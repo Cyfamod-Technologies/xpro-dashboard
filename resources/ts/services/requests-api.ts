@@ -21,6 +21,8 @@ import type {
   QuoteItemView,
   QuoteView,
   RankingRunView,
+  RefundReserveFundingView,
+  RefundReserveSummary,
   RefundView,
   RequestActivityView,
   RequestMessageView,
@@ -438,12 +440,26 @@ export const requestsApi = {
     command<PaymentView>(`/admin/payments/${pathId(id)}/reject`, "POST", { reason }),
   refunds: (params: { status?: string; page?: number } = {}) =>
     unwrap($api<ApiEnvelope<PaginatedResult<RefundView>>>("/admin/refunds", { query: params })),
+  refundReserve: () => unwrap($api<ApiEnvelope<RefundReserveSummary>>("/admin/refund-reserve")),
+  recordRefundReserveFunding: (body: { amount: number; reference: string; proofFileId: string; note?: string }) =>
+    command<RefundReserveFundingView>("/admin/refund-reserve/funding", "POST", body),
+  reconcileRefundReserveFunding: (id: string, note: string, version: number) =>
+    command<RefundReserveFundingView>(
+      `/admin/refund-reserve/funding/${pathId(id)}/reconcile`,
+      "POST",
+      { note },
+      version,
+    ),
+  rejectRefundReserveFunding: (id: string, note: string, version: number) =>
+    command<RefundReserveFundingView>(`/admin/refund-reserve/funding/${pathId(id)}/reject`, "POST", { note }, version),
   payouts: (params: { status?: string; page?: number } = {}) =>
     unwrap($api<ApiEnvelope<PaginatedResult<PayoutView>>>("/admin/payouts", { query: params })),
   decideRefund: (id: string, body: { approve: boolean; amount?: number; reason: string }) =>
     command<RefundView>(`/admin/refunds/${pathId(id)}/decide`, "POST", body),
   secondApproveRefund: (id: string, body: { approve: boolean; reason: string }) =>
     command<RefundView>(`/admin/refunds/${pathId(id)}/second-approve`, "POST", body),
+  prepareRefundTransfer: (id: string, version?: number) =>
+    command<RefundView>(`/admin/refunds/${pathId(id)}/prepare-transfer`, "POST", undefined, version),
   transferRefund: (id: string, body: { reference: string; proofFileId: string; note?: string }) =>
     command<RefundView>(`/admin/refunds/${pathId(id)}/transfer`, "POST", body),
   reconcileRefund: (id: string, note: string) =>

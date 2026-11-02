@@ -61,6 +61,7 @@ const settingGroups = computed(() => {
     assignment: "Provider matching",
     cancellation: "Cancellations",
     payment: "Payments",
+    payout: "Provider compensation",
     provider: "Provider onboarding",
     request: "Request handling",
     schedule: "Scheduling",
