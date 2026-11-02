@@ -37,9 +37,18 @@ const navIds = (actor: V1Actor) => {
 }
 
 assert.deepEqual(navIds("customer"), ["overview", "requests", "payments", "messages", "settings"])
-assert.deepEqual(navIds("admin"), ["overview", "requests", "messages", "providers", "services", "staff", "settings"])
+assert.deepEqual(navIds("admin"), [
+  "overview",
+  "requests",
+  "messages",
+  "providers",
+  "services",
+  "staff",
+  "transactions",
+  "settings",
+])
 assert.deepEqual(navIds("staff"), ["requests", "settings"])
-assert.deepEqual(navIds("provider"), ["overview", "availability", "jobs", "payouts", "settings"])
+assert.deepEqual(navIds("provider"), ["overview", "availability", "jobs", "settings"])
 
 // Every section in the V1 map exists and is enabled in the workspace config.
 for (const [actor, ids] of Object.entries(v1Sections)) {
@@ -59,7 +68,7 @@ const blocked: Record<V1Actor, string[]> = {
   customer: ["quotes", "schedule", "notifications", "services", "staff", "providers"],
   admin: ["approvals", "dispatch", "quotes", "schedule", "audit", "notifications", "finance"],
   staff: ["overview", "messages", "providers", "finance", "services", "staff", "approvals", "dispatch", "audit"],
-  provider: ["verification", "quotes", "schedule", "messages", "notifications", "requests"],
+  provider: ["verification", "quotes", "schedule", "messages", "notifications", "requests", "payouts"],
 }
 
 for (const [actor, ids] of Object.entries(blocked))
@@ -95,7 +104,7 @@ const menuPaths = (actor: V1Actor) => {
 
 assert.deepEqual(menuPaths("customer"), ["/", "/overview", "/requests", "/payments", "/messages", "/settings"])
 assert.deepEqual(menuPaths("staff"), ["/", "/admin/requests", "/admin/settings"])
-assert.deepEqual(menuPaths("provider"), ["/", "/overview", "/availability", "/jobs", "/payouts", "/settings"])
+assert.deepEqual(menuPaths("provider"), ["/", "/overview", "/availability", "/jobs", "/settings"])
 assert.deepEqual(menuPaths("admin"), [
   "/",
   "/admin",
@@ -104,6 +113,7 @@ assert.deepEqual(menuPaths("admin"), [
   "/admin/providers",
   "/admin/services",
   "/admin/staff",
+  "/admin/transactions",
   "/admin/settings",
 ])
 

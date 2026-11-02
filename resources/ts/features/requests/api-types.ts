@@ -613,6 +613,34 @@ export interface PaymentView {
   createdAt: string
 }
 
+export interface PlatformTransactionView {
+  id: string
+  reference: string | null
+  requestRecordId: string
+  requestId: string
+  requestTitle: string
+  customerName: string
+  customerEmail: string | null
+  /** Amount in kobo. */
+  amount: number | null
+  currency: "NGN"
+  method: "paystack" | "offline" | string
+  channel: string | null
+  status: PaymentView["status"]
+  createdAt: string
+  paidAt: string | null
+}
+
+export interface PlatformTransactionsView {
+  items: PlatformTransactionView[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPrevPage: boolean
+}
+
 export type RefundStatus =
   | "pending_approval"
   | "awaiting_second_approval"

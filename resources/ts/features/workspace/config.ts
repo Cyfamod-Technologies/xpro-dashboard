@@ -21,11 +21,11 @@ export const isWorkspaceRole = (role?: UserRole): role is WorkspaceRole =>
 // Keep the section definitions and feature components in place for later releases.
 // V1 exposes only the smaller workspace through navigation and route checks. Who sees which section, per V1 actor
 // (customer, admin, staff, provider), is `v1Sections` in `features/v1/access.ts`; these lists switch whole sections off.
-// V1 keeps admin Finance (`finance`) implemented but hidden; refund/payout operations are Phase 2.
+// V1 exposes a read-only admin transaction ledger; Finance actions (refunds and payouts) remain Phase 2.
 export const v1Workspace = {
   disabledSections: {
     customer: ["quotes", "schedule", "notifications"],
-    provider: ["quotes", "schedule", "messages", "notifications"],
+    provider: ["quotes", "schedule", "messages", "notifications", "payouts"],
     admin: ["approvals", "dispatch", "quotes", "schedule", "audit", "notifications"],
   },
   admin: {
@@ -249,6 +249,14 @@ export const workspaceSections: Record<WorkspaceRole, WorkspaceSection[]> = {
       "tabler-credit-card",
       "Reconcile payments and review refunds and payouts.",
       "There are no finance items waiting for review.",
+      "payment.record",
+    ),
+    section(
+      "transactions",
+      "Transactions",
+      "tabler-receipt",
+      "Track payments recorded across the platform.",
+      "No transactions have been recorded yet.",
       "payment.record",
     ),
     schedule,

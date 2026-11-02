@@ -16,6 +16,7 @@ import type {
   PaymentView,
   PayoutView,
   PendingRequestView,
+  PlatformTransactionsView,
   ProgressUpdateView,
   PublicRequestConfigView,
   QuoteItemView,
@@ -95,6 +96,14 @@ export interface RequestListParams {
   page?: number
   itemsPerPage?: number
   sort?: string
+}
+
+export interface PlatformTransactionParams {
+  page?: number
+  limit?: number
+  status?: string
+  method?: string
+  q?: string
 }
 
 export const requestsApi = {
@@ -423,6 +432,8 @@ export const requestsApi = {
   setQuotePayout: (id: string, quoteId: string, payoutAmount: number, version: number) =>
     command<RequestView>(`/requests/${pathId(id)}/quotes/${pathId(quoteId)}/payout`, "PUT", { payoutAmount }, version),
   payments: (id: string) => unwrap($api<ApiEnvelope<RequestPaymentsView>>(`/requests/${pathId(id)}/payments`)),
+  platformTransactions: (params: PlatformTransactionParams = {}) =>
+    unwrap($api<ApiEnvelope<PlatformTransactionsView>>("/admin/transactions", { query: params })),
   initiatePayment: (id: string, idemKey = randomKey()) =>
     unwrap(
       $api<ApiEnvelope<{ paymentId: string; authorizationUrl: string; reference: string }>>(
